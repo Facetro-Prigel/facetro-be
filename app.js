@@ -6,22 +6,6 @@ const app = express();
 app.use(bodyParser.json());
 const prisma= new PrismaClient()
 
-
-
-// app.post('/update', async (req, res) => {
-//   const id = req.body.uuid
-//   const post = req.body
-//   delete post.id
-//   const result = await prisma.user.update({
-//       where:{
-//         uuid:id
-//     },
-//     data: post
-//   });
-//   res.send(result);
-// })
-
-
 const hapus = async (req, res, model) =>{
   const id = req.params.uuid
   const call = eval('prisma.'+model)
@@ -73,10 +57,10 @@ method.forEach(element => {
   app.delete(`/${element}/:uuid`, async (req, res) => {
     hapus(req, res, element);
   });
-  app.put(`/${element}/add`, async (req, res) => {
+  app.post(`/${element}`, async (req, res) => {
     tambah(req, res, element);
   });
-  app.post(`/${element}/:uuid`, async (req, res) => {
+  app.put(`/${element}/:uuid`, async (req, res) => {
     perbarui(req, res, element);
   });
   app.get(`/${element}/:uuid?`, async (req, res) => {
@@ -89,20 +73,9 @@ method.forEach(element => {
   });
 });
 
-
-
-
-
-
-
-
 app.get('/', (req, res) => {
   res.send('Kamu terhubung kok, silahkan kulik lebih lanjut');
 });
-
-
-
-
 
 app.listen(3000, () => {
   console.log("Aplikasi berjalan di port 3000");

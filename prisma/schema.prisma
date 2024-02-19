@@ -76,9 +76,9 @@ model UserGroup {
 model Log {
   uuid        String      @id @default(uuid()) @map(name: "uuid")
   type        absen     // Assuming 'type' is a string field for the type of log
-  imagePath   String?     @db.VarChar(255) // Assuming 'image_path' is a varchar field
+  imagePath   String     @db.VarChar(255) // Assuming 'image_path' is a varchar field
   bbox        Json   
-  signature   String?     
+  signature   String     
   createdAt   DateTime    @default(now())
 
   user        User        @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
