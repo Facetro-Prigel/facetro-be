@@ -52,7 +52,7 @@ const tampilkansemua = async (req, res, model) => {
   res.send(result);
 };
 
-const method = ['user'];
+const method = ['user', 'role', 'permission', 'group', 'device'];
 method.forEach(element => {
   app.delete(`/${element}/:uuid`, async (req, res) => {
     hapus(req, res, element);
