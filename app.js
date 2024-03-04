@@ -72,11 +72,30 @@ method.forEach(element => {
     }
   });
 });
-
-app.get('/', (req, res) => {
+app.get('/test', async (req, res) => {
+  const result = await prisma.user.create({
+    data: {
+      name: 'Muhammad Iqbal',
+      nim: 5312421026,
+      password: 'testpassword',
+      email: 'xmod3905@students.unnes.ac.id',
+      roleuser : {
+        create: {
+          role: {
+            create:{
+              name:'Super Admin',
+              guardName:'super_admin',
+              description: 'like a god at this system that can do anyting'
+            }
+          }
+        }
+      }
+  }})
+  res.json({'status':'ok', result});
+});
+app.get('/',(req, res) => {
   res.send('Kamu terhubung kok, silahkan kulik lebih lanjut');
 });
-
 app.listen(3000, () => {
   console.log("Aplikasi berjalan di port 3000");
 });

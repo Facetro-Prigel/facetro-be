@@ -19,16 +19,16 @@ datasource db {
 model User {
   uuid           String    @id @default(uuid()) @map(name: "uuid")
   name           String
-  nim            Int
-  password       String
-  email          String
+  nim            String    @unique   
+  password       String     
+  email          String    @unique
   avatar         String?
   personalNumber Int?
   telegramId     Int?
+  nfc_data       String?
   createdAt      DateTime   @default(now())
   modifiedAt     DateTime   @default(now())
 
-  
   groups          Group[]
   usergroup       UserGroup[]
   log             Log[]   
@@ -46,7 +46,7 @@ model Group {
   users      User    @relation(fields: [notify_to], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   notify_to  String
   device     Device  @relation(fields: [devices], references: [uuid], onDelete: Cascade, onUpdate: Cascade)  
-  devices    String
+  devices    String   
 
   usergroup  UserGroup[]
 }
@@ -95,8 +95,8 @@ enum absen {
 model Role {
   uuid          String    @id @default(uuid()) @map(name: "uuid")
   name          String
-  guardName     String
-  description   String
+  guardName     String    @unique
+  description   String    @db.Text()
   createdAt     DateTime  @default(now())
   modifiedAt    DateTime  @default(now())
 
@@ -114,15 +114,14 @@ model RoleUser {
   userUuid     String
   role         Role      @relation(fields: [roleUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   roleUuid     String
-  
 }
 
 // Define the Permission model
 model Permission {
   uuid          String   @id @default(uuid()) @map(name: "uuid")
   name          String
-  guardName     String
-  description   String
+  guardName     String   @unique
+  description   String   @db.Text()
   createdAt     DateTime @default(now())
   modifiedAt    DateTime @default(now())
 
@@ -153,10 +152,3 @@ model PermissionUser {
   permission        Permission  @relation(fields: [permissionUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   permissionUuid    String
 }
-
-
-
-
-
-
-
