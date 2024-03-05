@@ -143,7 +143,15 @@ async function main() {
             name: "Log Anywhere",
             guardName: "log_anywhere", 
             description: "This User Can Absent On Any Device."
+        },
+
+        {
+            name: "Download Photo",
+            guardName: "download_photo", 
+            description: "This Role/User Can Download Photo From Log ."   
         }
+
+
 
     ]
  }) 
