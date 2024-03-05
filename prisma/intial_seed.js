@@ -143,11 +143,12 @@ async function main() {
             name: "Log Anywhere",
             guardName: "log_anywhere", 
             description: "This User Can Absent On Any Device."
-        },
+        }
 
     ]
  }) 
 }
+
 main()
   .then(async () => {
     await prisma.$disconnect()
