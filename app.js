@@ -73,25 +73,34 @@ method.forEach(element => {
   });
 });
 app.get('/test', async (req, res) => {
-  const result = await prisma.user.create({
-    data: {
-      name: 'Muhammad Iqbal',
-      nim: 5312421026,
-      password: 'testpassword',
-      email: 'xmod3905@students.unnes.ac.id',
-      roleuser : {
-        create: {
-          role: {
-            create:{
-              name:'Super Admin',
-              guardName:'super_admin',
-              description: 'like a god at this system that can do anyting'
-            }
-          }
-        }
-      }
-  }})
-  res.json({'status':'ok', result});
+  // const result = await prisma.user.create({
+  //   data: {
+  //     name: 'Muhammad Iqbal',
+  //     nim: 5312421026,
+  //     password: 'testpassword',
+  //     email: 'xmod3905@students.unnes.ac.id',
+  //     roleuser : {
+  //       create: {
+  //         role: {
+  //           create:{
+  //             name:'Super Admin',
+  //             guardName:'super_admin',
+  //             description: 'like a god at this system that can do anyting'
+  //           }
+  //         }
+  //       }
+  //     }
+  // }})
+
+  const result = await prisma.role.findUnique({
+    where: {
+      guardName: 'super_admin',
+    },select: {
+      uuid: true
+    },
+  })
+  console.info(result.uuid)
+  res.json({'status':result.uuid, });
 });
 app.get('/',(req, res) => {
   res.send('Kamu terhubung kok, silahkan kulik lebih lanjut');

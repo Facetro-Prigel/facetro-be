@@ -19,11 +19,11 @@ datasource db {
 model User {
   uuid           String    @id @default(uuid()) @map(name: "uuid")
   name           String
-  nim            String    @unique   
+  identityNumber String    @unique   
   password       String     
   email          String    @unique
   avatar         String?
-  personalNumber Int?
+  phoneNumber Int?
   telegramId     Int?
   nfc_data       String?
   createdAt      DateTime   @default(now())
@@ -39,7 +39,7 @@ model User {
 
 model Group {
   uuid       String    @id @default(uuid()) @map(name: "uuid")
-  name       String
+  name       String    @unique
   locations  String
 
   //one-to-many
@@ -47,17 +47,15 @@ model Group {
   notify_to  String
   device     Device  @relation(fields: [devices], references: [uuid], onDelete: Cascade, onUpdate: Cascade)  
   devices    String   
-
   usergroup  UserGroup[]
 }
   
 
 model Device {
   uuid        String   @id @default(uuid()) @map(name: "uuid")
-  name        String
+  name        String   @unique
   locations   String
-  ip_address  String
-
+  ip_address  String?
   groups      Group[]
   log         Log[]  
 }
@@ -96,7 +94,7 @@ model Role {
   uuid          String    @id @default(uuid()) @map(name: "uuid")
   name          String
   guardName     String    @unique
-  description   String    @db.Text()
+  description   String?   @db.Text()
   createdAt     DateTime  @default(now())
   modifiedAt    DateTime  @default(now())
 
@@ -107,13 +105,12 @@ model Role {
 // Define the RoleUser model
 model RoleUser {
   uuid         String    @id @default(uuid()) @map(name: "uuid")
-  createdAt    DateTime  @default(now())
-  modifiedAt   DateTime  @default(now())
-
   user         User      @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   userUuid     String
   role         Role      @relation(fields: [roleUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   roleUuid     String
+  createdAt    DateTime  @default(now())
+  modifiedAt   DateTime  @default(now())
 }
 
 // Define the Permission model
@@ -121,7 +118,7 @@ model Permission {
   uuid          String   @id @default(uuid()) @map(name: "uuid")
   name          String
   guardName     String   @unique
-  description   String   @db.Text()
+  description   String?  @db.Text()
   createdAt     DateTime @default(now())
   modifiedAt    DateTime @default(now())
 
@@ -134,7 +131,6 @@ model PermissionRole {
   uuid              String      @id @default(uuid()) @map(name: "uuid")
   createdAt         DateTime    @default(now())
   modifiedAt        DateTime    @default(now())
-
   permission        Permission  @relation(fields: [permissionUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   permissionUuid    String
   role              Role        @relation(fields: [roleUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
