@@ -14,10 +14,10 @@ const main = async () => {
     await user_seed.run();
     await device_seed.run();
     await group_seed.run();
+    await user_group_seed.run();
 }
 main()
     .then(async () => {
-        // await user_group_seed.run();
         await prisma.$disconnect();
     })
     .catch(async (e) => {

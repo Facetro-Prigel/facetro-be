@@ -1,8 +1,49 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient();
 
-exports.run = async () =>{
+exports.run = async () => {
     const group_seed = [
+
+        {
+            name: "PRIGEL-BATCH 3",
+            device: "1A - Digital Center",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "MEDUNNES",
+            device: "1A - Digital Center",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "SPARKA",
+            device: "1A - Digital Center",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "SENTI",
+            device: "1A - Digital Center",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "FACETRO",
+            device: "1A - Digital Center",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "REMOSTO",
+            device: "1A - Digital Center",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "BIMBINGAN SKRIPSI",
+            device: "E6-FT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "LMS",
+            device: "1A - Digital Center",
+            notify_to: "198409052019031006"
+        },
         //Capstone
         {
             name: "SISTEM INTEGRATIF SMART CARD UNTUK PENGAMAN PINTU",
@@ -63,65 +104,25 @@ exports.run = async () =>{
             name: "Penerapan Pemberian makan dan pendeteksi usia hewan peliharaan otomatis menggunakan methode Fuzy logic dan YoloV5",
             device: "E6-FT",
             notify_to: "198801072022031004"
-        },
-        {
-            name: "PRIGEL-BATCH 3",
-            device: "1A - Digital Center",
-            notify_to: "198409052019031006"
-        },
-        {
-            name: "MEDUNNES",
-            device: "1A - Digital Center",
-            notify_to: "198409052019031006"
-        },
-        {
-            name: "SPARKA",
-            device: "1A - Digital Center",
-            notify_to: "198409052019031006"
-        },
-        {
-            name: "SENTI",
-            device: "1A - Digital Center",
-            notify_to: "198409052019031006"
-        },
-        {
-            name: "FACETRO",
-            device: "1A - Digital Center",
-            notify_to: "198409052019031006"
-        },
-        {
-            name: "REMOSTO",
-            device: "1A - Digital Center",
-            notify_to: "198409052019031006"
-        },
-        {
-            name: "BIMBINGAN SKRIPSI",
-            device: "E6-FT",
-            notify_to: "198409052019031006"
-        },
-        {
-            name: "LMS",
-            device: "1A - Digital Center",
-            notify_to: "198409052019031006"
         }
     ];
-    group_seed.map(async (items) => {
-        data = {
-            data:{
-                name: items.name,
-                locations: items.device,
-                users:{
-                    connect:{
-                        identityNumber: items.notify_to,
-                         
-                }},
-                device:{
-                    connect:{
-                        locations: items.device
-                }}
+    for (let i of group_seed) {
+        let data = {
+            data: {
+                name: i.name,
+                locations: i.device,
+                users: {
+                    connect: {
+                        identityNumber: i.notify_to,
+                    }
+                },
+                device: {
+                    connect: {
+                        locations: i.device
+                    }
+                }
             }
         }
         await prisma.group.create(data)
-        return data
-    });
+    }
 }

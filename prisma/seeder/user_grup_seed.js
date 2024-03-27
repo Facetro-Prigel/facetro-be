@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient();
 exports.run = async () =>{
-    const user_group=[
+    const user_groupsa=[
         {
             nim: "4612421017",
             project:["LMS","PRIGEL-BATCH 3"]
@@ -53,10 +53,10 @@ exports.run = async () =>{
         {
             nim: "5301421052",
             project:["SPARKA","PRIGEL-BATCH 3"]
-        },
+         },
     ]
-    user_group.map(async (items) => {
-        data = {
+    user_groupsa.forEach(async (items) => {
+        let data = {
             where: {
                 identityNumber: items.nim,
               },
