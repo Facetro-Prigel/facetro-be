@@ -39,7 +39,6 @@ exports.run = async () =>{
             device: "Presensi Gedung E6",
             notify_to: "196306281990021001"
         },
-
         {
             name: "Alat bantu monitor disabilitas",
             device: "Presensi Gedung E11",
@@ -60,7 +59,6 @@ exports.run = async () =>{
             device: "Presensi Gedung E6",
             notify_to: "198801072022031004"
         },
-
         {
             name: "PRIGEL-BATCH 3",
             device: "Ruang 1A",

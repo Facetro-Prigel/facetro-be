@@ -22,6 +22,8 @@ model User {
   identityNumber String    @unique   
   password       String     
   email          String    @unique
+  batch          Int?
+  program_study  String? 
   avatar         String?
   phoneNumber Int?
   telegramId     Int?
