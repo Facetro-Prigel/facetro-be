@@ -8,7 +8,7 @@
     "serve": "node app.js"
   },
   "prisma": {
-    "seed": "node prisma/intial_seed.js"
+    "seed": "node prisma/seeder/intial_seed.js"
   },
   "keywords": [],
   "author": "",

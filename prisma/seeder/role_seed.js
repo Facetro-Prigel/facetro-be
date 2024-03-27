@@ -56,14 +56,11 @@ exports.run = async () =>{
         }
     })
     const lecturePermission = [
-        // User
         'user_get',
         'user_get_multi',
-        // Group
         'group_update',
         'group_get',
         'group_get_multi',
-        // Asign
         'asign_user_to_group',
         'log_anywhere'
     ]

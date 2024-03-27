@@ -56,6 +56,8 @@ model Device {
   name        String   @unique
   locations   String
   ip_address  String?
+  token       String   @default(uuid())
+  secret      String
   groups      Group[]
   log         Log[]  
 }
@@ -78,7 +80,6 @@ model Log {
   bbox        Json   
   signature   String     
   createdAt   DateTime    @default(now())
-
   user        User        @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   userUuid    String
   device      Device      @relation(fields: [deviceUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
