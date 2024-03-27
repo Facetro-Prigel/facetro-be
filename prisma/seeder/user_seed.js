@@ -108,11 +108,95 @@ exports.run = async () => {
     });
     const prigel_user_seed = [
         {
-            identityNumber: "197808222003121002",
-            name: "Dr. Feddy Setio Pribadi, S.Pd., M.T.",
-            email: "feddy.setio@mail.unnes.ac.id",
+            identityNumber: "4612421017",
+            name: "LUTHFIYANTO",
+            email: "luthfiyantooo@students.unnes.ac.id",
             batch: 2021,
-            program_study: "sasas"
+            program_study: "Sistem Informasi"
+        },
+        {
+            identityNumber: "4611421040",
+            name: "ROBERT PANCA R. SIMANJUNTAK",
+            email: "simanjuntak101001@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "4611421013",
+            name: "HILMI SYAMSUDIN",
+            email: "hilmisyamsudin@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "4611421026",
+            name: "BURHAN AHMAD",
+            email: "bur3112003@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "4611421104",
+            name: "REYHAN HERDIYANTO",
+            email: "reyhanherdiyanto180603@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "4612421007",
+            name: "IKHSAN RAHMATDHANU",
+            email: "ikhsanrahmatdhanu@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Sistem Informasi"
+        },
+        {
+            identityNumber: "4611421112",
+            name: "ARI FARHANSYACH DIRAJA",
+            email: "arifarhansyachdiraja@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "4611421093",
+            name: "MICHAEL JONATHAN PANJAITAN",
+            email: "michaelpanjaitan13@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "4611421091",
+            name: "ANGGITO WAHYU ADI",
+            email: "itoadi2002@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "5302421061",
+            name: "DIMAS SAKHA FAUZI",
+            email: "zenox2511@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Pendidikan Teknik Informatika dan Komputer"
+        },
+        {
+            identityNumber: "4611421029",
+            name: "KEVYN ALIFIAN HERNANDA WIBOWO",
+            email: "kevinalifian2802@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Informatika"
+        },
+        {
+            identityNumber: "5312421023",
+            name: "AZRUL HANIF DINOFA",
+            email: "azrulretropus200@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Teknik Komputer"
+        },
+        {
+            identityNumber: "5301421052",
+            name: "NURUL HADI MUSTOFA",
+            email: "nurulhadimustofa@students.unnes.ac.id",
+            batch: 2021,
+            program_study: "Pendidikan Teknik Elektro"
         }
     ]
     prigel_user_seed.map(async (items) => {
@@ -123,14 +207,14 @@ exports.run = async () => {
                 name: items.name,
                 identityNumber: items.identityNumber,
                 password: await generatePassword(password),
-                batch:,
-                program_study:, 
+                batch: items.batch,
+                program_study:items.program_study, 
                 email: items.identityNumber,
                 roleuser: {
                     create: {
                         role: {
                             connect: {
-                                guardName: 'lecture',
+                                guardName: 'student',
                             }
                         }
                     }
