@@ -1,11 +1,5 @@
 const { PrismaClient } = require('@prisma/client')
-const bcrypt = require('bcrypt');;
 const prisma = new PrismaClient();
-
-const generatePassword = async (password) => {
-    const salt = await bcrypt.genSalt(14);
-    return await bcrypt.hash(password, salt);
-}
 exports.run = async () =>{
     const user_group=[
         {
@@ -54,11 +48,28 @@ exports.run = async () =>{
         }, 
         {
             nim: "5312421023",
-            project:["SPARKA","PRIGEL-BATCH 3", "Sistem Cerdas safety property management pada wearpack safety dalam keselamatan kerja"]
+            project:["SPARKA", "PRIGEL-BATCH 3", "Sistem Cerdas safety property management pada wearpack safety dalam keselamatan kerja"]
         },
         {
             nim: "5301421052",
-            project:["SPARKA","PRIGEL-BATCH 3", "Sistem Cerdas safety property management pada wearpack safety dalam keselamatan kerja"]
+            project:["SPARKA","PRIGEL-BATCH 3"]
         },
     ]
+    user_group.map(async (items) => {
+        data = {
+            where: {
+                identityNumber: items.nim,
+              },
+              data: {
+                usergroup:{
+                    create: items.project.map((projectItems) => {
+                        console.log(projectItems)
+                        return {group: {connect: {name: projectItems}}}
+                    })
+                },
+              },
+        }
+        await prisma.user.update(data)
+        return data
+    });
 }

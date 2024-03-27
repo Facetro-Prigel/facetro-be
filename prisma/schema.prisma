@@ -30,7 +30,6 @@ model User {
   nfc_data       String?
   createdAt      DateTime   @default(now())
   modifiedAt     DateTime   @default(now())
-
   groups          Group[]
   usergroup       UserGroup[]
   log             Log[]   
@@ -54,8 +53,8 @@ model Group {
 
 model Device {
   uuid        String   @id @default(uuid()) @map(name: "uuid")
-  name        String   @unique
-  locations   String
+  name        String
+  locations   String   @unique
   ip_address  String?
   token       String   @default(uuid())
   secret      String
@@ -123,7 +122,6 @@ model Permission {
   description   String?  @db.Text()
   createdAt     DateTime @default(now())
   modifiedAt    DateTime @default(now())
-
   permisionrole   PermissionRole[]
   permissionUser  PermissionUser[]
 }
