@@ -106,4 +106,38 @@ exports.run = async () => {
         await prisma.user.create(data)
         return data
     });
+    const prigel_user_seed = [
+        {
+            identityNumber: "197808222003121002",
+            name: "Dr. Feddy Setio Pribadi, S.Pd., M.T.",
+            email: "feddy.setio@mail.unnes.ac.id",
+            batch: 2021,
+            program_study: "sasas"
+        }
+    ]
+    prigel_user_seed.map(async (items) => {
+        let password = items.name.replace('Dr. ', '').replace(',', '').split(" ")[0]+"2023"
+        console.log(items.name, items.identityNumber, password)
+        data = {
+            data:{
+                name: items.name,
+                identityNumber: items.identityNumber,
+                password: await generatePassword(password),
+                batch:,
+                program_study:, 
+                email: items.identityNumber,
+                roleuser: {
+                    create: {
+                        role: {
+                            connect: {
+                                guardName: 'lecture',
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        await prisma.user.create(data)
+        return data
+    });
 }
