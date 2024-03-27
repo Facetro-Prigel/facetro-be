@@ -43,7 +43,6 @@ model Group {
   uuid       String    @id @default(uuid()) @map(name: "uuid")
   name       String    @unique
   locations  String
-
   //one-to-many
   users      User    @relation(fields: [notify_to], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   notify_to  String

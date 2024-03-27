@@ -25,6 +25,11 @@ exports.run = async () =>{
             notify_to: "198303072012121004"
         },
         {
+            name: "Sistem Cerdas safety property management pada wearpack safety dalam keselamatan kerja",
+            device: "Presensi Gedung E11",
+            notify_to: "198802102018031001"
+        },
+        {
             name: "Teknologi Smart Home Berbasis Suara untuk Kontrol Pencahayaan Ramah Disabilitas",
             device: "Presensi Gedung E11",
             notify_to: "197808222003121002"
@@ -70,6 +75,26 @@ exports.run = async () =>{
             notify_to: "198409052019031006"
         },
         {
+            name: "MEDUNNES",
+            device: "Ruang 1A",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "SPRAKA",
+            device: "Ruang 1A",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "SENTI",
+            device: "Ruang 1A",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "FACETRO",
+            device: "Ruang 1A",
+            notify_to: "198409052019031006"
+        },
+        {
             name: "REMOSTO",
             device: "Ruang 1A",
             notify_to: "198409052019031006"
@@ -78,6 +103,21 @@ exports.run = async () =>{
             name: "BIMBINGAN SKRIPSI",
             device: "Presensi Gedung E6",
             notify_to: "198409052019031006"
+        },
+        {
+            name: "LMS",
+            device: "Ruang 1A",
+            notify_to: "198409052019031006"
         }
-    ]
+    ];
+    group_seed.map(async (items) => {
+        data = {
+            data:{
+                name: items.name,
+                locations: items.device,
+            }
+        }
+        await prisma.group.create(data)
+        return data
+    });
 }

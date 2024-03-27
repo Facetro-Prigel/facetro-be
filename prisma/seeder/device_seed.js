@@ -12,16 +12,16 @@ exports.run = async () =>{
             {
                 name: "Presensi Gedung E11",
                 locations: "E11-FT", 
-                secret: generatePassword("PresensiGedungE112024")
+                secret: await generatePassword("PresensiGedungE112024")
             },{
                 name: "Presensi Gedung E6",
                 locations: "E6-FT", 
-                secret: generatePassword("PresensiGedungE62024")
+                secret: await generatePassword("PresensiGedungE62024")
             },
             {
                 name: "Ruang 1A",
                 locations: "1A - Digital Center", 
-                secret: generatePassword("Ruang1A2024")
+                secret: await generatePassword("Ruang1A2024")
             }
         ]
     })
