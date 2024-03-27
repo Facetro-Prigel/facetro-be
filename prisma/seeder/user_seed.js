@@ -13,6 +13,8 @@ exports.run = async () => {
             identityNumber: "5312421026",
             password: await generatePassword("Leb4hG@nt3ng"),
             email: "xmod3905@students.unnes.ac.id",
+            batch: "2021",
+            program_study: "Teknik Komputer",
             roleuser: {
                 create: {
                     role: {
