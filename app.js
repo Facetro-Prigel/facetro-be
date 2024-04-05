@@ -1,55 +1,61 @@
 const express = require('express');
-const path = require('path');
 const bodyParser = require('body-parser');
 const {PrismaClient} =require('@prisma/client')
+const middleware = require('./middleware')
 const app = express();
 app.use(bodyParser.json());
-const prisma= new PrismaClient()
+const prisma= new PrismaClient(); 
+const dotenv = require('dotenv');
+// get config vars
+dotenv.config();
+const allRoutes = require("./routes");
+app.use(allRoutes);
+
 
 const hapus = async (req, res, model) =>{
   const id = req.params.uuid
   const call = eval('prisma.'+model)
-  const result = await call.delete({
+  const results = await call.delete({
       where:{
         uuid:id
     }
   });
-  res.send(result);
+  res.send(results);
 }
 
 const tambah = async (req, res, model) =>{
   const id = req.body
   const call = eval('prisma.'+model)
-  const result = await call.create({
+  const results = await call.create({
     data:id
   })
-  res.send(result);
+  res.send(results);
 }
 
 const perbarui = async (req, res, model) => {
   const id = req.params.uuid;
   const post = req.body;
   const call = eval('prisma.' + model);
-  const result = await call.update({
+  const results = await call.update({
     where: { uuid: id },
     data: post
   });
-  res.send(result);
+  res.send(results);
 };
 
 const tampilkan = async (req, res, model) => {
   const id = req.params.uuid;
   const call = eval('prisma.' + model);
-  const result = await call.findUnique({
+  const results = await call.findUnique({
     where: { uuid: id }
   });
-  res.send(result);
+  res.send(results);
 };
 
 const tampilkansemua = async (req, res, model) => {
   const call = eval('prisma.' + model);
-  const result = await call.findMany();
-  res.send(result);
+  const results = await call.findMany();
+  res.send(results);
 };
 
 const method = ['user', 'role', 'permission', 'group', 'device'];
@@ -72,39 +78,10 @@ method.forEach(element => {
     }
   });
 });
-app.get('/test', async (req, res) => {
-  // const result = await prisma.user.create({
-  //   data: {
-  //     name: 'Muhammad Iqbal',
-  //     nim: 5312421026,
-  //     password: 'testpassword',
-  //     email: 'xmod3905@students.unnes.ac.id',
-  //     roleuser : {
-  //       create: {
-  //         role: {
-  //           create:{
-  //             name:'Super Admin',
-  //             guardName:'super_admin',
-  //             description: 'like a god at this system that can do anyting'
-  //           }
-  //         }
-  //       }
-  //     }
-  // }})
 
-  const result = await prisma.role.findUnique({
-    where: {
-      guardName: 'super_admin',
-    },select: {
-      uuid: true
-    },
-  })
-  console.info(result.uuid)
-  res.json({'status':result.uuid, });
-});
 app.get('/',(req, res) => {
-  res.send('Kamu terhubung kok, silahkan kulik lebih lanjut');
+  res.json({msg:'Hello!'});
 });
-app.listen(3000, () => {
-  console.log("Aplikasi berjalan di port 3000");
+app.listen(process.env.PORT, () => {
+  console.log(`Aplikasi berjalan di port ${ process.env.PORT }`);
 });

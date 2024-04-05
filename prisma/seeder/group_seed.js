@@ -3,7 +3,6 @@ const prisma = new PrismaClient();
 
 exports.run = async () => {
     const group_seed = [
-
         {
             name: "PRIGEL-BATCH 3",
             device: "1A - Digital Center",

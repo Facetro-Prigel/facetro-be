@@ -56,8 +56,7 @@ model Device {
   name        String
   locations   String   @unique
   ip_address  String?
-  token       String   @default(uuid())
-  secret      String
+  token       String?  @unique
   groups      Group[]
   log         Log[]  
 }

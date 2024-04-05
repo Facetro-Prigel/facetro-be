@@ -37,10 +37,10 @@ CREATE TABLE `Device` (
     `name` VARCHAR(191) NOT NULL,
     `locations` VARCHAR(191) NOT NULL,
     `ip_address` VARCHAR(191) NULL,
-    `token` VARCHAR(191) NOT NULL,
-    `secret` VARCHAR(191) NOT NULL,
+    `token` VARCHAR(191) NULL,
 
-    UNIQUE INDEX `Device_name_key`(`name`),
+    UNIQUE INDEX `Device_locations_key`(`locations`),
+    UNIQUE INDEX `Device_token_key`(`token`),
     PRIMARY KEY (`uuid`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

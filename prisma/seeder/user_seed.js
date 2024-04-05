@@ -82,8 +82,7 @@ exports.run = async () => {
             email: "abdurrakhmanhamid@mail.unnes.ac.id"
         }
     ]
-
-    lecture_user_seed.map(async (items) => {
+    for (let items of lecture_user_seed) {
         let password = items.name.replace('Dr. ', '').replace(',', '').split(" ")[0]+"2023"
         console.log(items.name, items.identityNumber, password)
         data = {
@@ -104,8 +103,8 @@ exports.run = async () => {
             }
         }
         await prisma.user.create(data)
-        return data
-    });
+    }
+    
     const prigel_user_seed = [
         {
             identityNumber: "4612421017",
@@ -202,207 +201,207 @@ exports.run = async () => {
             identityNumber: "5312421019",
             name: "Erika Cindyana Mahesti",
             email: "kacin691@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421003",
             name: "Arvina Rizqi Nurul'aini",
             email: "arvinarizqi@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421031",
             name: "Rafik Kladius",
             email: "rafikcladius69@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421009",
             name: "Irfan Alfian Rizqi ",
             email: "irfanalfianrizqi@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421030",
             name: "Niko Andriano",
             email: "nikoandriano230503@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421018",
             name: "Yohanes Batara Setya",
             email: "yohanesbatarasetya@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421025",
             name: "Alif Krisnanda Nurhuda Rahardian",
             email: "alifkrisnanda023@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5311419035",
             name: "Mochammad Wildan Mochollad",
             email: "wildan1422m@students.unnes.ac.id",
-            batch: "2019",
+            batch: 2019,
             programStudy: "Teknik Elektro",
         },
         {
             identityNumber: "5302420041",
             name: "Zidan Vieri Wijaya",
             email: "zidanvieri@students.unnes.ac.id",
-            batch: "2020",
+            batch: 2020,
             programStudy: "Pendidikan Teknik Informatika dan Komputer",
         },
         {
             identityNumber: "5312421017",
             name: "Alena Ghinna Kirana",
             email: "alenaghinn13@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421020",
             name: "Ryandi Kresna Anugerah",
             email: "ryandikresna@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421008",
             name: "Mohammad Alvin Fajri",
             email: "alvinfajri200@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5302418037",
             name: "Anang Ma'ruf",
             email: "mgnana@students.unnes.ac.id",
-            batch: "2018",
+            batch: 2018,
             programStudy: "Pendidikan Teknik Informatika dan Komputer",
         },
         {
             identityNumber: "5302420049",
             name: "RIZKI ABDILLAH",
             email: "rizkiabd@students.unnes.ac.id",
-            batch: "2020",
+            batch: 2020,
             programStudy: "Pendidikan Teknik Informatika dan Komputer",
         },
         {
             identityNumber: "5302418024",
             name: "IZZATUL JANNAH",
             email: "izzatuljnh@students.unnes.ac.id",
-            batch: "2018",
+            batch: 2018,
             programStudy: "Pendidikan Teknik Informatika dan Komputer",
         },
         {
             identityNumber: "5312421016",
             name: "Septian Akbar Noor Wahyu Hardi",
             email: "septianakbarr92@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421024",
             name: "Muhammad Hilmy Herdiansyah",
             email: "hilmyherdiansyah@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421032",
             name: "Muhammad Pahlevi Adinugraha ",
             email: "pahleviadinugraha2@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5311420038",
             name: "Hanna Naili Syifa",
             email: "hannasyifa06@students.unnes.ac.id",
-            batch: "2020",
+            batch: 2020,
             programStudy: "Teknik Elektro",
         },
         {
             identityNumber: "5312421002",
             name: "Arya Isva Ramdhan Pratama",
             email: "aryaramdhan27@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421010",
             name: "Widiyanto",
             email: "instinctjago41@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421022",
             name: "Ninda Yulia Dwi Rahmawati",
             email: "nindayulia@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5311420062",
             name: "Juan Aditya",
             email: "juanaditya75@students.unnes.ac.id",
-            batch: "2020",
+            batch: 2020,
             programStudy: "Teknik Elektro",
         },
         {
             identityNumber: "5301420022",
             name: "Rizal Rezianto",
             email: "rizalrezianto14@students.unnes.ac.id",
-            batch: "2020",
+            batch: 2020,
             programStudy: "Pendidikan Teknik Elektro",
         },
         {
             identityNumber: "5312421029",
             name: "Mohammad Maulana Maghribi ",
             email: "aulanamaghribi@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5302420016",
             name: "Tia Rosalita",
             email: "tiarosalita06@students.unnes.ac.id",
-            batch: "2020",
+            batch: 2020,
             programStudy: "Pendidikan Teknik Informatika dan Komputer",
         },
         {
             identityNumber: "5311420058",
             name: "Ridho Bagus Nugroho",
             email: "ridhobagusn21@students.unnes.ac.id",
-            batch: "2020",
+            batch: 2020,
             programStudy: "Teknik Elektro",
         },
         {
             identityNumber: "5312421015",
             name: "Valdi Dhani Pratama",
             email: "Dhanivaldi0223@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         },
         {
             identityNumber: "5312421004",
             name: "Syaiful Malik Yusuf Abdullah",
             email: "syaifilabdullah31@students.unnes.ac.id",
-            batch: "2021",
+            batch: 2021,
             programStudy: "Teknik Komputer",
         }
     ]
-    prigel_user_seed.map(async (items) => {
+    for (let items of prigel_user_seed) {
         let password = items.name.replace('Dr. ', '').replace(',', '').split(" ")[0]+"2023"
         console.log(items.name, items.identityNumber, password)
         data = {
@@ -410,8 +409,6 @@ exports.run = async () => {
                 name: items.name,
                 identityNumber: items.identityNumber,
                 password: await generatePassword(password),
-                batch: items.batch,
-                program_study:items.program_study, 
                 email: items.identityNumber,
                 roleuser: {
                     create: {
@@ -425,6 +422,5 @@ exports.run = async () => {
             }
         }
         await prisma.user.create(data)
-        return data
-    });
+    }
 }
