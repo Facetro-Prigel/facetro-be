@@ -7,16 +7,19 @@ exports.run = async () =>{
             {
                 name: "Presensi Gedung E11",
                 locations: "E11-FT",
-                token: random.generateString(7)
+                token: random.generateString(7),
+                identity: await random.generatePassword(random.generateString(20))
             },{
                 name: "Presensi Gedung E6",
                 locations: "E6-FT", 
-                token: random.generateString(7)
+                token: random.generateString(7),
+                identity: await random.generatePassword(random.generateString(20))
             },
             {
                 name: "Ruang 1A",
                 locations: "1A - Digital Center", 
-                token: random.generateString(7)
+                token: random.generateString(7),
+                identity: await random.generatePassword(random.generateString(20))
             }
         ]
     })

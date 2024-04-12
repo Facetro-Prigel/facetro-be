@@ -1,5 +1,6 @@
 
 const jwt = require("jsonwebtoken");
+const bcrypt = require('bcrypt');
 module.exports = {
 generateString: (length) => {
     let result = '';
@@ -12,8 +13,14 @@ generateString: (length) => {
     }
     return result;
 },
-
-generateAccessToken: (username) =>{
-  return jwt.sign(username, process.env.SECRET_TOKEN, { expiresIn: '14d' });
+generatePassword: async (password, round=14) => {
+  const salt = await bcrypt.genSalt(round);
+  return await bcrypt.hash(password, salt);
+},
+generateZero: (number)=>{
+  return number < 10 ? "0"+number : number;
+},
+generateAccessToken: (username, secretToken = process.env.SECRET_TOKEN) =>{
+  return jwt.sign(username, secretToken, { expiresIn: '14d' });
  }
 }

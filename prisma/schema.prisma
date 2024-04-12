@@ -25,9 +25,10 @@ model User {
   batch          Int?
   program_study  String? 
   avatar         String?
+  signature      String?   @db.Text() 
   phoneNumber Int?
   telegramId     Int?
-  nfc_data       String?
+  nfc_data       String?  @unique
   createdAt      DateTime   @default(now())
   modifiedAt     DateTime   @default(now())
   groups          Group[]
@@ -57,6 +58,7 @@ model Device {
   locations   String   @unique
   ip_address  String?
   token       String?  @unique
+  identity    String
   groups      Group[]
   log         Log[]  
 }
@@ -77,7 +79,7 @@ model Log {
   type        absen     // Assuming 'type' is a string field for the type of log
   imagePath   String     @db.VarChar(255) // Assuming 'image_path' is a varchar field
   bbox        Json   
-  signature   String     
+  signature   String      @db.Text()
   createdAt   DateTime    @default(now())
   user        User        @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   userUuid    String

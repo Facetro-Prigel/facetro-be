@@ -1,17 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
-const generatePassword = async (password) => {
-    const salt = await bcrypt.genSalt(14);
-    return await bcrypt.hash(password, salt);
-}
+const genPass = require('../../helper/generator')
 exports.run = async () => {
     const user_seed = await prisma.user.create({
         data:
         {
             name: "Muhammad Iqbal",
             identityNumber: "5312421026",
-            password: await generatePassword("Leb4hG@nt3ng"),
+            password: await genPass.generatePassword("Leb4hG@nt3ng"),
             email: "xmod3905@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Komputer",
@@ -32,7 +28,7 @@ exports.run = async () => {
         {
             name: "Dr. Anan Nugroho, S.T., M.Eng.",
             identityNumber: "198409052019031006",
-            password: await generatePassword("Anan2024"),
+            password: await genPass.generatePassword("Anan2024"),
             email: "anannugroho@mail.unnes.ac.id",
             roleuser: {
                 create: {
@@ -89,7 +85,7 @@ exports.run = async () => {
             data:{
                 name: items.name,
                 identityNumber: items.identityNumber,
-                password: await generatePassword(password),
+                password: await genPass.generatePassword(password),
                 email: items.identityNumber,
                 roleuser: {
                     create: {
@@ -408,7 +404,7 @@ exports.run = async () => {
             data:{
                 name: items.name,
                 identityNumber: items.identityNumber,
-                password: await generatePassword(password),
+                password: await genPass.generatePassword(password),
                 email: items.identityNumber,
                 roleuser: {
                     create: {
