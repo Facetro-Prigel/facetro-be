@@ -86,7 +86,7 @@ exports.run = async () => {
                 name: items.name,
                 identityNumber: items.identityNumber,
                 password: await genPass.generatePassword(password),
-                email: items.identityNumber,
+                email: items.email,
                 roleuser: {
                     create: {
                         role: {
@@ -405,7 +405,7 @@ exports.run = async () => {
                 name: items.name,
                 identityNumber: items.identityNumber,
                 password: await genPass.generatePassword(password),
-                email: items.identityNumber,
+                email: items.email,
                 roleuser: {
                     create: {
                         role: {
