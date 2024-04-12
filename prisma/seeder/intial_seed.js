@@ -7,6 +7,7 @@ const user_seed = require('./user_seed')
 const device_seed = require('./device_seed')
 const group_seed = require('./group_seed')
 const user_group_seed = require('./user_grup_seed')
+const signiture_seed = require('./user_signature_seed')
 
 const main = async () => {
     await permision_seed.run();
@@ -15,6 +16,7 @@ const main = async () => {
     await device_seed.run();
     await group_seed.run();
     await user_group_seed.run();
+    await signiture_seed.run();
 }
 main()
     .then(async () => {

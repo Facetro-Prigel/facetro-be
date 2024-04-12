@@ -23,10 +23,12 @@ model User {
   password       String     
   email          String    @unique
   batch          Int?
+  birtday        DateTime? @db.Date()
   program_study  String? 
+  bbox           Json?
   avatar         String?
   signature      String?   @db.Text() 
-  phoneNumber Int?
+  phoneNumber    String?
   telegramId     Int?
   nfc_data       String?  @unique
   createdAt      DateTime   @default(now())

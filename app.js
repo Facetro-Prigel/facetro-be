@@ -2,15 +2,16 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const {PrismaClient} =require('@prisma/client')
 const middleware = require('./middleware')
-const app = express();
-app.use(bodyParser.json());
-const prisma= new PrismaClient(); 
+const allRoutes = require("./routes");
 const dotenv = require('dotenv');
+const app = express();
+const prisma= new PrismaClient(); 
 // get config vars
 dotenv.config();
-const allRoutes = require("./routes");
+app.use("/photos", express.static('photos'))
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
-
 
 const hapus = async (req, res, model) =>{
   const id = req.params.uuid

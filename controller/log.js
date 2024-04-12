@@ -1,12 +1,17 @@
 const { PrismaClient } = require('@prisma/client')
 const generator = require('../helper/generator')
+const utils = require('../helper/utils')
+const axios = require('axios')
 const prisma = new PrismaClient()
 module.exports = {
     log: async (req, res) => {
         let body = req.body
         let identity = String(body.identity)
+        let image = body.image
         let logAnywhere = false;
-        if ((Object.keys(body).length == 1) && (body.identity != undefined)) {
+        if ((Object.keys(body).length == 2) && (body.identity != undefined)) {
+            requestImagePath = `photos/${generator.generateString(23)}.jpg`
+            utils.saveImage(image, requestImagePath)
             identity = identity.replace(/[^A-F0-9]/g, '')
             isExist = await prisma.user.findFirst({
                 where: {
@@ -114,7 +119,7 @@ module.exports = {
             let logData = {
                 userUuid: isExist.uuid,
                 bbox: ["bbox"],
-                imagePath: "imagePath",
+                imagePath: requestImagePath,
                 deviceUuid: req.device.uuid,
                 signature: "signature||"+generator.generateString(35),
                 createdAt: now
