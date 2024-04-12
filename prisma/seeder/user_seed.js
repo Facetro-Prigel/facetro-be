@@ -75,7 +75,7 @@ exports.run = async () => {
         {
             identityNumber: "198801072022031004",
             name: "Syahroni Hidayat, S.T., M.Eng.",
-            email: "abdurrakhmanhamid@mail.unnes.ac.id"
+            email: "muh.iqbalg1@gmail.com"
         }
     ]
     for (let items of lecture_user_seed) {
