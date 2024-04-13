@@ -150,7 +150,6 @@ module.exports = {
                     if(ml_result.isMatch){
                         break
                     }
-
                 }catch(e){
                     return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!", code: 400 })
                 }
