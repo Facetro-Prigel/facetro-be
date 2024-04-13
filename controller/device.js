@@ -3,12 +3,15 @@ const generator = require('../helper/generator')
 const prisma = new PrismaClient()
 module.exports = {
   register: async (req, res) => {
+    if(!req.body.token){
+      return res.status(400).json({ 'msg': "Request Salah" }) 
+    }
     const results = await prisma.device.findUnique({
       where: {
         token: req.body.token,
       }
     })
-    if (!results) { return res.send({ 'msg': "Token Tidak Ditemuakan" }, 404) }
+    if (!results) { return res.status(404).json({ 'msg': "Token Tidak Ditemuakan" }) }
     let identityKey = generator.generateString(10)
     let token = generator.generateAccessToken({ uuid: results.uuid, identityKey: identityKey }, process.env.SECRET_DEVICE_TOKEN)
     await prisma.device.update({

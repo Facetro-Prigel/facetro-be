@@ -1,13 +1,15 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const {PrismaClient} =require('@prisma/client')
-const middleware = require('./middleware')
+const middleware = require('./middleware');
 const allRoutes = require("./routes");
 const dotenv = require('dotenv');
+var cors = require('cors');
 const app = express();
 const prisma= new PrismaClient(); 
 // get config vars
 dotenv.config();
+app.use(cors())
 app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));

@@ -1,28 +1,32 @@
-name,email,identity,batch,studyProgram,birtday,phoneNumber
-Rafik Kladius,rafikcladius69@students.unnes.ac.id,5312421031,2021,Teknik Komputer,2002-07-04T00:00:00.00Z,08998044381
-Irfan Alfian Rizqi ,irfanalfianrizqi@students.unnes.ac.id,5312421009,2021,Teknik Komputer,2003-10-22T00:00:00.00Z,085790782978
-Niko Andriano,nikoandriano230503@students.unnes.ac.id,5312421030,2021,Teknik Komputer,2003-05-23T00:00:00.00Z,0895606415240
-Yohanes Batara Setya,yohanesbatarasetya@students.unnes.ac.id,5312421018,2021,Teknik Komputer,2002-10-22T00:00:00.00Z,081296489147
-Alif Krisnanda Nurhuda Rahardian,alifkrisnanda023@students.unnes.ac.id,5312421025,2021,Teknik Komputer,2003-02-23T00:00:00.00Z,0895358646616
-Mochammad Wildan Mochollad,wildan1422m@students.unnes.ac.id,5311419035,2019,Teknik Elektro,2001-08-10T00:00:00.00Z,083837252755
-Zidan Vieri Wijaya,zidanvieri@students.unnes.ac.id,5302420041,2020,Pendidikan Teknik Informatika dan Komputer,2002-03-21T00:00:00.00Z,087728494306
-Alena Ghinna Kirana,alenaghinn13@students.unnes.ac.id,5312421017,2021,Teknik Komputer,2003-12-13T00:00:00.00Z,08975620209
-Ryandi Kresna Anugerah,ryandikresna@students.unnes.ac.id,5312421020,2021,Teknik Komputer,2003-03-27T00:00:00.00Z,082280106884
-Mohammad Alvin Fajri,alvinfajri200@students.unnes.ac.id,5312421008,2021,Teknik Komputer,2003-06-19T00:00:00.00Z,083116347880
-Anang Ma'ruf,mgnana@students.unnes.ac.id,5302418037,2018,Pendidikan Teknik Informatika dan Komputer,1999-08-08T00:00:00.00Z,0895414361896
-RIZKI ABDILLAH,rizkiabd@students.unnes.ac.id,5302420049,2020,Pendidikan Teknik Informatika dan Komputer,2002-07-05T00:00:00.00Z,085602755328
-IZZATUL JANNAH,izzatuljnh@students.unnes.ac.id,5302418024,2018,Pendidikan Teknik Informatika dan Komputer,2000-10-01T00:00:00.00Z,087732951519
-Septian Akbar Noor Wahyu Hardi,septianakbarr92@students.unnes.ac.id,5312421016,2021,Teknik Komputer,2002-02-11T00:00:00.00Z,085728844598
-Muhammad Hilmy Herdiansyah,hilmyherdiansyah@students.unnes.ac.id,5312421024,2021,Teknik Komputer,2002-01-16T00:00:00.00Z,
-Muhammad Pahlevi Adinugraha ,pahleviadinugraha2@students.unnes.ac.id,5312421032,2021,Teknik Komputer,2003-04-02T00:00:00.00Z,085692883630
-Hanna Naili Syifa',hannasyifa06@students.unnes.ac.id,5311420038,2020,Teknik Elektro,2002-09-06T00:00:00.00Z,085228911609
-Arya Isva Ramdhan Pratama,aryaramdhan27@students.unnes.ac.id,5312421002,2021,Teknik Komputer,2003-10-27T00:00:00.00Z,082328440553
-Widiyanto,instinctjago41@students.unnes.ac.id,5312421010,2021,Teknik Komputer,2003-02-13T00:00:00.00Z,085875622950
-Ninda Yulia Dwi Rahmawati,nindayulia@students.unnes.ac.id,5312421022,2021,Teknik Komputer,2002-06-07T00:00:00.00Z,085866887935
-Juan Aditya,juanaditya75@students.unnes.ac.id,5311420062,2020,Teknik Elektro,2002-02-14T00:00:00.00Z,089657049603
-Rizal Rezianto,rizalrezianto14@students.unnes.ac.id,5301420022,2020,Pendidikan Teknik Elektro,2002-02-14T00:00:00.00Z,08985238343
-Mohammad Maulana Maghribi ,aulanamaghribi@students.unnes.ac.id,5312421029,2021,Teknik Komputer,2003-05-01T00:00:00.00Z,085156695703
-Tia Rosalita,tiarosalita06@students.unnes.ac.id,5302420016,2020,Pendidikan Teknik Informatika dan Komputer,2002-02-03T00:00:00.00Z,0895379051824
-Ridho Bagus Nugroho,ridhobagusn21@students.unnes.ac.id,5311420058,2020,Teknik Elektro,2002-09-17T00:00:00.00Z,085730795461
-Valdi Dhani Pratama,Dhanivaldi0223@students.unnes.ac.id,5312421015,2021,Teknik Komputer,2003-02-23T00:00:00.00Z,083878571151
-Syaiful Malik Yusuf Abdullah,syaifilabdullah31@students.unnes.ac.id,5312421004,2021,Teknik Komputer,2000-09-20T00:00:00.00Z,085801266013
+name,email,identity,batch,studyProgram,birtday,phoneNumber,group
+Erika Cindyana Mahesti,kacin691@students.unnes.ac.id,5312421019,2019,Teknik Komputer,2001-01-18T00:00:00.00Z,6.28E+12,Rancang Bangun Pengelolaan Kolam Ikan Jarak Jauh Berbasis IoT
+Arvina Rizqi Nurul'aini,arvinarizqi@students.unnes.ac.id,5312421003,2020,Teknik Komputer,2002-07-09T00:00:00.00Z,6.28E+12,Sistem Cerdas Sarung Tangan Anti Microsleep untuk Keselamatan Pengguna Jalan
+Rafik Kladius,rafikcladius69@students.unnes.ac.id,5312421031,2021,Teknik Komputer,2002-07-04T00:00:00.00Z,6.29E+11,Sistem Smart Locker Menggunakan Teknologi NFC untuk Akses Kontrol dan Monitoring di Lingkungan Perpustakaan
+Irfan Alfian Rizqi ,irfanalfianrizqi@students.unnes.ac.id,5312421009,2021,Teknik Komputer,2003-10-22T00:00:00.00Z,6.29E+12,Sistem Smart Locker Menggunakan Teknologi NFC untuk Akses Kontrol dan Monitoring di Lingkungan Perpustakaan
+Niko Andriano,nikoandriano230503@students.unnes.ac.id,5312421030,2021,Teknik Komputer,2003-05-23T00:00:00.00Z,6.29E+13,Sistem Cerdas Sarung Tangan Anti Microsleep untuk Keselamatan Pengguna Jalan
+Yohanes Batara Setya,yohanesbatarasetya@students.unnes.ac.id,5312421018,2021,Teknik Komputer,2002-10-22T00:00:00.00Z,6.28E+12,Teknologi Smart Home Berbasis Suara untuk Kontrol Pencahayaan Ramah Disabilitas
+Alif Krisnanda Nurhuda Rahardian,alifkrisnanda023@students.unnes.ac.id,5312421025,2021,Teknik Komputer,2003-02-23T00:00:00.00Z,6.29E+13,Sistem monitoring kualitas udara berbasi IoT di lingkungan UNNES
+Mochammad Wildan Mochollad,wildan1422m@students.unnes.ac.id,5311419035,2019,Teknik Elektro,2001-08-10T00:00:00.00Z,6.28E+12,SPARKA.BIMBINGAN SKRIPSI
+Zidan Vieri Wijaya,zidanvieri@students.unnes.ac.id,5302420041,2020,Pendidikan Teknik Informatika dan Komputer,2002-03-21T00:00:00.00Z,6.29E+12,SPARKA.BIMBINGAN SKRIPSI
+Alena Ghinna Kirana,alenaghinn13@students.unnes.ac.id,5312421017,2021,Teknik Komputer,2003-12-13T00:00:00.00Z,6.29E+11,FACETRO.REMOSTO.SISTEM INTEGRATIF SMART CARD UNTUK PENGAMAN PINTU
+Ryandi Kresna Anugerah,ryandikresna@students.unnes.ac.id,5312421020,2021,Teknik Komputer,2003-03-27T00:00:00.00Z,6.28E+12,Sistem Cerdas safety property management pada wearpack safety dalam keselamatan kerja
+Mohammad Alvin Fajri,alvinfajri200@students.unnes.ac.id,5312421008,2021,Teknik Komputer,2003-06-19T00:00:00.00Z,6.28E+12,FACETRO.SISTEM INTEGRATIF SMART CARD UNTUK PENGAMAN PINTU
+Anang Ma'Ruf,mgnana@students.unnes.ac.id,5302418037,2018,Pendidikan Teknik Informatika dan Komputer,1999-08-08T00:00:00.00Z,6.29E+13,BIMBINGAN SKRIPSI
+Rizki Abdillah,rizkiabd@students.unnes.ac.id,5302420049,2020,Pendidikan Teknik Informatika dan Komputer,2002-07-05T00:00:00.00Z,6.29E+12,BIMBINGAN SKRIPSI
+Izzatul Jannah,izzatuljnh@students.unnes.ac.id,5302418024,2018,Pendidikan Teknik Informatika dan Komputer,2000-10-01T00:00:00.00Z,6.29E+12,BIMBINGAN SKRIPSI
+Septian Akbar Noor Wahyu Hardi,septianakbarr92@students.unnes.ac.id,5312421016,2021,Teknik Komputer,2002-02-11T00:00:00.00Z,6.29E+12,PENGEMBANGAN INTELLIGENT ELECTROCARDIOGRAPH PORTABLE UNTUK PEMANTAUAN DETAK JANTUNG
+Muhammad Hilmy Herdiansyah,hilmyherdiansyah@students.unnes.ac.id,5312421024,2021,Teknik Komputer,2002-01-16T00:00:00.00Z,,Teknologi Smart Home Berbasis Suara untuk Kontrol Pencahayaan Ramah Disabilitas
+Muhammad Pahlevi Adinugraha ,pahleviadinugraha2@students.unnes.ac.id,5312421032,2021,Teknik Komputer,2003-04-02T00:00:00.00Z,6.29E+12,Rancang Bangun Pengelolaan Kolam Ikan Jarak Jauh Berbasis IoT
+Hanna Naili Syifa',hannasyifa06@students.unnes.ac.id,5311420038,2020,Teknik Elektro,2002-09-06T00:00:00.00Z,6.29E+12,BIMBINGAN SKRIPSI
+Arya Isva Ramdhan Pratama,aryaramdhan27@students.unnes.ac.id,5312421002,2021,Teknik Komputer,2003-10-27T00:00:00.00Z,6.28E+12,Sistem monitoring kualitas udara berbasi IoT di lingkungan UNNES
+Widiyanto,instinctjago41@students.unnes.ac.id,5312421010,2021,Teknik Komputer,2003-02-13T00:00:00.00Z,6.29E+12,Sistem monitoring kualitas udara berbasi IoT di lingkungan UNNES
+Ninda Yulia Dwi Rahmawati,nindayulia@students.unnes.ac.id,5312421022,2021,Teknik Komputer,2002-06-07T00:00:00.00Z,6.29E+12,"Penerapan Penyortiran Sampah Plastik Otomatis Berbasis Kecerdasan Buatan dengan ROS2 menggunakan SSD(Single Shot MultiBox Detector), YOLOv5, dan Faster R-CNN Lite"
+Juan Aditya,juanaditya75@students.unnes.ac.id,5311420062,2020,Teknik Elektro,2002-02-14T00:00:00.00Z,6.29E+12,BIMBINGAN SKRIPSI
+Rizal Rezianto,rizalrezianto14@students.unnes.ac.id,5301420022,2020,Pendidikan Teknik Elektro,2002-02-14T00:00:00.00Z,6.29E+11,BIMBINGAN SKRIPSI
+Mohammad Maulana Maghribi ,aulanamaghribi@students.unnes.ac.id,5312421029,2021,Teknik Komputer,2003-05-01T00:00:00.00Z,6.29E+12,"Penerapan Penyortiran Sampah Plastik Otomatis Berbasis Kecerdasan Buatan dengan ROS2 menggunakan SSD(Single Shot MultiBox Detector), YOLOv5, dan Faster R-CNN Lite"
+Tia Rosalita,tiarosalita06@students.unnes.ac.id,5302420016,2020,Pendidikan Teknik Informatika dan Komputer,2002-02-03T00:00:00.00Z,6.29E+13,BIMBINGAN SKRIPSI
+Ridho Bagus Nugroho,ridhobagusn21@students.unnes.ac.id,5311420058,2020,Teknik Elektro,2002-09-17T00:00:00.00Z,6.29E+12,BIMBINGAN SKRIPSI
+Valdi Dhani Pratama,Dhanivaldi0223@students.unnes.ac.id,5312421015,2021,Teknik Komputer,2003-02-23T00:00:00.00Z,6.28E+12,Alat bantu monitor disabilitas
+Syaiful Malik Yusuf Abdullah,syaifilabdullah31@students.unnes.ac.id,5312421004,2021,Teknik Komputer,2000-09-20T00:00:00.00Z,6.29E+12,Alat bantu monitor disabilitas
+Veda Bezaleel,vedabezaleel@students.unnes.ac.id,4611421054,2021,Teknik Informatika,2003-08-09T00:00:00.00Z,6.29E+11,SPARKA
+Hana Aeni Mustahibah,hanaaenimustahibah@students.unnes.ac.id,5302422011,2022,Pendidikan Teknik Informatika dan Komputer,2004-01-31T00:00:00.00Z,6.29E+12,SPARKA

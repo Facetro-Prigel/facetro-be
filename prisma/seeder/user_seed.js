@@ -4,8 +4,6 @@ const genPass = require('../../helper/generator');
 const utils = require('../../helper/utils');
 const fs = require('fs');
 const csv = require('csv-parser');
-const axios = require('axios');
-const ml_url = "http://localhost:5039/"
 exports.run = async () => {
     const user_seed = await prisma.user.create({
         data:
@@ -110,7 +108,7 @@ exports.run = async () => {
     const prigel_user_seed = [
         {
             identityNumber: "4612421017",
-            name: "LUTHFIYANTO",
+            name: "Luthfiyanto",
             email: "luthfiyantooo@students.unnes.ac.id",
             batch: 2021,
             program_study: "Sistem Informasi",
@@ -118,7 +116,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421040",
-            name: "ROBERT PANCA R. SIMANJUNTAK",
+            name: "Robert Panca R. Simanjuntak",
             email: "simanjuntak101001@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -126,7 +124,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421013",
-            name: "HILMI SYAMSUDIN",
+            name: "Hilmi Syamsudin",
             email: "hilmisyamsudin@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -134,7 +132,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421026",
-            name: "BURHAN AHMAD",
+            name: "Burhan Ahmad",
             email: "bur3112003@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -142,7 +140,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421104",
-            name: "REYHAN HERDIYANTO",
+            name: "Reyhan Herdiyanto",
             email: "reyhanherdiyanto180603@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -150,7 +148,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4612421007",
-            name: "IKHSAN RAHMATDHANU",
+            name: "Ikhsan Rahmatdhanu",
             email: "ikhsanrahmatdhanu@students.unnes.ac.id",
             batch: 2021,
             program_study: "Sistem Informasi",
@@ -158,7 +156,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421112",
-            name: "ARI FARHANSYACH DIRAJA",
+            name: "Ari Farhansyach Diraja",
             email: "arifarhansyachdiraja@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -166,7 +164,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421093",
-            name: "MICHAEL JONATHAN PANJAITAN",
+            name: "Michael Jonathan Panjaitan",
             email: "michaelpanjaitan13@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -174,7 +172,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421091",
-            name: "ANGGITO WAHYU ADI",
+            name: "Anggito Wahyu Adi",
             email: "itoadi2002@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -182,7 +180,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "5302421061",
-            name: "DIMAS SAKHA FAUZI",
+            name: "Dimas Sakha Fauzi",
             email: "zenox2511@students.unnes.ac.id",
             batch: 2021,
             program_study: "Pendidikan Teknik Informatika dan Komputer",
@@ -190,7 +188,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "4611421029",
-            name: "KEVYN ALIFIAN HERNANDA WIBOWO",
+            name: "Kevyn Alifian Hernanda Wibowo",
             email: "kevinalifian2802@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Informatika",
@@ -198,7 +196,7 @@ exports.run = async () => {
         },
         {
             identityNumber: "5312421023",
-            name: "AZRUL HANIF DINOFA",
+            name: "Azrul Hanif Dinofa",
             email: "azrulretropus200@students.unnes.ac.id",
             batch: 2021,
             program_study: "Teknik Komputer",
@@ -206,27 +204,11 @@ exports.run = async () => {
         },
         {
             identityNumber: "5301421052",
-            name: "NURUL HADI MUSTOFA",
+            name: "Nurul Hadi Mustofa",
             email: "nurulhadimustofa@students.unnes.ac.id",
             batch: 2021,
             program_study: "Pendidikan Teknik Elektro",
             birtday: new Date("2002-04-24")
-        },
-        {
-            identityNumber: "5312421019",
-            name: "Erika Cindyana Mahesti",
-            email: "kacin691@students.unnes.ac.id",
-            batch: 2021,
-            program_study: "Teknik Komputer",
-            birtday: new Date("2001-01-18")
-        },
-        {
-            identityNumber: "5312421003",
-            name: "Arvina Rizqi Nurul'aini",
-            email: "arvinarizqi@students.unnes.ac.id",
-            batch: 2021,
-            program_study: "Teknik Komputer",
-            birtday: new Date("2002-07-09")
         }
     ]
     for (let items of prigel_user_seed) {

@@ -85,6 +85,7 @@ model Log {
   createdAt   DateTime    @default(now())
   user        User        @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   userUuid    String
+  isMatch     Boolean    @default(false)
   device      Device      @relation(fields: [deviceUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   deviceUuid  String
 }
