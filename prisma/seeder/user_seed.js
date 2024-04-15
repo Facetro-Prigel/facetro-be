@@ -15,6 +15,7 @@ exports.run = async () => {
             birtday: new Date("2003-05-01"),
             batch: 2021,
             program_study: "Teknik Komputer",
+            telegramToken: "cZQJlk8Ap0",
             roleuser: {
                 create: {
                     role: {
@@ -34,6 +35,7 @@ exports.run = async () => {
             identityNumber: "198409052019031006",
             password: await genPass.generatePassword("Anan2024"),
             email: "anannugroho@mail.unnes.ac.id",
+            telegramToken: "zPDHDvvvwN",
             roleuser: {
                 create: {
                     role: {
@@ -91,6 +93,7 @@ exports.run = async () => {
                 identityNumber: items.identityNumber,
                 password: await genPass.generatePassword(password),
                 email: items.email,
+                telegramToken: genPass.generateString(10),
                 roleuser: {
                     create: {
                         role: {
@@ -223,6 +226,7 @@ exports.run = async () => {
                 birtday: items.birtday ?? null,
                 batch: items.batch,
                 program_study: items.program_study,
+                telegramToken: genPass.generateString(10),
                 roleuser: {
                     create: {
                         role: {
@@ -253,6 +257,7 @@ fs.createReadStream(csvFilePath)
                 batch: parseInt(row.batch),
                 program_study: row.studyProgram,
                 phoneNumber: row.phoneNumber,
+                telegramToken: genPass.generateString(10),
                 roleuser: {
                     create: {
                         role: {

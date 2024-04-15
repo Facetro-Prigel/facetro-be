@@ -30,6 +30,7 @@ model User {
   signature      String?   @db.Text() 
   phoneNumber    String?
   telegramId     Int?
+  telegramToken  String?
   nfc_data       String?  @unique
   createdAt      DateTime   @default(now())
   modifiedAt     DateTime   @default(now())

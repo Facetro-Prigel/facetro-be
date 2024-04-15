@@ -1,6 +1,21 @@
 const fs = require('fs');
 const path = require('path');
 module.exports = {
+    arrayToHuman:(arrayData )=>{
+        if(arrayData.length==0){
+            return null
+        }
+        if(arrayData.length==1){
+            return arrayData[0]
+        }
+        const newArray = arrayData.slice(0, -1)
+        return newArray.join(', ')+", dan " + arrayData[arrayData.length-1]
+    },
+    base64ToFile:(base64String) => {
+        const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        return buffer
+    },
     saveImage: (base64String, filePath) => {
         const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
         const buffer = Buffer.from(base64Data, 'base64');

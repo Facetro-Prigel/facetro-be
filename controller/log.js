@@ -1,8 +1,11 @@
 const { PrismaClient } = require('@prisma/client')
+
 const generator = require('../helper/generator')
 const utils = require('../helper/utils')
+const { bot } = require('../helper/telegram')
 const axios = require('axios')
 const { request } = require('express')
+const { Telegraf } = require('telegraf')
 const prisma = new PrismaClient()
 const compareFace = async (base64image, dbSignature) =>{
     let bbox = []
@@ -199,10 +202,30 @@ module.exports = {
                 result.startTime = todayLog.createdAt.toISOString()
                 result.endTime = now.toISOString()
             }
-
+            
             // process create log
             await prisma.log.create({data:logData})
+            // Send to Telegram!
+            const superAdminUser = await prisma.role.findUnique({where:{
+                guardName: "super_admin"
+            }, include:{
+                roleuser:{
+                    include:{
+                        user:true
+                    }
+                }
+            }})
+            if(superAdminUser){
+                let superUsers = superAdminUser.roleuser
+                for (let user of superUsers) {
+                    if(user.user.telegramId){
+                        await bot.telegram.sendPhoto(user.user.telegramId, { source: "./"+ requestImagePath},{ caption: 'ada yang masuk' })
+                        console.log(requestImagePath)
+                    }
+                }
+            }
             return res.status(202).json({result})
+
         }
         res.status(400).json({ msg: "Request yang diminta salah", code: 400 })
     }
