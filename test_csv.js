@@ -42,11 +42,11 @@
 // getFaceSignature("inital_photos/4612421017.jpg")
 
 
-const nodemailer = require("nodemailer");
-const fs = require('fs');
+import { createTransport } from "nodemailer";
+import { readFile } from 'fs';
 
 var readHTMLFile = function(path, callback) {
-  fs.readFile(path, {encoding: 'utf-8'}, function (err, html) {
+  readFile(path, {encoding: 'utf-8'}, function (err, html) {
       if (err) {
          callback(err);                 
       }
@@ -56,7 +56,7 @@ var readHTMLFile = function(path, callback) {
   });
 };
 
-const transporter = nodemailer.createTransport({
+const transporter = createTransport({
   service: 'gmail',
   host: "smtp.gmail.email",
   port: 587,
@@ -111,7 +111,7 @@ const transporter = nodemailer.createTransport({
 // hu.sendMail({name:"Yono", email:"muh.iqbalg1@gmail.com", password:"yonomakan", token:"tokensuus"})
 
 
-const TelegramBot = require('node-telegram-bot-api');
+import TelegramBot from 'node-telegram-bot-api';
 
 // replace the value below with the Telegram token you receive from @BotFather
 const token = '6659659302:AAHaxS6PjY82SXncKhHKq-0KQasTiDZ9UnE';

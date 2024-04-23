@@ -5,6 +5,7 @@ const { message } = require('telegraf/filters')
 const prisma = new PrismaClient();
 const utils = require('../helper/utils')
 const { generateString } = require('../helper/generator')
+const role_utils = require('../helper/role_utils');
 const aboutUser = async (userUid, render = false) => {
     const result = await prisma.user.findUnique({
         where: {
@@ -81,11 +82,7 @@ const aboutUser = async (userUid, render = false) => {
             let n = 0
             for (const field in mapingResults) {
                 txt += '*' + renderFiled[n] + '*:\n'
-                if (Array.isArray(mapingResults[field])) {
-                    txt += (utils.arrayToHuman(mapingResults[field]) ?? "(Tidak Ada)") + '\n\n'
-                } else {
-                    txt += (mapingResults[field] ?? "(Tidak Ada)") + '\n\n'
-                }
+                txt += utils.arrayToHuman(mapingResults[field])+"\n\n"
                 n += 1
             }
             return txt
@@ -97,11 +94,24 @@ const aboutUser = async (userUid, render = false) => {
 const bot = new Telegraf(process.env.BOT_TOKEN);
 bot.start((ctx) => {
     ctx.reply('Selamat Datang di Sistem Presensi yang baru, Semoga Harimu menyenangkan!\nPERINGATAN! Kamu belum menghubngkan akun telegram ini dengan sistem presensi. Check Email (UNNES) untuk mengetahui caranya!')
+    if(ctx.message.message_id < 2){
+        ctx.reply(`Kamu adalah orang Pertama yang mengintegrasikan ke sistem Presensi! Yey!`)
+    }
 })
 bot.command('connect', async (ctx) => {
     var result = await prisma.user.findFirst({
         where: {
             telegramToken: ctx.payload
+        },include:{
+            usergroup: {
+                include: {
+                    group: {
+                        include: {
+                            users: true
+                        }
+                    }
+                }
+            }
         },
     })
     if (result) {
@@ -115,26 +125,56 @@ bot.command('connect', async (ctx) => {
             }
         })
         var caption = 'Akun telegram berhasil ditautkan dengan:\n'
-        caption += await aboutUser(result.uuid, true)
+        var aboutUserObj =  await aboutUser(result.uuid, true)
+        caption += aboutUserObj
         var infoChatId = 0
         var infoMsgId = 0 
         ctx.reply('Tunggu Sebentar! Sedang Mengirim Informasi!').then((e)=>{
             infoChatId = e.chat.id
             infoMsgId= e.message_id
         })
+        let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegramId')
+        let admin_users = await role_utils.getUserWithRole('admin', 'telegramId')
+        let notify_to_users = result.usergroup.map((t) => {
+            return t.group.users.telegramId
+        })
+        let notify_to = []
+        notify_to = notify_to.concat(super_admin_users,admin_users,notify_to_users)
+        notify_to = new Set(notify_to)
+        ctx.reply(aboutUserObj)
         if(result.avatar){
-            await ctx.replyWithPhoto({ source: "./" + result.avatar }, { caption: `Gambar ${result.name}` }).then((e)=>{
-                bot.telegram.deleteMessage(infoChatId, infoMsgId)
+            await ctx.replyWithPhoto({ source: "./" + result.avatar }, { caption: `Gambar ${result.name}` }).then(async (e)=>{
+                await bot.telegram.deleteMessage(infoChatId, infoMsgId)
+                for (let notify of notify_to) {
+                    if (notify) {
+                        await bot.telegram.sendPhoto(notify, { source: "./" + result.avatar }, { caption: `${result.name} sudah menghubungkan Akun telegramnya` })
+                    }
+                }
             }).catch((e)=>{
                 console.log('Error While seding Image')
             })
         }
-        await ctx.reply(caption)
+
+        for (let notify of notify_to) {
+            if (notify) {
+                await bot.telegram.sendMessage(notify, aboutUserObj+"berhasil menghubungkan akunnya dengan telegram")
+            }
+        }
     } else {
         ctx.reply(`Maaf token yang diberikan salah!`)
     }
-
 })
+
+bot.command('izin', async (ctx) => {
+    ctx.replyWithMarkdownV2("* Maaf fitur ini masih dalam pengembangan *")
+    ctx.replyWithMarkdownV2("* Fitur dirilis pada 22 April 2024 *")
+})
+
+bot.command('broadcast', async (ctx) => {
+    ctx.replyWithMarkdownV2("* Maaf fitur ini masih dalam pengembangan *")
+    ctx.replyWithMarkdownV2("* Fitur dirilis pada 29 April 2024 *")
+})
+
 bot.command('info', async (ctx) => {
     var result = await prisma.user.findFirst({
         where: {
@@ -143,19 +183,22 @@ bot.command('info', async (ctx) => {
     })
     if (result) {
         var caption = 'Akun telegram telah ditautkan dengan:\n'
-        caption += await aboutUser(result.uuid, true)
+        var aboutUserObj =  await aboutUser(result.uuid, true)
+        caption += aboutUserObj
         var infoChatId = 0
         var infoMsgId = 0 
         ctx.reply('Tunggu Sebentar! Sedang Mengirim Informasi!').then((e)=>{
             infoChatId = e.chat.id
             infoMsgId= e.message_id
         })
+        let photo = ''
         if(result.avatar){
-            await ctx.replyWithPhoto({ source: "./" + result.avatar }, { caption: `Gambar ${result.name}` }).then((e)=>{
-                bot.deleteMessage(infoChatId, infoMsgId)
+            photo = await ctx.replyWithPhoto({ source: "./" + result.avatar }, { caption: `Gambar ${result.name}` }).then((e)=>{
+                bot.telegram.deleteMessage(infoChatId, infoMsgId)
             })
         }
         await ctx.reply(caption)
+        
     } else {
         ctx.reply(`Akun ini (ID: ${ctx.chat.id}) belum tertaut dengan Sistem Presensi. Check e-mail unnes untuk informasi lebih lanjut!`)
     }

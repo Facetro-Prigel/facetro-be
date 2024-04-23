@@ -34,6 +34,7 @@ sendMail:(data)=>{
       html = html.replace("emailSEE212", data.email)
       html = html.replace("p43232sas", data.password)
       html = html.replace("t0ket3l", data.token)
+      html = html.replace("husashb", data.bimbingan)
       const info = await transporter.sendMail({
         from: '"no-replay FACETRO" <facetro.unnes@gmail.com>', // sender address
         to: data.email, // list of receivers

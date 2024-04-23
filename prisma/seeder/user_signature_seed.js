@@ -1,9 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
+const dotenv = require('dotenv');
+dotenv.config();
 const utils = require('../../helper/utils');
 const axios = require('axios');
-const ml_url = "http://localhost:5039/"
+const ml_url = process.env.ML_URL
 const prisma = new PrismaClient
 const generator = require('../../helper/generator')
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const getFaceSignature = async (file) =>{
     let bbox = []
     let base64 = ""
