@@ -167,7 +167,7 @@ bot.command('connect', async (ctx) => {
 
 bot.command('izin', async (ctx) => {
     ctx.replyWithMarkdownV2("* Maaf fitur ini masih dalam pengembangan *")
-    ctx.replyWithMarkdownV2("* Fitur dirilis pada 22 April 2024 *")
+    ctx.replyWithMarkdownV2("* Fitur dirilis pada 29 April 2024 *")
 })
 
 bot.command('broadcast', async (ctx) => {
