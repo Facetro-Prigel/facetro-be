@@ -230,13 +230,14 @@ module.exports = {
             let notify_to = []
             notify_to = notify_to.concat(super_admin_users,admin_users,notify_to_users)
             notify_to = new Set(notify_to)
-
-            if (isExist.telegramId) {
-                await bot.telegram.sendPhoto(isExist.telegramId, { source: "./" + requestImagePath }, { caption: captionThatUser })
-            }
-            for (let notify of notify_to) {
-                if (notify) {
-                    await bot.telegram.sendPhoto(notify, { source: "./" + requestImagePath }, { caption: captionForElse })
+            if (ml_result.isMatch) {
+                if (isExist.telegramId) {
+                    await bot.telegram.sendPhoto(isExist.telegramId, { source: "./" + requestImagePath }, { caption: captionThatUser })
+                }
+                for (let notify of notify_to) {
+                    if (notify) {
+                        await bot.telegram.sendPhoto(notify, { source: "./" + requestImagePath }, { caption: captionForElse })
+                    }
                 }
             }
             return res.status(202).json({ result })
