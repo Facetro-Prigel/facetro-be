@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 const utils = require('../helper/utils')
 const { generateString } = require('../helper/generator')
 const role_utils = require('../helper/role_utils');
+import { Agent } from "node:https";
 const aboutUser = async (userUid, render = false) => {
     const result = await prisma.user.findUnique({
         where: {
@@ -91,7 +92,11 @@ const aboutUser = async (userUid, render = false) => {
     }
 }
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new Telegraf(token, {
+	telegram: {
+		agent: new Agent({ keepAlive: false }),
+	},
+});
 // bot.telegram.deleteWebhook()
 bot.start((ctx) => {
     ctx.reply('Selamat Datang di Sistem Presensi yang baru, Semoga Harimu menyenangkan!\nPERINGATAN! Kamu belum menghubngkan akun telegram ini dengan sistem presensi. Check Email (UNNES) untuk mengetahui caranya!')
