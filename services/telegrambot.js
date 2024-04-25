@@ -92,12 +92,15 @@ const aboutUser = async (userUid, render = false) => {
 }
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+bot.telegramdeleteWebhook()
+bot.startPolling()
 bot.start((ctx) => {
     ctx.reply('Selamat Datang di Sistem Presensi yang baru, Semoga Harimu menyenangkan!\nPERINGATAN! Kamu belum menghubngkan akun telegram ini dengan sistem presensi. Check Email (UNNES) untuk mengetahui caranya!')
     if(ctx.message.message_id < 2){
         ctx.reply(`Kamu adalah orang Pertama yang mengintegrasikan ke sistem Presensi! Yey!`)
     }
 })
+
 bot.command('connect', async (ctx) => {
     var result = await prisma.user.findFirst({
         where: {
