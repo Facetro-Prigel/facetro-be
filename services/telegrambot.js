@@ -92,7 +92,7 @@ const aboutUser = async (userUid, render = false) => {
 }
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
-bot.telegram.deleteWebhook()
+// bot.telegram.deleteWebhook()
 bot.startPolling()
 bot.start((ctx) => {
     ctx.reply('Selamat Datang di Sistem Presensi yang baru, Semoga Harimu menyenangkan!\nPERINGATAN! Kamu belum menghubngkan akun telegram ini dengan sistem presensi. Check Email (UNNES) untuk mengetahui caranya!')
