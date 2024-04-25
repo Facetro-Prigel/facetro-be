@@ -92,7 +92,7 @@ const aboutUser = async (userUid, render = false) => {
     }
 }
 
-const bot = new Telegraf(token, {
+const bot = new Telegraf(process.env.BOT_TOKEN, {
 	telegram: {
 		agent: new Agent({ keepAlive: false }),
 	},
