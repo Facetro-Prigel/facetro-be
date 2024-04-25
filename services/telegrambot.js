@@ -94,7 +94,8 @@ const aboutUser = async (userUid, render = false) => {
 
 const bot = new Telegraf(process.env.BOT_TOKEN, {
 	telegram: {
-		agent: new Agent({ keepAlive: false }),
+        apiRoot: "http://api.telegram.org",
+		agent: new Agent({ keepAlive: false })
 	},
 });
 // bot.telegram.deleteWebhook()
