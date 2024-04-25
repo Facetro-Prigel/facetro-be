@@ -6,7 +6,6 @@ const prisma = new PrismaClient();
 const utils = require('../helper/utils')
 const { generateString } = require('../helper/generator')
 const role_utils = require('../helper/role_utils');
-const { Agent } = require("node:https");
 const aboutUser = async (userUid, render = false) => {
     const result = await prisma.user.findUnique({
         where: {
@@ -94,8 +93,7 @@ const aboutUser = async (userUid, render = false) => {
 
 const bot = new Telegraf(process.env.BOT_TOKEN, {
 	telegram: {
-        apiRoot: "http://api.telegram.org",
-		agent: new Agent({ keepAlive: false })
+        apiRoot: "http://api.telegram.org"
 	},
 });
 // bot.telegram.deleteWebhook()
