@@ -206,7 +206,18 @@ bot.command('info', async (ctx) => {
     }
 
 })
-bot.launch()
+let error_k = 0
+const launch = () =>{
+    try{
+        bot.launch()
+    }catch (e){
+        error_k += 1
+        console.log(`Tele Bot Error Percobaan ke-${error_k}`)
+        launch()
+    }
+
+}
+launch()
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'))
