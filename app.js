@@ -15,9 +15,6 @@ app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
-app.get('*', function(req, res){
-  res.status(404).send('what??? from facetro');
-});
 telegram
 // const hapus = async (req, res, model) =>{
 //   const id = req.params.uuid
