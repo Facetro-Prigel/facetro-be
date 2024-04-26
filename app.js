@@ -19,7 +19,7 @@ app.use(function(req, res, next) {
 
   // respond with html page
   if (req.accepts('html')) {
-    res.render('404 Not Found! from: FACETRO!', { url: req.url });
+    res.send('404 Not Found! from: FACETRO!', { url: req.url });
     return;
   }
 
