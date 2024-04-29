@@ -22,6 +22,18 @@ const compareFace = async (base64image, dbSignature) => {
     })
     return { isMatch: isMatch, bbox: bbox, signature: signiture }
 }
+const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) =>{
+    if (ml_result.isMatch) {
+        if (isExist.telegramId) {
+            await bot.telegram.sendPhoto(isExist.telegramId, { source: "./" + requestImagePath }, { caption: captionThatUser })
+        }
+        for (let notify of notify_to) {
+            if (notify) {
+                await bot.telegram.sendPhoto(notify, { source: "./" + requestImagePath }, { caption: captionForElse })
+            }
+        }
+    }
+}
 module.exports = {
     log: async (req, res) => {
         let body = req.body
@@ -230,15 +242,11 @@ module.exports = {
             let notify_to = []
             notify_to = notify_to.concat(super_admin_users,admin_users,notify_to_users)
             notify_to = new Set(notify_to)
-            if (ml_result.isMatch) {
-                if (isExist.telegramId) {
-                    await bot.telegram.sendPhoto(isExist.telegramId, { source: "./" + requestImagePath }, { caption: captionThatUser })
-                }
-                for (let notify of notify_to) {
-                    if (notify) {
-                        await bot.telegram.sendPhoto(notify, { source: "./" + requestImagePath }, { caption: captionForElse })
-                    }
-                }
+            try{
+                send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
+            }catch (e){
+                console.error("Eror Terjadi Ketika Mengirim Ke telegram!")
+                send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
             }
             return res.status(202).json({ result })
 
