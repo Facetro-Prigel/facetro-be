@@ -34,6 +34,18 @@ const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, ca
         }
     }
 }
+
+const handelSend2Telegram = async(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n=1) =>{
+    try{
+        await send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
+    }catch (e){
+        console.error(`Error Terjadi Ketika Mengirim Ke telegram! Percobaan ke-${n}`)
+        if(n < 6){
+            n += 1
+            await  handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n)
+        }
+    }
+}
 module.exports = {
     log: async (req, res) => {
         let body = req.body
@@ -242,12 +254,7 @@ module.exports = {
             let notify_to = []
             notify_to = notify_to.concat(super_admin_users,admin_users,notify_to_users)
             notify_to = new Set(notify_to)
-            try{
-                send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
-            }catch (e){
-                console.error("Eror Terjadi Ketika Mengirim Ke telegram!")
-                send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
-            }
+            handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
             return res.status(202).json({ result })
 
         }
