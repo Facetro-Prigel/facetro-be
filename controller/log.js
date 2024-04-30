@@ -238,12 +238,12 @@ module.exports = {
             startTimeToHuman = utils.timeToHuman(result.startTime)
 
             await prisma.log.create({ data: logData })
-            let captionThatUser = `Kamu Bertugas di ${req.device.name} berangkat pada ${startTimeToHuman}`
+            let captionThatUser = `Kamu Bertugas di ${req.device.name} presensi di ${req.device.name} berangkat pada ${startTimeToHuman}`
             captionThatUser += endCaptions ?? ''
             captionForElse = `${isExist.name} dari ${isExist.program_study} ${isExist.batch} dengan proyek:\n`
             captionForElse += utils.arrayToHuman(isExist.usergroup.map((t) => {
                 return t.group.name
-            })) + `\n berangkat pada ${startTimeToHuman}`
+            })) + `\n presensi di ${req.device.name} berangkat pada ${startTimeToHuman}`
             captionForElse += endCaptions ?? ''
             // Send to Telegram!
             let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegramId')
