@@ -76,5 +76,9 @@ module.exports = {
     seconds %= 60;
     minutes %= 60;
     return hours + " jam " + minutes + " menit " + seconds + " detik"
-  }
+  },
+    validateEmail: (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    return emailRegex.test(email);
+  },
 }

@@ -1,0 +1,21 @@
+# Development Variable
+# BOT_TOKEN="6892129187:AAFtLpMWvUb1hJsrjQH_U8iuGPZijSuvFJE"
+# DATABASE_URL="mysql://root:password@localhost:3306/presensi-baru"
+# ML_URL="http://localhost:5039/"
+
+# Emerngency Variabel
+BOT_TOKEN="7110251435:AAFmgR8H1p2l5BLEGF_CqeB6FsehHqvGlOA"
+DATABASE_URL="mysql://app:nWMuB%3FK%5EXY%265oDI@localhost:3010/presensi-baru?connection_limit=10"
+SECRET_TOKEN="4ix0tbwpy0hci7u1e5jfrxh3ea0nxzt4smt6h7jkkufd70pxrl6tns1jmx0mz6vm2l6siz"
+SECRET_DEVICE_TOKEN="3mcvop7tn8336s27hpnpylcoxcjxtwrltcsc10b01a2kmu8fk4qv6r3t0tlhu5yty6n2wz"
+PORT=3038
+ML_URL="http://localhost:5039/"
+
+
+# Productions Variabel
+# BOT_TOKEN="7110251435:AAFmgR8H1p2l5BLEGF_CqeB6FsehHqvGlOA"
+# DATABASE_URL="mysql://root:iqbalganteng@34.126.124.131:3306/presensi-baru?connection_limit=10"
+# SECRET_TOKEN="4ix0tbwpy0hci7u1e5jfrxh3ea0nxzt4smt6h7jkkufd70pxrl6tns1jmx0mz6vm2l6siz"
+# SECRET_DEVICE_TOKEN="3mcvop7tn8336s27hpnpylcoxcjxtwrltcsc10b01a2kmu8fk4qv6r3t0tlhu5yty6n2wz"
+# PORT=3039
+# ML_URL="https://103.23.100.110/"

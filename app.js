@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const {PrismaClient} =require('@prisma/client')
 const middleware = require('./middleware');
 const allRoutes = require("./routes");
-const telegram = require("./services/telegrambot");
+// const telegram = require("./services/telegrambot");
 var cors = require('cors');
 const app = express();
 const prisma= new PrismaClient(); 
@@ -15,7 +15,7 @@ app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
-telegram
+// telegram
 // const hapus = async (req, res, model) =>{
 //   const id = req.params.uuid
 //   const call = eval('prisma.'+model)
