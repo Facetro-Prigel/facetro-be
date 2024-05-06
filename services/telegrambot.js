@@ -208,14 +208,22 @@ bot.command('info', async (ctx) => {
 })
 let error_k = 0
 const launch = () =>{
-    try{
-        bot.launch()
-    }catch (e){
-        error_k += 1
-        console.log(`Tele Bot Error Percobaan ke-${error_k}`)
-        launch()
-    }
-
+    bot.launch().then(()=>{
+        console.info('Akhirnya Berhasil')
+    }).catch((e)=>{
+        console.error(`Telegram tidak aktif, dipercobaan ke-${error_k}`)
+        console.error(e)
+        if(error_k < 10){
+            launch()
+            error_k += 1
+        }else{
+            error_k = 0
+            console.info('tunggu 5 detik')
+            setTimeout(() => {
+                launch()
+            }, 5000); 
+        }
+    })
 }
 launch()
 
