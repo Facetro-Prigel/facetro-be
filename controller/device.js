@@ -23,6 +23,6 @@ module.exports = {
         identity: await generator.generatePassword(identityKey, 10),
       }
     })
-    return res.json({ 'token': token, 'name': results.name, 'uuid':  results.name});
+    return res.json({ 'token': token, 'name': results.name, 'uuid':  results.uuid});
   }
 };
