@@ -21,6 +21,7 @@ module.exports = {
       data: {
         token: generator.generateString(8),
         identity: await generator.generatePassword(identityKey, 10),
+        ip_address: req.headers['x-forwarded-for'] || req.socket.remoteAddress 
       }
     })
     return res.json({ 'token': token, 'name': results.name, 'uuid':  results.uuid});
