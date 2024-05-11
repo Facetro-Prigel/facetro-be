@@ -11,7 +11,7 @@ module.exports = {
         token: req.body.token,
       }
     })
-    if (!results) { return res.status(404).json({ 'msg': "Token Tidak Ditemuakan" }) }
+    if (!results) { return res.status(404).json({ 'msg': "Token Tidak Ditemukan" }) }
     let identityKey = generator.generateString(10)
     let token = generator.generateAccessToken({ uuid: results.uuid, identityKey: identityKey }, process.env.SECRET_DEVICE_TOKEN)
     await prisma.device.update({
