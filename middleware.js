@@ -81,7 +81,6 @@ exports.authorization = (text = '') => {
             }
           }
         })
-         
         if (!thare_premission){ 
           permission_name = await prisma.permission.findUnique({where:{guardName: text}, select:{name: true}})
           return await res.status(403).json({ msg: `Anda tidak memiliki izin untuk melakukan '${ permission_name.name ?? text }'`, code: 401 }) }

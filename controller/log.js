@@ -84,7 +84,18 @@ module.exports = {
             isCanPresenceAnyware = await prisma.user.findFirst({
                 where: {
                     uuid: isExist["uuid"],
-                    OR: [{
+                    OR: [
+            {
+              roleuser: {
+                some: {
+                  role: {
+                    is: {
+                      guardName: 'super_admin'
+                    }
+                  }
+                }
+              }
+            },{
                         permissionUser: {
                             some: {
                                 permission: {
@@ -137,12 +148,9 @@ module.exports = {
                     }
                 }
             })
-            if ((isExist["roleuser"][0]["role"]["guardName"] == "super_admin") || isCanPresenceAnyware) {
-                logAnywhere = true
-            }
             let isDeviceOk = false
             let whereCluse = {}
-            if (!logAnywhere) {
+            if (!isCanPresenceAnyware) {
                 for (let i = 0; i < isExist.usergroup.length; i++) {
                     if (isExist.usergroup[i].group.devices == req.device.uuid) {
                         isDeviceOk = true
