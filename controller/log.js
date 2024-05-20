@@ -5,6 +5,7 @@ const utils = require('../helper/utils')
 const { bot } = require('../helper/telegram')
 const axios = require('axios')
 const role_utils = require('../helper/role_utils');
+const { request } = require('express')
 const prisma = new PrismaClient()
 const compareFace = async (base64image, dbSignature) => {
     let bbox = []
@@ -22,7 +23,7 @@ const compareFace = async (base64image, dbSignature) => {
     })
     return { isMatch: isMatch, bbox: bbox, signature: signiture }
 }
-const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) =>{
+const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
     if (ml_result.isMatch) {
         if (isExist.telegramId) {
             await bot.telegram.sendPhoto(isExist.telegramId, { source: "./" + requestImagePath }, { caption: captionThatUser })
@@ -35,14 +36,14 @@ const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, ca
     }
 }
 
-const handelSend2Telegram = async(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n=1) =>{
-    try{
+const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n = 1) => {
+    try {
         await send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
-    }catch (e){
+    } catch (e) {
         console.error(`Error Terjadi Ketika Mengirim Ke telegram! Percobaan ke-${n}`)
-        if(n < 6){
+        if (n < 6) {
             n += 1
-            await  handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n)
+            await handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n)
         }
     }
 }
@@ -85,37 +86,38 @@ module.exports = {
                 where: {
                     uuid: isExist["uuid"],
                     OR: [
-            {
-              roleuser: {
-                some: {
-                  role: {
-                    is: {
-                      guardName: 'super_admin'
-                    }
-                  }
-                }
-              }
-            },{
-                        permissionUser: {
-                            some: {
-                                permission: {
-                                    is: {
-                                        guardName: "log_anywhere"
+                        {
+                            roleuser: {
+                                some: {
+                                    role: {
+                                        is: {
+                                            guardName: 'super_admin'
+                                        }
                                     }
                                 }
                             }
-                        }
-                    },
-                    {
-                        roleuser: {
-                            some: {
-                                role: {
-                                    is: {
-                                        permisionrole: {
-                                            some: {
-                                                permission: {
-                                                    is: {
-                                                        guardName: "log_anywhere"
+                        }, {
+                            permissionUser: {
+                                some: {
+                                    permission: {
+                                        is: {
+                                            guardName: "log_anywhere"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            roleuser: {
+                                some: {
+                                    role: {
+                                        is: {
+                                            permisionrole: {
+                                                some: {
+                                                    permission: {
+                                                        is: {
+                                                            guardName: "log_anywhere"
+                                                        }
                                                     }
                                                 }
                                             }
@@ -124,7 +126,6 @@ module.exports = {
                                 }
                             }
                         }
-                    }
                     ]
                 },
                 include: {
@@ -195,7 +196,7 @@ module.exports = {
             }
             // Check is thare have log data
             const now = new Date()
-            const gteValue = `${now.getFullYear()}-${generator.generateZero(now.getMonth()+1)}-${generator.generateZero(now.getDate())}T00:00:00.000+07:00`
+            const gteValue = `${now.getFullYear()}-${generator.generateZero(now.getMonth() + 1)}-${generator.generateZero(now.getDate())}T00:00:00.000+07:00`
             console.log(gteValue)
             whereCluse.type = "Login"
             whereCluse.createdAt = { gte: new Date(gteValue).toISOString() }
@@ -240,7 +241,7 @@ module.exports = {
                 result.startTime = todayLog.createdAt.toISOString()
                 result.endTime = now.toISOString()
                 endTimeToHuman = utils.timeToHuman(result.endTime)
-                let timeDiff=utils.countDiff(now.getTime() - todayLog.createdAt.getTime())
+                let timeDiff = utils.countDiff(now.getTime() - todayLog.createdAt.getTime())
                 endCaptions = ` pulang pada ${endTimeToHuman} selama ${timeDiff} di ${req.device.name}`
             }
             startTimeToHuman = utils.timeToHuman(result.startTime)
@@ -260,9 +261,20 @@ module.exports = {
                 return t.group.users.telegramId
             })
             let notify_to = []
-            notify_to = notify_to.concat(super_admin_users,admin_users,notify_to_users)
+            notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
             notify_to = new Set(notify_to)
             handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
+            const io = req.app.get('socketio');
+            if(ml_result.isMatch){
+                io.emit('logger update', {
+                    name: isExist.name,
+                    project: result.group,
+                    device: req.device.name,
+                    photo: requestImagePath,
+                    bbox: ml_result.bbox,
+                    time: result.startTime
+                })
+            }
             return res.status(202).json({ result })
 
         }

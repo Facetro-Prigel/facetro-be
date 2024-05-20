@@ -5,9 +5,11 @@ const bodyParser = require('body-parser');
 const {PrismaClient} =require('@prisma/client')
 const middleware = require('./middleware');
 const allRoutes = require("./routes");
+const { Server } = require('socket.io');
+const app = express();
+const server = require('http').createServer(app);
 // const telegram = require("./services/telegrambot");
 var cors = require('cors');
-const app = express();
 const prisma= new PrismaClient(); 
 // get config vars
 app.use(cors())
@@ -15,6 +17,26 @@ app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST", "OPTIONS"]
+  }
+});
+app.set('socketio', io);
+io.on('connection', (socket) => {
+  console.log(`Pengguna (${socket.id}) terhubung ke websocket`);
+  socket.on('disconnect', () => {
+    console.log(`Pengguna (${socket.id}), terputus ke websocket`);
+  });
+});
+io.on("connection_error", (err) => {
+  console.log(err.req);      // the request object
+  console.log(err.code);     // the error code, for example 1
+  console.log(err.message);  // the error message, for example "Session ID unknown"
+  console.log(err.context);  // some additional error context
+});
+
 // telegram
 // const hapus = async (req, res, model) =>{
 //   const id = req.params.uuid
@@ -86,6 +108,7 @@ app.use(allRoutes);
 app.get('/',(req, res) => {
   res.json({msg:'Hello!'});
 });
-app.listen(process.env.PORT, () => {
+
+server.listen(process.env.PORT, () => {
   console.log(`Aplikasi berjalan di port ${ process.env.PORT }`);
 });
