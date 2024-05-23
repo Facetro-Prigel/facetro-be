@@ -8,7 +8,7 @@ const allRoutes = require("./routes");
 const { Server } = require('socket.io');
 const app = express();
 const server = require('http').createServer(app);
-const telegram = require("./services/telegrambot");
+// const telegram = require("./services/telegrambot");
 var cors = require('cors');
 const prisma= new PrismaClient(); 
 // get config vars
@@ -37,7 +37,7 @@ io.on("connection_error", (err) => {
   console.log(err.context);  // some additional error context
 });
 
-telegram
+// telegram
 // const hapus = async (req, res, model) =>{
 //   const id = req.params.uuid
 //   const call = eval('prisma.'+model)
