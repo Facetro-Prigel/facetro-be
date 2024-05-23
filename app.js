@@ -6,6 +6,7 @@ const {PrismaClient} =require('@prisma/client')
 const middleware = require('./middleware');
 const allRoutes = require("./routes");
 const { Server } = require('socket.io');
+const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
@@ -106,7 +107,9 @@ if(process.env.APP_STATE != "DEV"){
 //     }
 //   });
 // });
-
+console.info("=======Bejalan Menggunakan Versi=======")
+console.info(execSync("git show --summary").toString().trim())
+console.info("=======================================")
 app.get('/',(req, res) => {
   res.json({msg:'Hello!'});
 });
