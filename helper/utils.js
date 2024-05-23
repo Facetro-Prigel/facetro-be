@@ -61,7 +61,6 @@ module.exports = {
             });
         });
     }, 
-    
     timeToHuman: (time) => {
         let s= new Date(time).toLocaleString('id-ID', {
             timeZone: 'Asia/Jakarta',
