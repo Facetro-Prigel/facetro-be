@@ -111,13 +111,13 @@ console.info("=======Bejalan Menggunakan Versi=======")
 let data_commit = execSync("git show --summary").toString().split(/\r?\n/)
 console.table({
   hash: data_commit[0].replace("commit ", ""),
-  penulis: data_commit[1].replace("Author: ", ""), 
-  waktu: new Date(data_commit[2].replace("Date:", "").trim()).toLocaleString('id-ID', {
+  penulis: data_commit[2].replace("Author: ", ""), 
+  waktu: new Date(data_commit[3].replace("Date:", "").trim()).toLocaleString('id-ID', {
     timeZone: 'Asia/Jakarta',
     timeStyle: "long",
     dateStyle:"full"
   }), 
-  pesan: data_commit[4].trim()
+  pesan: data_commit[5].trim()
 })
 app.get('/',(req, res) => {
   res.json({msg:'Hello!'});
