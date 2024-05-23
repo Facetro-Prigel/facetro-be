@@ -202,7 +202,7 @@ module.exports = {
       where: {userUuid:uuid}
     })
     var data = await inputInsertUpdate(req)
-    data.createdAt = new Date(user.createdAt)
+    data.modifiedAt = new Date()
     const updateUser = await prisma.user.update({
       where: { uuid: uuid },
       data: data
