@@ -65,7 +65,11 @@ model Device {
   groups      Group[]
   log         Log[]  
 }
-
+model TempData{
+  uuid       String     @id @default(uuid()) @map(name: "uuid")
+  createdAt  DateTime  @default(now())
+  data       Json
+}
 model UserGroup {
   uuid       String     @id @default(uuid()) @map(name: "uuid")
   createdAt  DateTime  @default(now())

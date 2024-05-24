@@ -6,8 +6,8 @@ const utils = require("../helper/utils");
 const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const prisma = new PrismaClient();
-const inputInsertUpdate= async (req) =>{
-  return {
+const inputInsertUpdate = async (req) => {
+  let data = {
     email: req.body.email,
     name: req.body.name,
     identityNumber: req.body.identityNumber,
@@ -15,14 +15,10 @@ const inputInsertUpdate= async (req) =>{
     batch: parseInt(req.body.batch),
     birtday: new Date(req.body.birthday),
     program_study: req.body.program_study,
-    signature: req.body.signature,
     phoneNumber: req.body.phoneNumber,
     telegramId: req.body.telegramId,
     telegramToken: genPass.generateString(10),
     nfc_data: req.body.nfc_data,
-    signature: req.body.signature,
-    avatar: req.body.avatar,
-    bbox: req.body.bbox,
     usergroup: {
       create: req.body.usergroup.map((projectItems) => {
         if (projectItems != "") {
@@ -45,8 +41,21 @@ const inputInsertUpdate= async (req) =>{
       })
     }
   };
+  if(req.body.file_uuid){
+    try{
+      tempData = await prisma.tempData.findUnique({where:{uuid: req.body.file_uuid}})
+      data.signature= tempData.data.signatureData
+      data.avatar= tempData.data.image_path
+      data.bbox= tempData.data.bbox
+      await prisma.tempData.delete({where:{uuid: req.body.file_uuid}})
+    }catch{
+      return false
+
+    }
+  }
+  return data
 }
-const checkDeleteUpdate =  async(uuid, reqs) =>{
+const checkDeleteUpdate = async (uuid, reqs) => {
   const user = await prisma.user.findUnique({
     where: {
       uuid: uuid,
@@ -63,7 +72,7 @@ const checkDeleteUpdate =  async(uuid, reqs) =>{
       }]
     },
     select: {
-      createdAt:true,
+      createdAt: true,
       roleuser: {
         select: {
           role: {
@@ -78,6 +87,22 @@ const checkDeleteUpdate =  async(uuid, reqs) =>{
   return user
 }
 module.exports = {
+  updload_image: async (req, res) => {
+    let image = req.body.image
+    let datas
+    let config_u = { headers: { "Content-Type": "application/json", } }
+    await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
+      datas = res.data
+      console.log(res.data)
+    }).catch((e) => {
+      return res.status(400).json({msg: "Tidak atau terdapat banyak wajah!"})
+    })
+    requestImagePath = `photos/${genPass.generateString(23)}.jpg`
+    utils.saveImage(image, requestImagePath)
+    datas.image_path = requestImagePath
+    let uuid = await prisma.tempData.create({data: {data: datas}})
+    return res.status(201).json({msg: "gambar berhasil disimpan", file_uuid: uuid.uuid})
+  },
   getter_all: async (req, res) => {
     let isExist;
     isExist = await prisma.user.findMany({
@@ -168,9 +193,12 @@ module.exports = {
 
     res.status(200).json({ data: isExist, code: 200 });
   },
-  
+
   insert: async (req, res) => {
     let variabel = await inputInsertUpdate(req)
+    if (variabel == false){
+      return res.status(400).json({msg: "Id file salah", code: 400})
+    }
     try {
       const results = await prisma.user.create({
         data: variabel
@@ -178,7 +206,7 @@ module.exports = {
 
       // sendMail({ name: variabel.name, email: variabel.email, password: req.body.password, token: variabel.telegramToken, bimbingan: utils.arrayToHuman(ss) });
 
-      return res.status(200).json({ msg: "Selamat Data berhasil dibuat", data: results });
+      return res.status(200).json({ msg: "Selamat Data berhasil dibuat"});
     } catch (error) {
       console.error("Error while inserting user:", error);
       return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
@@ -193,15 +221,18 @@ module.exports = {
       return res.status(404).json({ error: "Pengguna tidak ditemukan / tidak dapat diubah" });
     }
     await prisma.userGroup.deleteMany({
-      where: {userUuid:uuid}
+      where: { userUuid: uuid }
     })
     await prisma.roleUser.deleteMany({
-      where: {userUuid:uuid}
+      where: { userUuid: uuid }
     })
     await prisma.permissionUser.deleteMany({
-      where: {userUuid:uuid}
+      where: { userUuid: uuid }
     })
     var data = await inputInsertUpdate(req)
+    if (data == false){
+      return res.status(400).json({msg: "Id file salah", code: 400})
+    }
     data.modifiedAt = new Date()
     const updateUser = await prisma.user.update({
       where: { uuid: uuid },
