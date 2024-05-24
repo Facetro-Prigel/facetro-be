@@ -89,7 +89,7 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 module.exports = {
   updload_image: async (req, res) => {
     let image = req.body.image
-    let datas
+    let datas = {}
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
@@ -97,11 +97,15 @@ module.exports = {
     }).catch((e) => {
       return res.status(400).json({msg: "Tidak atau terdapat banyak wajah!"})
     })
-    requestImagePath = `photos/${genPass.generateString(23)}.jpg`
-    utils.saveImage(image, requestImagePath)
-    datas.image_path = requestImagePath
-    let uuid = await prisma.tempData.create({data: {data: datas}})
-    return res.status(201).json({msg: "gambar berhasil disimpan", file_uuid: uuid.uuid})
+    try{
+      requestImagePath = `photos/${genPass.generateString(23)}.jpg`
+      utils.saveImage(image, requestImagePath)
+      datas.image_path = requestImagePath
+      let uuid = await prisma.tempData.create({data: {data: datas}})
+      return res.status(201).json({msg: "gambar berhasil disimpan", file_uuid: uuid.uuid})
+    }catch(e){
+      console.error("gagal menyimpan gambar")
+    }
   },
   getter_all: async (req, res) => {
     let isExist;
