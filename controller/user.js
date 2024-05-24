@@ -214,7 +214,7 @@ module.exports = {
   },
 
 
-  updateUser: async (req, res) => {
+  update: async (req, res) => {
     const uuid = req.params.uuid;
     const user = await checkDeleteUpdate(uuid, req)
     if (!user) {

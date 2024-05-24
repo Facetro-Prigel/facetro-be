@@ -25,5 +25,6 @@ module.exports = {
       }
     })
     return res.json({ 'token': token, 'name': results.name, 'uuid':  results.uuid});
-  }
+  },
+  
 };
