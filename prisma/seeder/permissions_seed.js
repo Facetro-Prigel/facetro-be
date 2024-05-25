@@ -46,7 +46,7 @@ exports.run = async () =>{
             },
             {
                 name: "Can Update Device",
-                guardName: "Device_update",
+                guardName: "device_update",
                 description: "This Role/User can updating another Device."
             },
             {
@@ -106,7 +106,6 @@ exports.run = async () =>{
                 guardName: "group_get_multi",
                 description: "This Role/User can get general information of multiple Groups."
             },
-    
             {
                 name: "Can Asign User To Group",
                 guardName: "asign_user_to_group",
@@ -147,6 +146,31 @@ exports.run = async () =>{
                 name: "Download Photo",
                 guardName: "download_photo",
                 description: "This Role/User Can Download Photo From Log ."
+            },
+            {
+                name: "Can Create Permission",
+                guardName: "permission_create",
+                description: "This Role/User can create another Permission."
+            },
+            {
+                name: "Can Update Permission",
+                guardName: "permission_update",
+                description: "This Role/User can update another Permission."
+            },
+            {
+                name: "Can Delete Permission",
+                guardName: "permission_delete",
+                description: "This Role/User can delete another Permission."
+            },
+            {
+                name: "Can Get Permission",
+                guardName: "permission_get",
+                description: "This Role/User can get general information of a single Permission."
+            },
+            {
+                name: "Can Get Multiple Permissions",
+                guardName: "permission_get_multi",
+                description: "This Role/User can get general information of multiple Groups."
             }
         ]
     })

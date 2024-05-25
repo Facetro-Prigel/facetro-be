@@ -25,9 +25,9 @@ module.exports = {
       return res.status(404).json({ msg: "Password salah" });
     }
     let token = generator.generateAccessToken(
-      { uuid: results.uuid, email: results.email, name: results.name, avatar: results.password },
+      { uuid: results.uuid, email: results.email, name: results.name},
       process.env.SECRET_TOKEN
     );
-    return res.json({ token: token, name: results.name });
+    return res.json({ token: token, name: results.name, avatar: results.avatar, bbox: results.bbox });
   }
 };

@@ -5,7 +5,76 @@ const bcrypt = require('bcrypt');
 const prisma = new PrismaClient
 // get config vars
 dotenv.config();
-exports.authorization = (text = '') => {
+const checkPermission = async (user, text) =>{
+  return await prisma.user.findFirst({
+    where: {
+      uuid: user["uuid"],
+      OR: [{
+        permissionUser: {
+          some: {
+            permission: {
+              is: {
+                guardName: text
+              }
+            }
+          }
+        }
+      },
+      {
+        roleuser: {
+          some: {
+            role: {
+              is: {
+                permisionrole: {
+                  some: {
+                    permission: {
+                      is: {
+                        guardName: text
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        roleuser: {
+          some: {
+            role: {
+              is: {
+                guardName: 'super_admin'
+              }
+            }
+          }
+        }
+      }
+      ]
+    },
+    include: {
+      permissionUser: {
+        include: {
+          permission: true
+        }
+      },
+      roleuser: {
+        include: {
+          role: {
+            include: {
+              permisionrole: {
+                include: {
+                  permission: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+}
+exports.authorization = (text = '', child_permission = []) => {
   return (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]
@@ -14,76 +83,18 @@ exports.authorization = (text = '') => {
       if (err) return res.status(403).json({ msg: "Dilarang", code: 403 })
       req.user = user
       if (text != '') {
-        let thare_premission = await prisma.user.findFirst({
-          where: {
-            uuid: user["uuid"],
-            OR: [{
-              permissionUser: {
-                some: {
-                  permission: {
-                    is: {
-                      guardName: text
-                    }
-                  }
-                }
-              }
-            },
-            {
-              roleuser: {
-                some: {
-                  role: {
-                    is: {
-                      permisionrole: {
-                        some: {
-                          permission: {
-                            is: {
-                              guardName: text
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            {
-              roleuser: {
-                some: {
-                  role: {
-                    is: {
-                      guardName: 'super_admin'
-                    }
-                  }
-                }
-              }
-            }
-            ]
-          },
-          include: {
-            permissionUser: {
-              include: {
-                permission: true
-              }
-            },
-            roleuser: {
-              include: {
-                role: {
-                  include: {
-                    permisionrole: {
-                      include: {
-                        permission: true
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        })
+        let thare_premission = await checkPermission(user, text)
         if (!thare_premission){ 
           permission_name = await prisma.permission.findUnique({where:{guardName: text}, select:{name: true}})
           return await res.status(403).json({ msg: `Anda tidak memiliki izin untuk melakukan '${ permission_name.name ?? text }'`, code: 401 }) }
+        if (child_permission.length){
+          for (const permission_i of child_permission) {
+            let thare_child_premission = await checkPermission(user, permission_i)
+            if(thare_child_premission){
+              req[permission_i] = true
+            }
+          }
+        }
       }
       next()
     })
