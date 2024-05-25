@@ -44,14 +44,14 @@ module.exports = {
     try {
       let data = {
         name: req.body.name,
-        guardName: req.body.guardName ?? utils.toSnakeCase(req.body.name),
+        guardName: utils.toSnakeCase(req.body.guardName) ?? utils.toSnakeCase(req.body.name),
         description: req.body.description
       }
-      let result = await prisma.device.create({
+      let result = await prisma.permission.create({
         data: data
       })
     } catch (error) {
-      console.error("Error while inserting device:", error);
+      console.error("Error while inserting permission:", error);
       return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
     return res.status(200).json({ msg: "Izin sudah ditambahkan" });
@@ -62,7 +62,7 @@ module.exports = {
     if (!check) {
       return res.status(400).json({ msg: "Izin tidak ditemukan" });
     }
-    await prisma.device.delete({ where: { uuid: uuid } })
+    await prisma.permission.delete({ where: { uuid: uuid } })
     return res.status(200).json({ msg: "Izin berhasil dihapus" })
   },
   update: async (req, res) => {
@@ -77,16 +77,16 @@ module.exports = {
         description: req.body.description
       }
       if (req.body.guardName) {
-        data.guardName = req.body.guardName
+        data.guardName = utils.toSnakeCase(req.body.guardName)
       }
-      let result = await prisma.device.update({
+      let result = await prisma.permission.update({
         where: {
           uuid: uuid
         },
         data: data
       })
     } catch (error) {
-      console.error("Error while inserting device:", error);
+      console.error("Error while inserting permission:", error);
       return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
     return res.status(200).json({ msg: "Izin berhasil ubah" })

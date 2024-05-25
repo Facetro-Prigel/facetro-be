@@ -78,7 +78,10 @@ module.exports = {
         return hours + " jam " + minutes + " menit " + seconds + " detik"
     },
     toSnakeCase: (str) => {
-        let cleanedStr = str.replace(/[^a-zA-Z0-9\s]/g, '');
+        if(!str){
+            return null   
+        }
+        let cleanedStr = str.replace(/[^a-zA-Z0-9_\s]/g, '');
 
         let snakeCaseStr = cleanedStr
             .replace(/\s+/g, '_')

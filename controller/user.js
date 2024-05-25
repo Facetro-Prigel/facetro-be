@@ -2,7 +2,6 @@ const { PrismaClient } = require("@prisma/client");
 const genPass = require('../helper/generator');
 const { sendMail } = require('../helper/mailer');
 const utils = require("../helper/utils");
-const { authorization } = require('../middleware')
 const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const prisma = new PrismaClient();
@@ -20,7 +19,7 @@ const inputInsertUpdate = async (req) => {
     telegramToken: genPass.generateString(10),
     nfc_data: req.body.nfc_data
   };
-  if(req.asign_user_to_group){
+  if(req.asign_user_to_group && req.body.usergroup){
     data.usergroup = {
       create: req.body.usergroup.map((projectItems) => {
         if (projectItems != "") {
@@ -29,7 +28,7 @@ const inputInsertUpdate = async (req) => {
       })
     }
   }
-  if(req.asign_user_to_permision){
+  if(req.asign_user_to_permision && req.body.permission){
     data.permissionUser = {
       create: req.body.permission.map((permissionItems) => {
         if (permissionItems != "") {
@@ -38,7 +37,7 @@ const inputInsertUpdate = async (req) => {
       })
     }
   }
-  if(req.asign_user_to_role){
+  if(req.asign_user_to_role && req.body.role){
     data.roleuser =  {
       create: req.body.role.map((roleItems) => {
         if (roleItems != "") {
