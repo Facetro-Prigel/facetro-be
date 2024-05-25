@@ -2,7 +2,6 @@ const { PrismaClient } = require("@prisma/client");
 const genPass = require('../helper/generator');
 const { sendMail } = require('../helper/mailer');
 const utils = require("../helper/utils");
-// const { bot } = require('../helper/telegram')
 const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const prisma = new PrismaClient();
@@ -18,29 +17,35 @@ const inputInsertUpdate = async (req) => {
     phoneNumber: req.body.phoneNumber,
     telegramId: req.body.telegramId,
     telegramToken: genPass.generateString(10),
-    nfc_data: req.body.nfc_data,
-    usergroup: {
+    nfc_data: req.body.nfc_data
+  };
+  if(req.asign_user_to_group && req.body.usergroup){
+    data.usergroup = {
       create: req.body.usergroup.map((projectItems) => {
         if (projectItems != "") {
           return { group: { connect: { uuid: projectItems } } }
         }
       })
-    },
-    roleuser: {
-      create: req.body.role.map((roleItems) => {
-        if (roleItems != "") {
-          return { role: { connect: { uuid: roleItems } } }
-        }
-      })
-    },
-    permissionUser: {
+    }
+  }
+  if(req.asign_user_to_permision && req.body.permission){
+    data.permissionUser = {
       create: req.body.permission.map((permissionItems) => {
         if (permissionItems != "") {
           return { permission: { connect: { uuid: permissionItems } } }
         }
       })
     }
-  };
+  }
+  if(req.asign_user_to_role && req.body.role){
+    data.roleuser =  {
+      create: req.body.role.map((roleItems) => {
+        if (roleItems != "") {
+          return { role: { connect: { uuid: roleItems } } }
+        }
+      })
+    }
+  }
   if(req.body.file_uuid){
     try{
       tempData = await prisma.tempData.findUnique({where:{uuid: req.body.file_uuid}})
@@ -49,11 +54,10 @@ const inputInsertUpdate = async (req) => {
       data.bbox= tempData.data.bbox
       await prisma.tempData.delete({where:{uuid: req.body.file_uuid}})
     }catch{
-      return false
-
+      return {status: false, msg: "Id file salah"}
     }
   }
-  return data
+  return {status: true, data: data}
 }
 const checkDeleteUpdate = async (uuid, reqs) => {
   const user = await prisma.user.findUnique({
@@ -89,7 +93,7 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 module.exports = {
   updload_image: async (req, res) => {
     let image = req.body.image
-    let datas
+    let datas = {}
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
@@ -97,11 +101,15 @@ module.exports = {
     }).catch((e) => {
       return res.status(400).json({msg: "Tidak atau terdapat banyak wajah!"})
     })
-    requestImagePath = `photos/${genPass.generateString(23)}.jpg`
-    utils.saveImage(image, requestImagePath)
-    datas.image_path = requestImagePath
-    let uuid = await prisma.tempData.create({data: {data: datas}})
-    return res.status(201).json({msg: "gambar berhasil disimpan", file_uuid: uuid.uuid})
+    try{
+      requestImagePath = `photos/${genPass.generateString(23)}.jpg`
+      utils.saveImage(image, requestImagePath)
+      datas.image_path = requestImagePath
+      let uuid = await prisma.tempData.create({data: {data: datas}})
+      return res.status(201).json({msg: "gambar berhasil disimpan", file_uuid: uuid.uuid})
+    }catch(e){
+      console.error("gagal menyimpan gambar")
+    }
   },
   getter_all: async (req, res) => {
     let isExist;
@@ -196,12 +204,12 @@ module.exports = {
 
   insert: async (req, res) => {
     let variabel = await inputInsertUpdate(req)
-    if (variabel == false){
-      return res.status(400).json({msg: "Id file salah", code: 400})
+    if (variabel.status == false){
+      return res.status(400).json({msg: variabel.msg, code: 400})
     }
     try {
       const results = await prisma.user.create({
-        data: variabel
+        data: variabel.data
       });
 
       // sendMail({ name: variabel.name, email: variabel.email, password: req.body.password, token: variabel.telegramToken, bimbingan: utils.arrayToHuman(ss) });
@@ -214,7 +222,7 @@ module.exports = {
   },
 
 
-  updateUser: async (req, res) => {
+  update: async (req, res) => {
     const uuid = req.params.uuid;
     const user = await checkDeleteUpdate(uuid, req)
     if (!user) {
@@ -230,9 +238,10 @@ module.exports = {
       where: { userUuid: uuid }
     })
     var data = await inputInsertUpdate(req)
-    if (data == false){
-      return res.status(400).json({msg: "Id file salah", code: 400})
+    if (data.status == false){
+      return res.status(400).json({msg: data.msg, code: 400})
     }
+    data = data.data
     data.modifiedAt = new Date()
     const updateUser = await prisma.user.update({
       where: { uuid: uuid },

@@ -60,21 +60,36 @@ module.exports = {
                 console.log('File berhasil disalin dan nama diubah.');
             });
         });
-    }, 
+    },
     timeToHuman: (time) => {
-        let s= new Date(time).toLocaleString('id-ID', {
+        let s = new Date(time).toLocaleString('id-ID', {
             timeZone: 'Asia/Jakarta',
             timeStyle: "long",
-            dateStyle:"full"
-          })
-          return s
+            dateStyle: "full"
+        })
+        return s
     },
     countDiff: (deltaTime) => {
-    var seconds = Math.floor(deltaTime / 1000);
-    var minutes = Math.floor(seconds / 60);
-    var hours = Math.floor(minutes / 60);
-    seconds %= 60;
-    minutes %= 60;
-    return hours + " jam " + minutes + " menit " + seconds + " detik"
-  }
+        var seconds = Math.floor(deltaTime / 1000);
+        var minutes = Math.floor(seconds / 60);
+        var hours = Math.floor(minutes / 60);
+        seconds %= 60;
+        minutes %= 60;
+        return hours + " jam " + minutes + " menit " + seconds + " detik"
+    },
+    toSnakeCase: (str) => {
+        if(!str){
+            return null   
+        }
+        let cleanedStr = str.replace(/[^a-zA-Z0-9_\s]/g, '');
+
+        let snakeCaseStr = cleanedStr
+            .replace(/\s+/g, '_')
+            .replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);    
+        if (snakeCaseStr.startsWith('_')) {
+            snakeCaseStr = snakeCaseStr.substring(1);
+        }
+    
+        return snakeCaseStr.toLowerCase();
+    }
 }
