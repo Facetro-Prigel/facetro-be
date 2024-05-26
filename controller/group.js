@@ -1,7 +1,6 @@
 
 const { PrismaClient } = require('@prisma/client')
 const generator = require('../helper/generator');
-const { connect } = require('../routes/group');
 const prisma = new PrismaClient()
 const checkDeleteUpdate = async (uuid, reqs) => {
     const user = await prisma.group.findUnique({

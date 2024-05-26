@@ -43,7 +43,9 @@ const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePa
         console.error(`Error Terjadi Ketika Mengirim Ke telegram! Percobaan ke-${n}`)
         if (n < 6) {
             n += 1
-            await handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n)
+            setTimeout(async () => {
+                await handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n)
+            }, 3000);
         }
     }
 }
