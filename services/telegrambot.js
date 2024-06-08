@@ -207,6 +207,7 @@ bot.command('info', async (ctx) => {
 
 })
 let error_k = 0
+bot.launch()
 const launch = () =>{
     bot.launch().then(()=>{
         console.info('Akhirnya Berhasil')
