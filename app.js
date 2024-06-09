@@ -20,7 +20,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: '*',
     methods: ["GET", "POST", "OPTIONS"]
   }
 });
