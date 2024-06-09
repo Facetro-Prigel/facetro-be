@@ -285,6 +285,11 @@ module.exports = {
     },
     getLog: async (req, res) => {
         let logDatas = await prisma.log.findMany({
+            orderBy:[
+                {
+                    createdAt:'desc'
+                }
+            ],
             select:{
                 imagePath: true,
                 bbox: true, 
