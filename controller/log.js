@@ -6,6 +6,7 @@ const { bot } = require('../helper/telegram')
 const axios = require('axios')
 const role_utils = require('../helper/role_utils');
 const { request } = require('express')
+const device = require('./device')
 const prisma = new PrismaClient()
 const compareFace = async (base64image, dbSignature) => {
     let bbox = []
@@ -281,5 +282,37 @@ module.exports = {
 
         }
         res.status(400).json({ msg: "Request yang diminta salah", code: 400 })
+    },
+    getLog: async (req, res) => {
+        let logDatas = await prisma.log.findMany({
+            select:{
+                imagePath: true,
+                bbox: true, 
+                user: {
+                    select:{
+                        name: true,
+                        identityNumber: true,
+                    }
+                },
+                createdAt: true,
+                device: {
+                    select:{
+                        name: true,
+                    }
+                }
+            }
+        })
+        let showLogs = [];
+        for (const log of logDatas) {
+            showLogs.push({
+                name: log.user.name,
+                nim:log.user.identityNumber,
+                device:log.device.name,
+                image:log.imagePath,
+                bbox:log.bbox, 
+                inTime:log.createdAt             
+            })
+        }
+        return res.json(showLogs)
     }
 }
