@@ -285,6 +285,9 @@ module.exports = {
     },
     getLog: async (req, res) => {
         let logDatas = await prisma.log.findMany({
+            where:{
+                isMatch: true
+            },
             orderBy:[
                 {
                     createdAt:'desc'
