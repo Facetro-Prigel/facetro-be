@@ -286,7 +286,7 @@ module.exports = {
     getLog: async (req, res) => {
         let logDatas = await prisma.log.findMany({
             where:{
-                isMatch: false
+                isMatch: true
             },
             orderBy:[
                 {
