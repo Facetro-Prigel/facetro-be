@@ -29,7 +29,7 @@ model User {
   avatar         String?
   signature      String?   @db.Text() 
   phoneNumber    String?
-  telegramId     Int?
+  telegramId     BigInt?
   telegramToken  String?
   nfc_data       String?  @unique
   createdAt      DateTime   @default(now())
@@ -39,7 +39,6 @@ model User {
   log             Log[]   
   roleuser        RoleUser[]
   permissionUser  PermissionUser[]
-
 }
 
 model Group {
