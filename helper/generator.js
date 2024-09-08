@@ -21,6 +21,6 @@ generateZero: (number)=>{
   return number < 10 ? "0"+number : number;
 },
 generateAccessToken: (username, secretToken = process.env.SECRET_TOKEN) =>{
-  return jwt.sign(username, secretToken, { expiresIn: '14d' });
+  return jwt.sign(username, secretToken, { expiresIn: '31d' });
  }
 }

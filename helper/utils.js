@@ -1,5 +1,36 @@
 const fs = require('fs');
 const path = require('path');
+const sharp = require('sharp');
+const makeBufferFromBase64 = (base64String)=>{
+    const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    return buffer
+}
+const makeBondingBox = (base64String, bbox, filename)=>{
+    // Membuat kotak merah dalam format SVG
+    let savedFilename = 'tmp-telegram-image-'+filename
+    const redBox = Buffer.from(
+      `<svg width="${bbox[2]}" height="${bbox[2]}">
+        <rect x="0" y="0" width="${bbox[2]}" height="${bbox[2]}" rx="${bbox[2]*0.1}" ry="${bbox[2]*0.1}" 
+            fill="none" stroke="green" stroke-width="8"/>
+      </svg> `
+    );
+    
+    // Menggabungkan gambar latar dengan kotak merah dan menempelkan gambar PNG di atasnya
+    sharp(makeBufferFromBase64(base64String))  // Gambar latar
+      .composite([
+        { input: 'logo-unnes-horizontal.png', top: 25, left: 25 }, // Menempelkan PNG di koordinat (150,150)
+        { input: redBox, top: bbox[1], left: bbox[0] } // Menambahkan kotak di koordinat (50,50)
+      ])
+      .toFile(savedFilename, (err, info) => {
+        if (err) {
+          console.error(err);
+        } else {
+          console.log('Gambar berhasil disimpan:', info);
+        }
+      });
+    return savedFilename
+}
 module.exports = {
     arrayToHuman: (arrayData) => {
         if (Array.isArray(arrayData)) {
@@ -19,9 +50,9 @@ module.exports = {
         const buffer = Buffer.from(base64Data, 'base64');
         return buffer
     },
+    
     saveImage: (base64String, filePath) => {
-        const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
+        const buffer = makeBufferFromBase64(base64String);
         fs.writeFile(filePath, buffer, (err) => {
             if (err) {
                 console.error('Gagal menyimpan gambar:', err);
@@ -91,5 +122,12 @@ module.exports = {
         }
     
         return snakeCaseStr.toLowerCase();
-    }
+    },
+    uuidToDecimal: (uuid) => {
+        let cleanUuidStr = uuid.replace(/-/g, '');
+        let decimalValue = BigInt('0x' + cleanUuidStr);
+        
+        return decimalValue.toString();
+    },
+    makeBufferFromBase64, makeBondingBox
 }
