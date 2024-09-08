@@ -6,7 +6,6 @@ const { bot } = require('../helper/telegram')
 const axios = require('axios')
 const role_utils = require('../helper/role_utils');
 const prisma = new PrismaClient()
-const fs = require('fs');
 
 const compareFace = async (base64image, dbSignature) => {
     try {
@@ -40,7 +39,6 @@ const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, ca
             }
         }
     }
-    fs.unlink(`./${requestImagePath}`)
 }
 const pythonModulus = (a, b) => {
     return ((a % b) + b) % b;
