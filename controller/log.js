@@ -7,22 +7,25 @@ const axios = require('axios')
 const role_utils = require('../helper/role_utils');
 const { request } = require('express')
 const device = require('./device')
+const { verify } = require('jsonwebtoken')
 const prisma = new PrismaClient()
 const compareFace = async (base64image, dbSignature) => {
     let bbox = []
     let signiture = ""
     let isMatch = false
+    let similarityResult, lengthOfTimeRequired
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}match`, { image: base64image, signature: dbSignature }, config_u).then((res) => {
         let datas = res.data
         bbox = datas.bbox
         signiture = datas.signiture
         isMatch = datas.isMatch == "True" ? true : false
-        console.log(res.data)
+        similarityResult = datas.similarityResult
+        lengthOfTimeRequired = datas.lengthOfTimeRequired
     }).catch((e) => {
         // console.log(`Request Error in ${file}`)
     })
-    return { isMatch: isMatch, bbox: bbox, signature: signiture }
+    return { isMatch: isMatch, bbox: bbox, signature: signiture,  similarityResult: similarityResult, lengthOfTimeRequired: lengthOfTimeRequired}
 }
 const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
     if (ml_result.isMatch) {
@@ -36,7 +39,9 @@ const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, ca
         }
     }
 }
-
+const pythonModulus = (a, b) => {
+    return ((a % b) + b) % b;
+}
 const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n = 1) => {
     try {
         await send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
@@ -52,6 +57,7 @@ const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePa
 }
 module.exports = {
     log: async (req, res) => {
+        const startTotalTimeNeeded = process.hrtime();
         let body = req.body
         let identity = String(body.identity)
         let image = body.image
@@ -174,6 +180,11 @@ module.exports = {
                 take: 4,
                 orderBy: {
                     createdAt: 'desc',
+                },
+                select:{
+                    imagePath: true,
+                    bbox: true,
+                    signature: true
                 }
             })
             four_last_signatures.push({
@@ -184,11 +195,18 @@ module.exports = {
             // Check to ML (Face Recognations)
             let ml_result = {}
             let seleted_server_image = {}
+            let condidateNumber = 0;
+            const four_last_signatures_process = []
             for (let signature of four_last_signatures) {
                 try {
                     ml_result = await compareFace(image, signature.signature)
+                    seleted_server_image.candidateNumber = condidateNumber 
                     seleted_server_image.image = signature.imagePath
                     seleted_server_image.bbox = signature.bbox
+                    seleted_server_image.signature = signature.signature
+                    seleted_server_image.similarityResult = ml_result.similarityResult
+                    seleted_server_image.lengthOfTimeRequired = ml_result.lengthOfTimeRequired
+                    four_last_signatures_process.push(seleted_server_image)
                     if (ml_result.isMatch) {
                         break
                     }
@@ -196,11 +214,11 @@ module.exports = {
                     console.log(e)
                     return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!", code: 400 })
                 }
+                condidateNumber += 1
             }
             // Check is thare have log data
             const now = new Date()
             const gteValue = `${now.getFullYear()}-${generator.generateZero(now.getMonth() + 1)}-${generator.generateZero(now.getDate())}T00:00:00.000+07:00`
-            console.log(gteValue)
             whereCluse.type = "Login"
             whereCluse.createdAt = { gte: new Date(gteValue).toISOString() }
             let todayLog = await prisma.log.findFirst({
@@ -239,6 +257,7 @@ module.exports = {
             }
             let startTimeToHuman, endTimeToHuman, endCaptions, captionForElse
             result.startTime = now.toISOString()
+            
             if (todayLog) {
                 logData.type = "Logout"
                 result.startTime = todayLog.createdAt.toISOString()
@@ -248,7 +267,14 @@ module.exports = {
                 endCaptions = ` pulang pada ${endTimeToHuman} selama ${timeDiff} di ${req.device.name}`
             }
             startTimeToHuman = utils.timeToHuman(result.startTime)
-
+            // Other data
+            const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded) 
+            const totalTimeNeeded = (endTotalTimeNeeded[0] * 1000) + (endTotalTimeNeeded[1] / 1e6);
+            logData.otherData = {
+                'totalTimeNeeded': totalTimeNeeded,
+                'dataComparisonCandidate': four_last_signatures,
+                'dataComparisonCandidateAfterProcess': four_last_signatures_process,
+            }
             await prisma.log.create({ data: logData })
             let captionThatUser = `Kamu Bertugas di ${req.device.name} presensi di ${req.device.name} berangkat pada ${startTimeToHuman}`
             captionThatUser += endCaptions ?? ''
@@ -268,7 +294,7 @@ module.exports = {
             notify_to = new Set(notify_to)
             handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
             const io = req.app.get('socketio');
-            if(ml_result.isMatch){
+            if (ml_result.isMatch) {
                 io.emit('logger update', {
                     name: isExist.name,
                     project: result.group,
@@ -285,26 +311,26 @@ module.exports = {
     },
     getLog: async (req, res) => {
         let logDatas = await prisma.log.findMany({
-            where:{
+            where: {
                 isMatch: true
             },
-            orderBy:[
+            orderBy: [
                 {
-                    createdAt:'desc'
+                    createdAt: 'desc'
                 }
             ],
-            select:{
+            select: {
                 imagePath: true,
-                bbox: true, 
+                bbox: true,
                 user: {
-                    select:{
+                    select: {
                         name: true,
                         identityNumber: true,
                     }
                 },
                 createdAt: true,
                 device: {
-                    select:{
+                    select: {
                         name: true,
                     }
                 }
@@ -314,13 +340,55 @@ module.exports = {
         for (const log of logDatas) {
             showLogs.push({
                 name: log.user.name,
-                nim:log.user.identityNumber,
-                device:log.device.name,
-                image:log.imagePath,
-                bbox:log.bbox, 
-                inTime:log.createdAt             
+                nim: log.user.identityNumber,
+                device: log.device.name,
+                image: log.imagePath,
+                bbox: log.bbox,
+                inTime: log.createdAt
             })
         }
         return res.json(showLogs)
+    },
+    cardlessRequest: async (req, res) => {
+        const n = 3191103090
+        const numericUUID = utils.uuidToDecimal(req.user.uuid).slice(0, 20)
+        const secret_key = BigInt(numericUUID) % BigInt(n);
+        const public_key = (secret_key ** BigInt(2)) % BigInt(n);
+        return res.json({ public_key: public_key.toString(), email: req.user.email })
+    },
+    cardlessVerify: async (req, res) => {
+        const n = 3191103090
+        const body = req.body
+        const publicKey = body.public_key
+        let secretKey = 2
+        let numericUUID = 0
+        // Generate random bits and calculate commitment
+        const r = BigInt((Math.floor(Math.random() * 99e20) + 10e20)) % BigInt(n);
+        const x = (r ** BigInt(2)) % BigInt(n);
+        try {
+            const user = await prisma.user.findUnique({where:{
+                email: body.email
+            },select:{
+                name:true,
+                uuid: true
+            }})
+            numericUUID = utils.uuidToDecimal(user.uuid).slice(0, 20)
+        } catch (error) {
+            return res.status(403).json({ msg: "Kradensisal tidak cocok!" })
+        }
+        secretKey = BigInt(numericUUID) % BigInt(n);
+
+        // Send challenge
+        const challenge = Math.floor(Math.random() * 2);
+
+        // Respond with the private key
+        const y = (r * (secretKey ** BigInt(challenge) % BigInt(n))) % BigInt(n);
+
+        // Verify
+        const expectedResponse = (x * (BigInt(publicKey) ** BigInt(challenge) % BigInt(n))) % BigInt(n);
+        if ((y ** BigInt(2)) % BigInt(n) === expectedResponse) {
+            return res.status(202).json({ msg: "Akses diizinkan!" })
+        }
+        return res.status(403).json({ msg: "Kradensisal tidak cocok!" })
     }
 }

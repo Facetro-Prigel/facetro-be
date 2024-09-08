@@ -91,5 +91,11 @@ module.exports = {
         }
     
         return snakeCaseStr.toLowerCase();
+    },
+    uuidToDecimal: (uuid) => {
+        let cleanUuidStr = uuid.replace(/-/g, '');
+        let decimalValue = BigInt('0x' + cleanUuidStr);
+        
+        return decimalValue.toString();
     }
 }

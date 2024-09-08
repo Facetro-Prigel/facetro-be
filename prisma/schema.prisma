@@ -93,6 +93,7 @@ model Log {
   isMatch     Boolean    @default(false)
   device      Device      @relation(fields: [deviceUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
   deviceUuid  String
+  otherData   Json?
 }
 
 enum absen {
