@@ -267,7 +267,7 @@ module.exports = {
                     result.endTime = now.toISOString()
                     endTimeToHuman = utils.timeToHuman(result.endTime)
                     let timeDiff = utils.countDiff(now.getTime() - todayLog.createdAt.getTime())
-                    endCaptions = `\n pulang pada \n ${endTimeToHuman} \n Waktu yang dihabiskan \n  ${timeDiff} di ${req.device.name}`
+                    endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`
                 }
                 startTimeToHuman = utils.timeToHuman(result.startTime)
                 // Other data
@@ -279,12 +279,12 @@ module.exports = {
                     'dataComparisonCandidateAfterProcess': four_last_signatures_process,
                 }
                 await prisma.log.create({ data: logData })
-                let captionThatUser = `Kamu Bertugas di \n ${req.device.name} \n presensi di \n ${req.device.name} \n berangkat pada \n ${startTimeToHuman}`
+                let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
                 captionThatUser += endCaptions ?? ''
-                captionForElse = `Nama: \n ${isExist.name} \n Nomor Identitas:\n ${isExist.identityNumber} \n Prodi: \n ${isExist.program_study} \n Angakatn: \n ${isExist.batch}   \n Proyek: \n`
+                captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identityNumber} \nProdi: \n > ${isExist.program_study} \nAngkatan: \n > ${isExist.batch}   \nProyek: \n > `
                 captionForElse += utils.arrayToHuman(isExist.usergroup.map((t) => {
                     return t.group.name
-                })) + `\n presensi di \n ${req.device.name} \n berangkat pada \n ${startTimeToHuman}`
+                })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
                 captionForElse += endCaptions ?? ''
                 // Send to Telegram!
                 let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegramId')
