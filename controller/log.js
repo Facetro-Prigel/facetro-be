@@ -31,11 +31,11 @@ const compareFace = async (base64image, dbSignature) => {
 const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
     if (ml_result.isMatch) {
         if (isExist.telegramId) {
-            await bot.telegram.sendPhoto(isExist.telegramId, { source: "./" + requestImagePath }, { caption: captionThatUser })
+            await bot.telegram.sendPhoto(parseInt(isExist.telegramId), { source: "./" + requestImagePath }, { caption: captionThatUser })
         }
         for (let notify of notify_to) {
             if (notify) {
-                await bot.telegram.sendPhoto(notify, { source: "./" + requestImagePath }, { caption: captionForElse })
+                await bot.telegram.sendPhoto(parseInt(notify), { source: "./" + requestImagePath }, { caption: captionForElse })
             }
         }
     }
@@ -47,6 +47,7 @@ const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePa
     try {
         await send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
     } catch (e) {
+        console.error(e)
         console.error(`Error Terjadi Ketika Mengirim Ke telegram! Percobaan ke-${n}`)
         if (n < 6) {
             n += 1
@@ -295,7 +296,8 @@ module.exports = {
                 notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
                 notify_to = new Set(notify_to)
                 const image2tele = utils.makeBondingBox(image, ml_result.bbox, nameImage)
-                handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
+                console.log('path:',image2tele)
+                handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
                 const io = req.app.get('socketio');
                 if (ml_result.isMatch) {
                     io.emit('logger update', {
