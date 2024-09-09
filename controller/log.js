@@ -281,7 +281,7 @@ module.exports = {
                 await prisma.log.create({ data: logData })
                 let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
                 captionThatUser += endCaptions ?? ''
-                captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identityNumber} \nProdi: \n > ${isExist.program_study} \nAngakatan: \n > ${isExist.batch}   \nProyek: \n > `
+                captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identityNumber} \nProdi: \n > ${isExist.program_study} \nAngkatan: \n > ${isExist.batch}   \nProyek: \n > `
                 captionForElse += utils.arrayToHuman(isExist.usergroup.map((t) => {
                     return t.group.name
                 })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
