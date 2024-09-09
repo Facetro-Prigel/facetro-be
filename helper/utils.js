@@ -19,8 +19,8 @@ const makeBondingBox = (base64String, bbox, filename)=>{
     // Menggabungkan gambar latar dengan kotak merah dan menempelkan gambar PNG di atasnya
     sharp(makeBufferFromBase64(base64String))  // Gambar latar
       .composite([
-        { input: 'logo-unnes-horizontal.png', top: 25, left: 25 }, // Menempelkan PNG di koordinat (150,150)
-        { input: redBox, top: bbox[1], left: bbox[0] } // Menambahkan kotak di koordinat (50,50)
+        { input: redBox, top: bbox[1], left: bbox[0] }, // Menambahkan kotak di koordinat (50,50)
+        { input: 'logo-unnes-horizontal.png', top: 25, left: 25 } // Menempelkan PNG di koordinat (150,150)
       ])
       .toFile(savedFilename, (err, info) => {
         if (err) {
