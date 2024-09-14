@@ -97,7 +97,6 @@ module.exports = {
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
-      console.log(res.data)
     }).catch((e) => {
       return res.status(400).json({msg: "Tidak atau terdapat banyak wajah!"})
     })
