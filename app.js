@@ -41,6 +41,10 @@ if(process.env.APP_STATE != "DEV"){
   const telegram = require("./services/telegrambot");
   telegram
 }
+BigInt.prototype.toJSON = function () {
+  const int = Number.parseInt(this.toString());
+  return int ?? this.toString();
+};
 // const hapus = async (req, res, model) =>{
 //   const id = req.params.uuid
 //   const call = eval('prisma.'+model)
@@ -132,6 +136,6 @@ app.get('/',(req, res) => {
   res.json({msg:'Hello!'});
 });
 
-server.listen(process.env.PORT, () => {
+server.listen(process.env.PORT,'0.0.0.0', () => {
   console.log(`Aplikasi berjalan di port ${ process.env.PORT }`);
 });
