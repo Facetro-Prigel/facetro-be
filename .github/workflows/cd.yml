@@ -16,6 +16,7 @@ jobs:
         port: 22
         script: | 
           cd /home/iqbal/facetro-be
+          npm install
           git reset --hard && git clean -df
           git pull origin master
           pm2 restart 1

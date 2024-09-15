@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
-    name: "Huruf besar, kecil, dan simbol (')",
+    name: "Huruf besar, kecil, dan simbol ('), (.), dan (,)",
     identityNumber: "Hanya angka",
     password: "Minimal 6 karakter kombinasi huruf besar, kecil, angka, dan simbol '&', '%', atau '$'",
     batch: "Angka dan boleh kosong",
@@ -20,7 +20,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
 };
   const validationRules = {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Format email standar
-    name: /^[A-Za-z' ]+$/, // Huruf besar, kecil, dan simbol '
+    name: /^[A-Za-z' .,]+$/, // Huruf besar, kecil, dan simbol '
     identityNumber: /^\d+$/, // Hanya angka
     password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/, // Kombinasi huruf besar, kecil, angka, dan simbol & % $
     batch: /^\d*$/, // Angka dan boleh kosong
