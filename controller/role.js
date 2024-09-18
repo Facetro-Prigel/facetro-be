@@ -58,7 +58,8 @@ module.exports = {
           select: {
             permission: {
               select:{
-                name: true
+                name: true,
+                uuid: true
               }
             }
           }

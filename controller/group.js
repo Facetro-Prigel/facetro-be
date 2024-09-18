@@ -29,7 +29,9 @@ module.exports = {
                 },
                 users: {
                     select: {
-                        name: true
+                        name: true,
+                        avatar:true,
+                        bbox:true
                     },
                 },
             },
