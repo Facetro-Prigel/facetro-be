@@ -322,21 +322,28 @@ module.exports = {
     },
     getLog: async (req, res) => {
         let logDatas = await prisma.log.findMany({
-            where: {
-                isMatch: true
-            },
             orderBy: [
                 {
                     createdAt: 'desc'
                 }
             ],
             select: {
+                isMatch: true,
                 imagePath: true,
                 bbox: true,
                 user: {
                     select: {
                         name: true,
                         identityNumber: true,
+                        usergroup: {
+                            select: {
+                                group: {
+                                  select: {
+                                    name: true
+                                  }
+                                },
+                              },
+                        }
                     }
                 },
                 createdAt: true,
@@ -355,7 +362,12 @@ module.exports = {
                 device: log.device.name,
                 image: log.imagePath,
                 bbox: log.bbox,
-                inTime: log.createdAt
+                type: log.type,
+                isMatch: log.isMatch,
+                inTime: log.createdAt,
+                group: log.user.usergroup.map((uy)=>{
+                    return uy.group.name
+                })
             })
         }
         return res.json(showLogs)
