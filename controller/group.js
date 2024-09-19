@@ -64,7 +64,8 @@ module.exports = {
                         user: {
                             select: {
                                 uuid: true,
-                                name: true
+                                name: true,
+                                avatar:true
                             }
                         }
                     }
