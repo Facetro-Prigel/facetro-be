@@ -54,6 +54,7 @@ module.exports = {
       console.error("Error while inserting permission:", error);
       return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Izin sudah ditambahkan" });
   },
   deleter: async (req, res) => {
@@ -63,6 +64,7 @@ module.exports = {
       return res.status(400).json({ msg: "Izin tidak ditemukan" });
     }
     await prisma.permission.delete({ where: { uuid: uuid } })
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Izin berhasil dihapus" })
   },
   update: async (req, res) => {
@@ -89,6 +91,7 @@ module.exports = {
       console.error("Error while inserting permission:", error);
       return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Izin berhasil ubah" })
   }
 };
