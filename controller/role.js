@@ -81,6 +81,7 @@ module.exports = {
       console.error("Error while inserting device:", error);
       return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Peran sudah ditambahkan" });
   },
   deleter: async (req, res) => {
@@ -90,6 +91,7 @@ module.exports = {
       return res.status(400).json({ msg: "Peran tidak ditemukan / tidak dapat dihapus" });
     }
     await prisma.role.delete({ where: { uuid: uuid } })
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Peran berhasil dihapus " })
   },
   update: async (req, res) => {
@@ -113,6 +115,7 @@ module.exports = {
       console.error("Error while inserting device:", error);
       return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Peran berhasil ubah" })
   }
 };

@@ -2,6 +2,7 @@
 const { PrismaClient } = require('@prisma/client')
 const generator = require('../helper/generator');
 const prisma = new PrismaClient()
+const utils = require('../helper/utils')
 const checkDeleteUpdate = async (uuid, reqs) => {
     const user = await prisma.group.findUnique({
       where: {
@@ -98,7 +99,9 @@ module.exports = {
             console.error("Error while inserting group:", error);
             return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
         }
+        utils.webSockerUpdate(req)
         return res.status(200).json({ msg: "Grup sudah ditambahkan"});
+
     },
     deleter: async (req, res)=>{
         let uuid = req.params.uuid
@@ -107,6 +110,7 @@ module.exports = {
             return res.status(400).json({ msg: "Grup tidak ditemukan"});
         }
         await prisma.group.delete({where: { uuid: uuid }})
+        utils.webSockerUpdate(req)
         return res.status(200).json({ msg: "Grup berhasil dihapus"})
     },
     update: async(req, res)=>{
@@ -144,6 +148,7 @@ module.exports = {
             console.error("Error while inserting group:", error);
             return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
         }
+        utils.webSockerUpdate(req)
         return res.status(200).json({ msg: "Grup berhasil ubah"})
     }
 };

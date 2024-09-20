@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client')
 const generator = require('../helper/generator')
 const prisma = new PrismaClient()
+const utils = require('../helper/utils')
 const checkDeleteUpdate = async (uuid, reqs) => {
   const user = await prisma.device.findUnique({
     where: {
@@ -88,6 +89,7 @@ module.exports = {
       console.error("Error while inserting device:", error);
       return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Perangkat sudah ditambahkan" });
   },
   deleter: async (req, res) => {
@@ -98,6 +100,7 @@ module.exports = {
       return res.status(400).json({ msg: "Device tidak ditemukan" });
     }
     await prisma.device.delete({ where: { uuid: uuid } })
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Device berhasil dihapus" })
   },
   update: async (req, res) => {
@@ -125,6 +128,7 @@ module.exports = {
       console.error("Error while inserting device:", error);
       return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
     }
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Grup berhasil ubah" })
   }
 };
