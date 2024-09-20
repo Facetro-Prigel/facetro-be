@@ -17,7 +17,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     phoneNumber: "Format nomor telepon dan boleh kosong",
     telegramId: "Angka dan boleh kosong",
     nfc_data: "Kode heksadesimal dan boleh kosong"
-};
+  };
   const validationRules = {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Format email standar
     name: /^[A-Za-z' .,]+$/, // Huruf besar, kecil, dan simbol '
@@ -31,7 +31,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     nfc_data: /^[0-9a-fA-F]*$/ // Kode heksadesimal dan boleh kosong
   };
 
-  if(updateOrInsert == 'up'){
+  if (updateOrInsert == 'up') {
     validationRules.password = /^$|^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/
   }
   const validateInput = (field, value) => {
@@ -41,11 +41,11 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   let errorVali = {}
   for (const field in validationRules) {
     const isValid = validateInput(field, req.body[field] ?? '');
-    if(!isValid){
+    if (!isValid) {
       errorVali[field] = `Harusnya berisi ${validationReason[field]}`
     }
   }
-  if(Object.keys(errorVali).length){
+  if (Object.keys(errorVali).length) {
     console.log(errorVali)
     return { status: false, msg: 'Check kembali masukan data anda!', validateError: errorVali }
   }
@@ -61,7 +61,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     telegramToken: genPass.generateString(10),
     nfc_data: req.body.nfc_data
   };
-  if(req.body.password){
+  if (req.body.password) {
     data.password = await genPass.generatePassword(req.body.password)
   }
   if (req.asign_user_to_group && req.body.usergroup) {
@@ -152,6 +152,7 @@ module.exports = {
       if (mimeType == 'image-png') {
         return res.status(404).json({ msg: "Gambar tersebut tidak tersedia" })
       }
+
       return res.status(200).json({ msg: "Gambar UNNES berhasil diambil", data: base64Data })
     } catch (error) {
       return res.status(400).json({ msg: "Gagal mengambil data", msg: error })
@@ -180,12 +181,18 @@ module.exports = {
   getter_all: async (req, res) => {
     let isExist;
     isExist = await prisma.user.findMany({
+      orderBy: [
+        {
+            createdAt: 'desc'
+        }
+    ],
       select: {
         uuid: true,
         name: true,
         identityNumber: true,
         avatar: true,
         bbox: true,
+        createdAt: true,
         roleuser: {
           select: {
             role: {
@@ -213,6 +220,7 @@ module.exports = {
     var uuid = req.params.uuid;
     let isExist;
     isExist = await prisma.user.findUnique({
+      
       where: { uuid: uuid },
       select: {
         uuid: true,
@@ -276,7 +284,7 @@ module.exports = {
       return res.status(400).json({ msg: "Input yang berikan tidak sesuai!" });
     }
     if (variabel.status == false) {
-      return res.status(400).json({ msg: variabel.msg, code: 400, validateError: variabel.validateError})
+      return res.status(400).json({ msg: variabel.msg, code: 400, validateError: variabel.validateError })
     }
     try {
       const results = await prisma.user.create({
@@ -284,7 +292,7 @@ module.exports = {
       });
 
       // sendMail({ name: variabel.name, email: variabel.email, password: req.body.password, token: variabel.telegramToken, bimbingan: utils.arrayToHuman(ss) });
-
+      utils.webSockerUpdate(req)
       return res.status(200).json({ msg: "Selamat pengguna berhasil dibuat" });
     } catch (error) {
       console.error("Error while inserting user:", error);
@@ -318,6 +326,7 @@ module.exports = {
       where: { uuid: uuid },
       data: data
     });
+    utils.webSockerUpdate(req)
     return res.status(200).json({ message: "Pengguna berhasil diperbarui", code: 200 });
   },
 
@@ -330,6 +339,7 @@ module.exports = {
     const deletedUser = await prisma.user.delete({
       where: { uuid: uuid }
     });
+    utils.webSockerUpdate(req)
     return res.status(200).json({ msg: "Pengguna berhasil dihapus", code: 200 });
   },
 

@@ -1,34 +1,35 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
-const makeBufferFromBase64 = (base64String)=>{
+const makeBufferFromBase64 = (base64String) => {
     const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     return buffer
 }
-const makeBondingBox = (base64String, bbox, filename)=>{
+
+const makeBondingBox = (base64String, bbox, filename) => {
     // Membuat kotak merah dalam format SVG
-    let savedFilename = 'tmp-telegram-image-'+filename
+    let savedFilename = 'tmp-telegram-image-' + filename
     const redBox = Buffer.from(
-      `<svg width="${bbox[2]}" height="${bbox[2]}">
-        <rect x="0" y="0" width="${bbox[2]}" height="${bbox[2]}" rx="${bbox[2]*0.1}" ry="${bbox[2]*0.1}" 
+        `<svg width="${bbox[2]}" height="${bbox[2]}">
+        <rect x="0" y="0" width="${bbox[2]}" height="${bbox[2]}" rx="${bbox[2] * 0.1}" ry="${bbox[2] * 0.1}" 
             fill="none" stroke="green" stroke-width="8"/>
       </svg> `
     );
-    
+
     // Menggabungkan gambar latar dengan kotak merah dan menempelkan gambar PNG di atasnya
     sharp(makeBufferFromBase64(base64String))  // Gambar latar
-      .composite([
-        { input: redBox, top: bbox[1], left: bbox[0] }, // Menambahkan kotak di koordinat (50,50)
-        { input: 'logo-unnes-horizontal.png', top: 25, left: 25 } // Menempelkan PNG di koordinat (150,150)
-      ])
-      .toFile(savedFilename, (err, info) => {
-        if (err) {
-          console.error(err);
-        } else {
-          console.log('Gambar berhasil disimpan:', info);
-        }
-      });
+        .composite([
+            { input: redBox, top: bbox[1], left: bbox[0] }, // Menambahkan kotak di koordinat (50,50)
+            { input: 'logo-unnes-horizontal.png', top: 25, left: 25 } // Menempelkan PNG di koordinat (150,150)
+        ])
+        .toFile(savedFilename, (err, info) => {
+            if (err) {
+                console.error(err);
+            } else {
+                console.log('Gambar berhasil disimpan:', info);
+            }
+        });
     return savedFilename
 }
 module.exports = {
@@ -50,7 +51,7 @@ module.exports = {
         const buffer = Buffer.from(base64Data, 'base64');
         return buffer
     },
-    
+
     saveImage: (base64String, filePath) => {
         const buffer = makeBufferFromBase64(base64String);
         fs.writeFile(filePath, buffer, (err) => {
@@ -109,25 +110,32 @@ module.exports = {
         return hours + " jam " + minutes + " menit " + seconds + " detik"
     },
     toSnakeCase: (str) => {
-        if(!str){
-            return null   
+        if (!str) {
+            return null
         }
         let cleanedStr = str.replace(/[^a-zA-Z0-9_\s]/g, '');
 
         let snakeCaseStr = cleanedStr
             .replace(/\s+/g, '_')
-            .replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);    
+            .replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
         if (snakeCaseStr.startsWith('_')) {
             snakeCaseStr = snakeCaseStr.substring(1);
         }
-    
+
         return snakeCaseStr.toLowerCase();
     },
     uuidToDecimal: (uuid) => {
         let cleanUuidStr = uuid.replace(/-/g, '');
         let decimalValue = BigInt('0x' + cleanUuidStr);
-        
+
         return decimalValue.toString();
+    },
+    webSockerUpdate: (req) => {
+        const generat = require('./generator.js')
+        const io = req.app.get('socketio');
+        io.emit('update CUD', {
+            token: generat.generateString(8)
+        })
     },
     makeBufferFromBase64, makeBondingBox
 }
