@@ -35,6 +35,7 @@ const inputInsertUpdate = async (req) => {
 module.exports = {
   getter_all: async (req, res) => {
     let isExist;
+    
     isExist = await prisma.role.findMany({
       select: {
         uuid: true,
@@ -42,6 +43,7 @@ module.exports = {
         description: true,
       },
     });
+
     res.status(200).json({ data: isExist, code: 200 });
   },
   getter: async (req, res) => {
