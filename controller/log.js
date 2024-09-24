@@ -28,35 +28,32 @@ const compareFace = async (base64image, dbSignature) => {
     }
 };
 
-const send2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
+const sendTele2UserTelegram = async (telegramId, requestImagePath, caption, n = 1) => {
+    try {
+        await bot.telegram.sendPhoto(parseInt(telegramId), { source: "./" + requestImagePath }, { caption: caption })
+    } catch (error) {
+        if(n < 6){
+            console.error( `Error terjadi ketika mengirimkan ke telegram ${isExist.telegramId} percobaan ke${n}`, error)
+            n++
+        }
+    }
+}
+
+const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
     if (ml_result.isMatch) {
         if (isExist.telegramId) {
-            await bot.telegram.sendPhoto(parseInt(isExist.telegramId), { source: "./" + requestImagePath }, { caption: captionThatUser })
+            sendTele2UserTelegram(isExist.telegramId, requestImagePath, captionThatUser)
         }
         for (let notify of notify_to) {
             if (notify) {
-                await bot.telegram.sendPhoto(parseInt(notify), { source: "./" + requestImagePath }, { caption: captionForElse })
+                sendTele2UserTelegram(notify, requestImagePath, captionForElse)
             }
         }
     }
 }
+
 const pythonModulus = (a, b) => {
     return ((a % b) + b) % b;
-}
-const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n = 1) => {
-    try {
-        await send2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser)
-    } catch (e) {
-        console.error(e)
-        console.error(`Error Terjadi Ketika Mengirim Ke telegram! Percobaan ke-${n}`)
-        if (n < 6) {
-            n += 1
-            setTimeout(async () => {
-                await handelSend2Telegram(isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser, n)
-            }, 3000);
-        }
-    }
-    
 }
 module.exports = {
     log: async (req, res) => {
