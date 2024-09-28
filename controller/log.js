@@ -293,11 +293,9 @@ module.exports = {
                 notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
                 notify_to = new Set(notify_to)
                 const image2tele = utils.makeBondingBox(image, ml_result.bbox, nameImage)
-                console.log('path:',image2tele)
-
-                if(process.env.APP_STATE != "DEV"){
-                    await handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
-                  }
+                if(image2tele){
+                    handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
+                }
                 const io = req.app.get('socketio');
                 if (ml_result.isMatch) {
                     io.emit('logger update', {

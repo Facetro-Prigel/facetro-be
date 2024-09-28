@@ -25,12 +25,11 @@ const makeBondingBox = (base64String, bbox, filename) => {
         ])
         .toFile(savedFilename, (err, info) => {
             if (err) {
-                console.error(err);
+                return false
             } else {
-                console.log('Gambar berhasil disimpan:', info);
+                return savedFilename
             }
         });
-    return savedFilename
 }
 module.exports = {
     arrayToHuman: (arrayData) => {
