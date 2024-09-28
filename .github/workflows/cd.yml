@@ -19,5 +19,4 @@ jobs:
           npm install
           git reset --hard && git clean -df
           git pull origin master
-          pm2 restart 1
-          pm2 restart 5
+          pm2 restart 2
