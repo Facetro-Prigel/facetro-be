@@ -292,9 +292,12 @@ module.exports = {
                 let notify_to = []
                 notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
                 notify_to = new Set(notify_to)
-                const image2tele = utils.makeBondingBox(image, ml_result.bbox, nameImage)
+                const image2tele = await utils.makeBondingBox(image, ml_result.bbox, nameImage)
+                console.info('sasas', image2tele)
                 if(image2tele){
-                    handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
+                    setTimeout(() => {
+                        handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
+                    }, 1000);
                 }
                 const io = req.app.get('socketio');
                 if (ml_result.isMatch) {
