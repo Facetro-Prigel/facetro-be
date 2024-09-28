@@ -7,7 +7,7 @@ const makeBufferFromBase64 = (base64String) => {
     return buffer
 }
 
-const makeBondingBox = (base64String, bbox, filename) => {
+const makeBondingBox = async (base64String, bbox, filename) => {
     // Membuat kotak merah dalam format SVG
     let savedFilename = 'tmp-telegram-image-' + filename
     const redBox = Buffer.from(
@@ -16,21 +16,26 @@ const makeBondingBox = (base64String, bbox, filename) => {
             fill="none" stroke="green" stroke-width="8"/>
       </svg> `
     );
-
     // Menggabungkan gambar latar dengan kotak merah dan menempelkan gambar PNG di atasnya
-    sharp(makeBufferFromBase64(base64String))  // Gambar latar
-        .composite([
-            { input: redBox, top: bbox[1], left: bbox[0] }, // Menambahkan kotak di koordinat (50,50)
-            { input: 'logo-unnes-horizontal.png', top: 25, left: 25 } // Menempelkan PNG di koordinat (150,150)
-        ])
-        .toFile(savedFilename, (err, info) => {
-            if (err) {
-                console.error(err);
-            } else {
-                console.log('Gambar berhasil disimpan:', info);
-            }
-        });
-    return savedFilename
+    let result = false
+    try {
+        sharp(makeBufferFromBase64(base64String))  // Gambar latar
+            .composite([
+                { input: redBox, top: bbox[1], left: bbox[0] }, // Menambahkan kotak di koordinat (50,50)
+                { input: 'logo-unnes-horizontal.png', top: 25, left: 25 } // Menempelkan PNG di koordinat (150,150)
+            ])
+            .toFile(savedFilename, (err, info) => {
+                if (err) {
+                    return false
+                } else {
+                    return savedFilename
+                }
+            });
+        result = savedFilename
+    } catch (error) {
+        console.error(error)
+    }
+    return result
 }
 module.exports = {
     arrayToHuman: (arrayData) => {
