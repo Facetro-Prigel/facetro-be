@@ -296,7 +296,7 @@ module.exports = {
                 console.log('path:',image2tele)
 
                 if(process.env.APP_STATE != "DEV"){
-                    handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
+                    await handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
                   }
                 const io = req.app.get('socketio');
                 if (ml_result.isMatch) {
