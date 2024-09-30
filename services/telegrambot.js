@@ -372,6 +372,8 @@ bot.command('izin', async (ctx) => {
  * lecturer.
  */
 
+
+
 bot.command('broadcast', async (ctx) => {
     const userId = ctx.from.id;
 
@@ -380,8 +382,9 @@ bot.command('broadcast', async (ctx) => {
         const userResult = await prisma.user.findFirst({
             where: { telegramId: userId },
             include: {
-                roleuser: { include: { role: true } },
-                usergroup: { include: { group: true } }
+                roleuser: { include: { role: {include: {permisionrole: {include: {permission: true}}}}}},
+                usergroup: { include: { group: true } },
+
             }
         });
 
@@ -390,15 +393,17 @@ bot.command('broadcast', async (ctx) => {
             return ctx.reply('Pengguna tidak ditemukan.');
         }
 
-        // definisi role yang diizinkan
-        const allowedRoles = ['super_admin', 'admin', 'lecturer'];
-
-        // ambil role yang dimiliki oleh user
+        // ambil rolenya user
         const userRoles = userResult.roleuser.map(ru => ru.role.guardName);
         
-        // kalau role user bukan role yang diizinkan, berhenti
-        if (!userRoles.some(role => allowedRoles.includes(role))) {
-            return ctx.reply('Anda tidak diizinkan menggunakan perintah ini.');
+        // ambil semua permissionnya
+        const userPermissions = userResult.roleuser.flatMap(ru => 
+            ru.role.permisionrole.map(pr => pr.permission.guardName)
+        );
+
+        // cek apakah user eligibel
+        if (!userPermissions.includes('broadcast_access') && !userRoles.includes('super_admin')) {
+            return ctx.reply('Anda tidak memiliki izin untuk menggunakan perintah ini.');
         }
 
         // ambil grup user
@@ -490,7 +495,7 @@ bot.command('broadcast', async (ctx) => {
 
     } catch (error) {
         // console.error('Error during broadcast command:', error);
-        ctx.reply('Terjadi kesalahan saat memulai proses broadcast.');
+        ctx.reply(`Terjadi kesalahan saat memulai proses broadcast: ${error}`,);
     }
 });
 
