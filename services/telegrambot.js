@@ -401,8 +401,13 @@ bot.command('broadcast', async (ctx) => {
             return ctx.reply('Anda tidak diizinkan menggunakan perintah ini.');
         }
 
-        // ambil grup user
-        let groupNames = userResult.usergroup.map(gu => gu.group.name);
+        // ambil semua grup yang ada di database
+        const allGroups = await prisma.group.findMany({
+            select: { name: true }
+        });
+
+        // ambil nama grup dari semua grup
+        let groupNames = allGroups.map(group => group.name);
 
         // membuat array untuk tombol inline
         const inlineButtons = groupNames.map(groupName => [
