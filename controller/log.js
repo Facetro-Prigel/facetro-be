@@ -51,9 +51,13 @@ const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePa
         }
     }
 }
-
-const pythonModulus = (a, b) => {
-    return ((a % b) + b) % b;
+const makeTelegramNotification = async (image, ml_result, nameImage, teleParams)=>{
+    const image2tele = await utils.makeBondingBox(image, ml_result.bbox, nameImage)
+    if(image2tele){
+        setTimeout(() => {
+            handelSend2Telegram(teleParams[0], ml_result, teleParams[1], 'tolol.jpg',teleParams[2], teleParams[3])
+        }, 1000);
+    }
 }
 module.exports = {
     log: async (req, res) => {
@@ -292,13 +296,8 @@ module.exports = {
                 let notify_to = []
                 notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
                 notify_to = new Set(notify_to)
-                const image2tele = await utils.makeBondingBox(image, ml_result.bbox, nameImage)
-                console.info('sasas', image2tele)
-                if(image2tele){
-                    setTimeout(() => {
-                        handelSend2Telegram(isExist, ml_result, notify_to, image2tele, captionForElse, captionThatUser)
-                    }, 1000);
-                }
+                const telegramParams = [isExist, notify_to, captionForElse, captionThatUser]
+                makeTelegramNotification(image, ml_result, nameImage, telegramParams)
                 const io = req.app.get('socketio');
                 if (ml_result.isMatch) {
                     io.emit('logger update', {
