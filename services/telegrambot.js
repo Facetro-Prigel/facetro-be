@@ -1,6 +1,7 @@
 
 const { PrismaClient } = require('@prisma/client')
-const { Telegraf } = require('telegraf')
+const { Telegraf, Markup } = require('telegraf')
+
 const { message } = require('telegraf/filters')
 const ProcessManager = require('./telegram_process_manager')
 const prisma = new PrismaClient();
@@ -93,12 +94,70 @@ const aboutUser = async (userUid, render = false) => {
     }
 }
 
-bot.start((ctx) => {
-    ctx.reply('Selamat Datang di Sistem Presensi yang baru, Semoga Harimu menyenangkan!\nPERINGATAN! Kamu belum menghubngkan akun telegram ini dengan sistem presensi. Check Email (UNNES) untuk mengetahui caranya!')
-    if(ctx.message.message_id < 2){
-        ctx.reply(`Kamu adalah orang Pertama yang mengintegrasikan ke sistem Presensi! Yey!`)
+async function menuLoader(userId) {
+    let userResult = await prisma.user.findFirst({
+        where: { telegramId: userId },
+        include: {
+            roleuser: { include: { role: {include: {permisionrole: {include: {permission: true}}}}}},
+            usergroup: { include: { group: true } },
+            permissionUser: { include: { permission: true } }
+        }
+    });
+
+    // Cek apakah userResult ada dan apakah roleuser memiliki setidaknya satu peran
+    if (!userResult || !userResult.roleuser || userResult.roleuser.length === 0) {
+        // console.log(`Pengguna dengan Telegram ID ${userId} tidak memiliki peran atau peran tidak ditemukan.`);
+        return;
     }
-})
+
+    // Get guardName from user role
+    const userRole = userResult.roleuser[0].role.guardName;
+
+    // Ambil semua permission dari role dan user
+    const userPermissions = [
+        // Permissions dari role
+        ...userResult.roleuser.flatMap(ru => ru.role.permisionrole.map(pr => pr.permission.guardName)),
+            
+        // Permissions langsung dari user
+        ...userResult.permissionUser.map(pu => pu.permission.guardName)
+    ];
+
+    let menu = [['ℹ️ Info'], []];
+    if (userRole == 'super_admin') {
+        menu.push(['🔉 Broadcast', '✉️ Izin']);
+    }else{
+        
+        if (userPermissions.includes('izin')) {
+            menu[1].push('✉️ Izin');
+        }
+        if (userPermissions.includes('broadcast_access') || userPermissions.includes('broadcast_access_all')) {
+            menu[1].push('🔉 Broadcast');
+        }
+    }
+
+    bot.telegram.sendMessage(userId, 'Selamat datang di Sistem Presensi Baru Factro! Silakan pilih menu di untuk menjalankan proses', Markup.keyboard(menu).resize().oneTime())
+}
+
+async function initMenu() {
+    const users = await prisma.user.findMany({
+        select: { telegramId: true } // Ambil hanya telegramId
+    });
+
+    // Iterate over each user and call menuLoader
+    for (const user of users) {
+        const userId = user.telegramId; // Simpan telegramId ke dalam userId
+
+        // Pastikan userId tidak null atau undefined sebelum memanggil menuLoader
+        if (userId != null) {
+            if (userId == "1949236643")
+                await menuLoader(userId);
+        } else {
+            // console.log(`User ID is null or undefined, skipping...`);
+        }
+    }
+}
+
+initMenu()
 
 bot.command('connect', async (ctx) => {
     var result = await prisma.user.findFirst({
@@ -159,7 +218,7 @@ bot.command('connect', async (ctx) => {
 
         for (let notify of notify_to) {
             if (notify) {
-                await bot.telegram.sendMessage(notify, aboutUserObj+"berhasil menghubungkan akunnya dengan telegram")
+                bot.telegram.sendMessage(notify, aboutUserObj+"berhasil menghubungkan akunnya dengan telegram")
             }
         }
     } else {
@@ -167,15 +226,16 @@ bot.command('connect', async (ctx) => {
     }
 })
 
-bot.command('info', async (ctx) => {
-    var result = await prisma.user.findFirst({
+// Reimplement info
+bot.hears('ℹ️ Info', async (ctx) => {
+    var result = prisma.user.findFirst({
         where: {
             telegramId: ctx.chat.id
         },
     })
     if (result) {
         var caption = 'Akun telegram telah ditautkan dengan:\n'
-        var aboutUserObj =  await aboutUser(result.uuid, true)
+        var aboutUserObj =  aboutUser(result.uuid, true)
         caption += aboutUserObj
         var infoChatId = 0
         var infoMsgId = 0 
@@ -185,196 +245,104 @@ bot.command('info', async (ctx) => {
         })
         let photo = ''
         if(result.avatar){
-            photo = await ctx.replyWithPhoto({ source: "./" + result.avatar }, { caption: `Gambar ${result.name}` }).then((e)=>{
+            photo = ctx.replyWithPhoto({ source: "./" + result.avatar }, { caption: `Gambar ${result.name}` }).then((e)=>{
                 bot.telegram.deleteMessage(infoChatId, infoMsgId)
             })
         }
-        await ctx.reply(caption)
+        ctx.reply(caption)
+        menuLoader(ctx.from.id);
         
     } else {
         ctx.reply(`Akun ini (ID: ${ctx.chat.id}) belum tertaut dengan Sistem Presensi. Check e-mail unnes untuk informasi lebih lanjut!`)
     }
-})
+})  
 
+const processManager = new ProcessManager(bot, menuLoader);
+// Reimplement broadcast
+bot.hears('✉️ Izin', async (ctx) => {
+    return ctx.reply(`Fitur ini sedang ada maintenance. Stay tune ya😉`)
+    // try {
+    //     const userId = ctx.from.id;
 
-/**
- * kode menuLoader dan initMenu digunakan untuk menampilkan menu
- * pada setiap user. menuLoader digunakan greeting ke user
- * dengan telegramId tertentu, demikian untuk initMenu yang
- * menerapkan untuk semua user saat bot mulai dinyalakan. Untuk
- * text yang ditampilkan di button, masih dalam bentuk command
- * langsung, bisa untuk future notes untuk diupgrade.
- */
+    //     // Ambil user berdasarkan telegramId
+    //     const userResult = await prisma.user.findFirst({
+    //         where: { telegramId: userId },
+    //         include: { usergroup: { include: { group: true } } }
+    //     });
 
+    //     if (!userResult) {
+    //         throw new Error('User tidak ditemukan.');
+    //     }
 
-async function menuLoader(userId) {
-    // Pastikan userId valid
-    if (typeof userId !== 'string') {
-        userId = userId.toString(); // Ubah userId menjadi string
-    }
+    //     // Ambil semua groupId yang dimiliki oleh user
+    //     const groupIds = userResult.usergroup.map(gu => gu.group.uuid);
 
-    let userResult = await prisma.user.findFirst({
-        where: { telegramId: userId },
-        include: {
-            roleuser: { include: { role: true } },
-            usergroup: { include: { group: true } }
-        }
-    });
+    //     if (groupIds.length === 0) {
+    //         throw new Error('User tidak terhubung dengan group manapun.');
+    //     }
 
-    // Cek apakah userResult ada dan apakah roleuser memiliki setidaknya satu peran
-    if (!userResult || !userResult.roleuser || userResult.roleuser.length === 0) {
-        // console.log(`Pengguna dengan Telegram ID ${userId} tidak memiliki peran atau peran tidak ditemukan.`);
-        return;
-    }
+    //     // Cari semua grup yang memiliki groupIds yang sama, dan ambil notify_to
+    //     const notifyToResults = await prisma.group.findMany({
+    //         where: { uuid: { in: groupIds } },
+    //         select: { notify_to: true },
+    //     });
 
-    // Get guardName from user role
-    const userRole = userResult.roleuser[0].role.guardName;
-    // Logic for menu
-    let menu;
-    if (userRole === 'lecturer') {
-        menu = [['/info'], ['/broadcast']];
-    } else if (['admin', 'super_admin'].includes(userRole)) {
-        menu = [['/info'], ['/broadcast', '/izin']];
-    } else if (userRole === 'students') {
-        menu = [['/info'], ['/izin']];
-    } else {
-        // console.log(`Pengguna dengan Telegram ID ${userId} tidak diizinkan menggunakan perintah ini.`);
-        return;
-    }
+    //     // Ambil UUID pemimpin group (notify_to) secara unik
+    //     const notify_to_uuids = notifyToResults.map(group => group.notify_to);
 
-    // Coba kirim pesan dengan menu
-    try {
-        await bot.telegram.sendMessage(userId, "Selamat Datang di Sistem Presensi Baru Facetro! Silahkan pilih menu di bawah ini:", {
-            reply_markup: {
-                keyboard: menu
-            }
-,        });
-    } catch (error) {
-        // console.error(`Gagal mengirim pesan ke pengguna ${userId}: ${error.response}`);
-        // Skip pengguna yang tidak ada chatnya
-    }
-}
+    //     if (notify_to_uuids.length === 0) {
+    //         throw new Error('Tidak ditemukan pemimpin group (notify_to) untuk group terkait.');
+    //     }
 
-async function initMenu() {
-    const users = await prisma.user.findMany({
-        select: { telegramId: true } // Ambil hanya telegramId
-    });
+    //     // Cari telegramId dari user yang merupakan notify_to
+    //     const notify_to_teleIds = await prisma.user.findMany({
+    //         where: {OR: [
+    //             {uuid: {in: notify_to_uuids}},
+    //             {roleuser: { some: { role: { guardName: 'super_admin' }}}}
+    //         ]},
+    //         select: { telegramId: true },
+    //         include: {roleuser: {include: {role: true}}}
+    //     });
 
-    // Iterate over each user and call menuLoader
-    for (const user of users) {
-        const userId = user.telegramId; // Simpan telegramId ke dalam userId
+    //     // Dapatkan array dari telegramId pemimpin
+    //     const notify_to_teleId = notify_to_teleIds.map(user => user.telegramId);
 
-        // Pastikan userId tidak null atau undefined sebelum memanggil menuLoader
-        if (userId != null) {
-            if (userId == "1949236643")
-                await menuLoader(userId);
-        } else {
-            // console.log(`User ID is null or undefined, skipping...`);
-        }
-    }
-}
+    //     // Define the steps for the izin process
+    //     const steps = [
+    //         {
+    //             name: 'text',
+    //             prompt: 'Silakan tuliskan detail izin (contoh: izin sakit, tugas lembaga, lomba):',
+    //             required: true,
+    //             onComplete: async (ctx, data) => {
+    //                 const message = `===== INFORMASI IZIN =====\nNama: ${userResult.name}\nNIM: ${userResult.identityNumber}\nProdi: ${userResult.program_study}\nNomor Telepon: ${userResult.phoneNumber ? userResult.phoneNumber : 'Tidak ada'}\nGrup: ${userResult.usergroup.map(ug => ug.group.name).join(', ')}\n===========================\n${ctx.message.text}`;
 
-initMenu()
-
-/**
- * ProcessManager diinstantiate untuk definisi proses handling
- * multiple input dari user. Untuk kali ini handling masih hanya
- * terbatas pada text handling dengan bot.on("text"), pengembangan
- * masih bisa dilanjut ke tipe data lain. 
- */
-const processManager = new ProcessManager(bot);
-
-/**
- * Command /izin untuk kali ini sudah memungkinkan user untuk mengirim izin 
- * pada notify_to. Pengembangan lanjut bisa dilanjutkan ke tipe data lain
- * seperti document, gambar, dll. Untuk kali ini role user yang bisa mengirim 
- * izin adalah students, admin dan super_admin.
- */
-bot.command('izin', async (ctx) => {
-    try {
-        const userId = ctx.from.id;
-
-        // Ambil user berdasarkan telegramId
-        const userResult = await prisma.user.findFirst({
-            where: { telegramId: userId },
-            include: { usergroup: { include: { group: true } } } // tidak perlu include 'user' di sini karena tidak digunakan
-        });
-
-        if (!userResult) {
-            throw new Error('User tidak ditemukan.');
-        }
-
-        // Ambil semua groupId yang dimiliki oleh user
-        const groupIds = userResult.usergroup.map(gu => gu.group.uuid);
-
-        if (groupIds.length === 0) {
-            throw new Error('User tidak terhubung dengan group manapun.');
-        }
-
-        // Cari semua grup yang memiliki groupIds yang sama, dan ambil notify_to
-        const notifyToResults = await prisma.group.findMany({
-            where: { uuid: { in: groupIds } },
-            select: { notify_to: true }
-        });
-
-        // Ambil UUID pemimpin group (notify_to) secara unik
-        const notify_to_uuids = notifyToResults.map(group => group.notify_to);
-
-        if (notify_to_uuids.length === 0) {
-            throw new Error('Tidak ditemukan pemimpin group (notify_to) untuk group terkait.');
-        }
-
-        // Cari telegramId dari user yang merupakan notify_to
-        const notify_to_teleIds = await prisma.user.findMany({
-            where: { uuid: { in: notify_to_uuids } },
-            select: { telegramId: true }
-        });
-
-        // Dapatkan array dari telegramId pemimpin
-        const notify_to_teleId = notify_to_teleIds.map(user => user.telegramId);
-
-        // Define the steps for the izin process
-        const steps = [
-            {
-                name: 'text',
-                prompt: 'Silakan tuliskan detail izin (contoh: izin sakit, tugas lembaga, lomba):',
-                required: true,
-                onComplete: async (ctx, data) => {
-                    const message = `===== INFORMASI IZIN =====\nNama: ${userResult.name}\nNIM: ${userResult.identityNumber}\nProdi: ${userResult.program_study}\nNomor Telepon: ${userResult.phoneNumber ? userResult.phoneNumber : 'Tidak ada'}\nGrup: ${userResult.usergroup.map(ug => ug.group.name).join(', ')}\n===========================\n${ctx.message.text}`;
-
-                    // Kirim informasi ke setiap notify_to
-                    for (const notifyId of notify_to_teleId) {
-                        try {
-                            await bot.telegram.sendMessage(notifyId, message);
-                        } catch (error) {
-                            console.error(`Gagal mengirim pesan ke ${notifyId}:`, error);
-                            await ctx.reply(`Gagal mengirim informasi izin ke ${notifyId}`);
-                        }
-                    }
+    //                 // Kirim informasi ke setiap notify_to
+    //                 for (const notifyId of notify_to_teleId) {
+    //                     try {
+    //                         await bot.telegram.sendMessage(notifyId, message);
+    //                     } catch (error) {
+    //                         console.error(`Gagal mengirim pesan ke ${notifyId}:`, error);
+    //                         await ctx.reply(`Gagal mengirim informasi izin ke ${notifyId}`);
+    //                     }
+    //                 }
         
-                    await ctx.reply('Izin Anda telah berhasil diajukan.');
-                }
-            }
-        ];
+    //                  ctx.reply('Izin Anda telah berhasil diajukan.');
+    //             }
+    //         }
+    //     ];
 
-        // Start the process for the user
-        processManager.startProcess(userId, steps);
-        ctx.reply(steps[0].prompt); // Start with the first prompt
+    //     // Start the process for the user
+    //     processManager.startProcess(userId, steps);
+    //     processManager.nextStep(userId, ctx)
 
-    } catch (error) {
-        ctx.reply(`Terjadi kesalahan saat memulai proses izin. Error: ${error.message}`);
-    }
+    // } catch (error) {
+    //     ctx.reply(`Terjadi kesalahan saat memulai proses izin.`);
+    // }
 });
 
-/** 
- * Broadcast digunakan untuk mengirim pesan ke seluruh group secara
- * langsung. Fitur ini bisa digunakan oleh admin, super_admin dan 
- * lecturer.
- */
 
-
-
-bot.command('broadcast', async (ctx) => {
+// Reimplement izin
+bot.hears('🔉 Broadcast', async (ctx) => {
     const userId = ctx.from.id;
 
     try {
@@ -384,7 +352,7 @@ bot.command('broadcast', async (ctx) => {
             include: {
                 roleuser: { include: { role: {include: {permisionrole: {include: {permission: true}}}}}},
                 usergroup: { include: { group: true } },
-
+                permissionUser: { include: { permission: true } }
             }
         });
 
@@ -396,29 +364,66 @@ bot.command('broadcast', async (ctx) => {
         // ambil rolenya user
         const userRoles = userResult.roleuser.map(ru => ru.role.guardName);
         
-        // ambil semua permissionnya
-        const userPermissions = userResult.roleuser.flatMap(ru => 
-            ru.role.permisionrole.map(pr => pr.permission.guardName)
-        );
+        // Ambil semua permission dari role dan user
+        const userPermissions = [
+            // Permissions dari role
+            ...userResult.roleuser.flatMap(ru => ru.role.permisionrole.map(pr => pr.permission.guardName)),
 
-        // cek apakah user eligibel
-        if (!userPermissions.includes('broadcast_access') && !userRoles.includes('super_admin')) {
+            // Permissions langsung dari user
+            ...userResult.permissionUser.map(pu => pu.permission.guardName)
+        ];
+
+        // Ambil nama grup sesuai izin
+        let groupData = [];
+
+        // Jika pengguna memiliki izin 'broadcast_access', ambil grup yang dimiliki
+        if (userPermissions.includes('broadcast_access')) {
+            groupData = userResult.usergroup.map(gu => ({
+                name: gu.group.name,
+                uuid: gu.group.uuid
+            }));
+        }
+
+        // Jika pengguna adalah super_admin, ambil semua grup
+        if (userRoles.includes('super_admin') || userPermissions.includes('broadcast_access_all')) {
+            const groups = await prisma.group.findMany({ select: { name: true, uuid: true }});
+            groupData = groups.map(group => ({
+                name: group.name,
+                uuid: group.uuid
+            }));
+        }
+
+        // Cek apakah ada grup yang diizinkan
+        if (groupData.length === 0) {
             return ctx.reply('Anda tidak memiliki izin untuk menggunakan perintah ini.');
         }
 
-        // ambil grup user
-        let groupNames = userResult.usergroup.map(gu => gu.group.name);
-
-        // membuat array untuk tombol inline
-        const inlineButtons = groupNames.map(groupName => [
-            {
-                text: groupName,
-                callback_data: groupName
+        // Membuat array untuk tombol inline dengan grup yang ada
+        let inlineButtons = groupData.map(gd => [{
+                text: gd.name,
+                callback_data: gd.uuid 
             }
         ]);
 
+        // Tambahkan tombol 'Selesai'
+        inlineButtons.push([{
+            text: '✅ Selesai',
+            callback_data: 'stop'
+        }]);
+
         // definisi langkah-langkah broadcasting
         const steps = [
+            {
+                // Step 1: Meminta input text
+                name: 'text',
+                validate: async (ctx) => {
+                    if (!ctx.message.text) {
+                        return false;
+                    }
+                    return true;
+                },
+                required: true
+            },
             {
                 // Step 1: Meminta input text
                 name: 'text',
@@ -427,7 +432,8 @@ bot.command('broadcast', async (ctx) => {
                     if (!ctx.message.text) {
                         await ctx.reply('Input tidak valid. Mohon diulang kembali!');
                         return false;
-                    }
+                    }3
+
                     return true;
                 },
                 required: true
@@ -452,70 +458,122 @@ bot.command('broadcast', async (ctx) => {
 
                 // ini kalau udah selesai prosesnya
                 onComplete: async (ctx, data) => {
-                    const message = `===== INFORMASI BROADCAST =====\nNama: ${userResult.name}\nNomor ID: ${userResult.identityNumber}\nNomor Telepon: ${userResult.phoneNumber ? userResult.phoneNumber : 'Tidak ada'}\nGrup: ${ctx.callbackQuery.data}\n===============================\n${data.text.text}`;
 
-                    // mengambil grup yang dipilih
-                    const selectedGroups = ctx.callbackQuery.data;
+                    const selectedGroupUuid = processManager.sessions[userId].data.userInputs;
                     
-                    // cek grup yang dipilih
+                    // Mencari grup yang sesuai dengan UUID yang dipilih
                     const groupResults = await prisma.userGroup.findMany({
-                        where: {group: {name: {in: [selectedGroups]}}},
+                        where: {
+                            group: {uuid: {in: selectedGroupUuid}}
+                        },
                         include: {user: true, group: true}
                     });
 
-                    // kalau grup yang dipilih tidak ada, skip
+                    // Jika grup tidak ditemukan, beri tahu pengguna
                     if (groupResults.length === 0) {
                         return ctx.reply('Grup yang dipilih tidak valid.');
                     }
 
-                    // ambil telegramId dari setiap user di grup yang sama, abaikan user yang sedang mengirim pesan
-                    const notify_to = groupResults.filter(ug => ug.user.telegramId != userId).map(ug => ug.user.telegramId);                    
+                    // Buat pesan broadcast
+                    const message = `===== INFORMASI BROADCAST =====\nNama: ${userResult.name}\nNomor ID: ${userResult.identityNumber}\nNomor Telepon: ${userResult.phoneNumber ? userResult.phoneNumber : 'Tidak ada'}\nDitujukan pada grup: ${[...new Set(groupResults.map(result => result.group.name))].join(', ')}\n===============================\n${data.text.text}`;
 
-                    // bagian ini untuk mengirim pesannya
-                    if (notify_to.length > 0) {
-                        for (let notify of notify_to) { 
+                    // Ambil telegramId dari setiap user di grup yang sama, kecuali pengirim
+                    const notifyTo = [...new Set(groupResults
+                        .filter(ug => ug.user.telegramId !== userResult.telegramId) // Kecualikan pengirim
+                        .map(ug => ug.user.telegramId))];
+
+                    // Kirim pesan ke setiap pengguna di grup
+                    if (notifyTo.length > 0) {
+                        for (let notify of notifyTo) {
                             try {
                                 if (notify) {
                                     await bot.telegram.sendMessage(notify, message);
                                 }
                             } catch (error) {
-                                
+                                console.error(`Error sending message to ${notify}: `, error);
                             }
                         }
+                    } else {
+                        ctx.reply('Tidak ada anggota grup yang bisa menerima pesan.');
                     }
-                    // konfirmasi
-                    ctx.reply('Pesan broadcast telah dikirim ke grup yang dipilih!');
+                    ctx.reply('Broadcast telah berhasil dilakukan.');
                 }
             }
         ];
 
-        // trigger proses pertama
+        // pengaturan proses
         processManager.startProcess(userId, steps);
-        ctx.reply(steps[0].prompt);
+        processManager.nextStep(userId, ctx);
 
     } catch (error) {
-        // console.error('Error during broadcast command:', error);
-        ctx.reply(`Terjadi kesalahan saat memulai proses broadcast: ${error}`,);
+        console.error('Error during broadcast command:', error);
+        ctx.reply(`Terjadi kesalahan saat memulai proses broadcast. error: ${error}`);
     }
 });
 
-// event handler untuk message
-bot.on('message', async (ctx) => {
-    const userId = ctx.from.id;
-    await processManager.nextStep(userId, ctx);
-});
+// Start command
+bot.start((ctx) => {
+    ctx.reply('Selamat Datang di Sistem Presensi yang baru, Semoga Harimu menyenangkan!\nPERINGATAN! Kamu belum menghubngkan akun telegram ini dengan sistem presensi. Check Email (UNNES) untuk mengetahui caranya!')
+    if(ctx.message.message_id < 2){
+        ctx.reply(`Kamu adalah orang Pertama yang mengintegrasikan ke sistem Presensi! Yey!`)
+    }
+})
 
-// event handler untuk callback_query dari inline keyboard
+// Dynamic action handler for all callback queries
 bot.on('callback_query', async (ctx) => {
-    // Memastikan bahwa callback query berasal dari proses yang valid
+    const callbackData = ctx.callbackQuery.data;
     const userId = ctx.from.id;
+    
+    // Pastikan sesi user ada di ProcessManager
+    if (!processManager.sessions[userId]) {
+      return ctx.reply('Proses belum dimulai. Silakan pilih salah satu proses yang ada di menu.');
+    }
+  
+    // Ambil sesi pengguna
     const session = processManager.sessions[userId];
+  
+    // Handle 'Stop' button click
+    if (callbackData === 'stop') {
+        if (!session.data.userInputs || session.data.userInputs.length === 0) {
+            return ctx.reply('Anda tidak memilih apapun.');
+        }
 
-    if (session) {
-        // Memanggil nextStep untuk melanjutkan ke langkah berikutnya
+        await ctx.deleteMessage();
+
+        // Lanjutkan ke langkah berikutnya
         await processManager.nextStep(userId, ctx);
+    }else{ 
+        // tambahkan grup yang baru dipilih
+        session.data.userInputs.push(callbackData);
+
+        const groupResult = await prisma.group.findUnique({
+            where: {uuid: callbackData}
+        });
+    
+        // Tampilkan konfirmasi pilihan user
+        ctx.answerCbQuery(`Kamu sudah memilih ${groupResult.name}`);
+    }
+  });
+
+// Event handler for handling user input
+bot.on("text", async (ctx) => {
+    const userId = ctx.from.id;
+    
+    // Check if the user has an active session in ProcessManager
+    const session = processManager.sessions[userId];
+    
+    // If the session exists, proceed to the next step
+    if (session) {
+        try {
+            // Pass the context to the next step in the process
+            await processManager.nextStep(userId, ctx);
+        } catch (error) {
+            console.error('Error while processing next step:', error);
+            await ctx.reply('Terjadi kesalahan. Silakan coba lagi.');
+        }
     } else {
-        ctx.answerCbQuery('Input tidak valid atau sudah keluar sesi T&J.');
+        // If no session, handle normally or provide a message
+        await ctx.reply('Proses belum dimulai. Silakan pilih salah satu proses yang ada di menu.');
     }
 });
 
