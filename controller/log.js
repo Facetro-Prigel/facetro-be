@@ -39,7 +39,7 @@ const sendTele2UserTelegram = async (telegramId, requestImagePath, caption, n = 
     }
 }
 
-const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionFo.rElse, captionThatUser) => {
+const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
     if (ml_result.isMatch) {
         if (isExist.telegramId) {
             sendTele2UserTelegram(isExist.telegramId, requestImagePath, captionThatUser)
