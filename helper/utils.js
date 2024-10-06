@@ -9,7 +9,7 @@ const makeBufferFromBase64 = (base64String) => {
 
 const makeBondingBox = async (base64String, bbox, filename) => {
     // Membuat kotak merah dalam format SVG
-    let savedFilename = 'tmp-telegram-image-' + filename
+    let savedFilename = './photos/temp/tmp-telegram-image-' + filename
     const redBox = Buffer.from(
         `<svg width="${bbox[2]}" height="${bbox[2]}">
         <rect x="0" y="0" width="${bbox[2]}" height="${bbox[2]}" rx="${bbox[2] * 0.1}" ry="${bbox[2] * 0.1}" 
