@@ -10,7 +10,6 @@ const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
-const { Telegram } = require('telegraf');
 const prisma= new PrismaClient(); 
 // get config vars
 app.use(cors())
@@ -37,10 +36,6 @@ io.on("connection_error", (err) => {
   console.log(err.message);  // the error message, for example "Session ID unknown"
   console.log(err.context);  // some additional error context
 });
-if(process.env.APP_STATE != "DEV"){
-  const telegram = require("./services/telegrambot");
-  telegram
-}
 BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();

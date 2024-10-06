@@ -28,34 +28,24 @@ const compareFace = async (base64image, dbSignature) => {
     }
 };
 
-const sendTele2UserTelegram = async (telegramId, requestImagePath, caption, n = 1) => {
-    try {
-        await bot.telegram.sendPhoto(parseInt(telegramId), { source: requestImagePath }, { caption: caption })
-    } catch (error) {
-        if(n < 6){
-            console.error( `Error terjadi ketika mengirimkan ke telegram ${isExist.telegramId} percobaan ke${n}`, error)
-            n++
-        }
-    }
-}
 
-const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
-    if (ml_result.isMatch) {
-        if (isExist.telegramId) {
-            sendTele2UserTelegram(isExist.telegramId, requestImagePath, captionThatUser)
-        }
-        for (let notify of notify_to) {
-            if (notify) {
-                sendTele2UserTelegram(notify, requestImagePath, captionForElse)
-            }
-        }
-    }
-}
 const makeTelegramNotification = async (image, ml_result, nameImage, teleParams)=>{
     const image2tele = await utils.makeBondingBox(image, ml_result.bbox, nameImage)
+    console.log(teleParams)
     if(image2tele){
-        setTimeout(() => {
-            handelSend2Telegram(teleParams[0], ml_result, teleParams[1], 'tolol.jpg',teleParams[2], teleParams[3])
+        setTimeout(async () => { 
+            try {
+            const { data } = await axios.post(`${process.env.TELE_URL}notify`, { 
+                'user': teleParams[0],
+                'ml_result': ml_result,
+                'notify_to': teleParams[1],
+                'request_image_path': image2tele,
+                'caption_for_else': teleParams[2],
+                'caption_that_user': teleParams[3]
+             }, { headers: { "Content-Type": "application/json" } });
+            } catch (error) {
+                console.error('Terjadi error ketika mencoba mengirim ke telegram handler!', error)        
+            }
         }, 1000);
     }
 }
@@ -296,7 +286,7 @@ module.exports = {
                 let notify_to = []
                 notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
                 notify_to = new Set(notify_to)
-                const telegramParams = [isExist, notify_to, captionForElse, captionThatUser]
+                const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
                 makeTelegramNotification(image, ml_result, nameImage, telegramParams)
                 const io = req.app.get('socketio');
                 if (ml_result.isMatch) {
