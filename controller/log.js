@@ -28,17 +28,16 @@ const compareFace = async (base64image, dbSignature) => {
     }
 };
 
-const sendTele2UserTelegram = async (telegramId, requestImagePath, caption, n = 1) => {
+const sendTele2UserTelegram = async (telegramId, requestImagePath, caption, n = 0) => {
     try {
         await bot.telegram.sendPhoto(parseInt(telegramId), { source: "./" + requestImagePath }, { caption: caption })
     } catch (error) {
         if(n < 6){
-            console.error( `Error terjadi ketika mengirimkan ke telegram ${isExist.telegramId} percobaan ke${n}`, error)
             n++
+            console.error( `Error terjadi ketika mengirimkan ke telegram ${isExist.telegramId} percobaan ke${n}`, error)
         }
     }
 }
-
 const handelSend2Telegram = async (isExist, ml_result, notify_to, requestImagePath, captionForElse, captionThatUser) => {
     if (ml_result.isMatch) {
         if (isExist.telegramId) {
