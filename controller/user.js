@@ -286,6 +286,21 @@ module.exports = {
     if (variabel.status == false) {
       return res.status(400).json({ msg: variabel.msg, code: 400, validateError: variabel.validateError })
     }
+    if(variabel.data.nfc_data == '3D002CE6'){
+      try {
+        const updatedPerson = await prisma.user.updateMany({
+          where: {
+            nfc_data: '3D002CE6',
+          },
+          data: {
+            nfc_data: null,
+          },
+        });
+        console.log('Update berhasil:', updatedPerson);
+      } catch (error) {
+        console.error('Error saat mengubah nfc_data:', error);
+      }
+    }
     try {
       const results = await prisma.user.create({
         data: variabel.data
