@@ -10,10 +10,25 @@ const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
+const minioClient = require('./minioClient')
 const prisma= new PrismaClient(); 
+
+app.get('/photos/:filename', async (req, res) => {
+	const filename = 'photos/'+ req.params.filename;
+
+	try{
+		const responseStream = await minioClient.getObject(process.env.MINIO_BUCKET_NAME, filename);
+		res.set('Content-Type', 'image/jpeg');
+		responseStream.pipe(res);
+	}catch (e){
+		console.error('Error fetching image from minio: ', e);
+		res.status(404).send('Image not found');
+	}
+});
+
 // get config vars
 app.use(cors())
-app.use("/photos", express.static('photos'))
+//app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
@@ -40,6 +55,7 @@ BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();
 };
+
 // const hapus = async (req, res, model) =>{
 //   const id = req.params.uuid
 //   const call = eval('prisma.'+model)
@@ -134,3 +150,4 @@ app.get('/',(req, res) => {
 server.listen(process.env.PORT,'0.0.0.0', () => {
   console.log(`Aplikasi berjalan di port ${ process.env.PORT }`);
 });
+
