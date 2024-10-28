@@ -14,5 +14,5 @@ route.use('/user',user)
 route.use('/group',group)
 route.use('/permission',permission)
 route.use('/role',role)
-route.use('./myprofile',myprofile)
+route.use('/myprofile',myprofile)
 module.exports = route;
