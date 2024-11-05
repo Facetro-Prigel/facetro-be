@@ -14,17 +14,26 @@ const minioClient = require('./minioClient')
 const prisma= new PrismaClient(); 
 
 app.get('/photos/:filename', async (req, res) => {
-	const filename = 'photos/'+ req.params.filename;
+    const filename = 'photos/' + req.params.filename;
 
-	try{
-		const responseStream = await minioClient.getObject(process.env.MINIO_BUCKET_NAME, filename);
-		res.set('Content-Type', 'image/jpeg');
-		responseStream.pipe(res);
-	}catch (e){
-		console.error('Error fetching image from minio: ', e);
-		res.status(404).send('Image not found');
-	}
+    const referer = req.get('Referer');
+    const origin = req.get('Origin');
+
+    // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
+    if (!referer && !origin) {
+        return res.redirect('https://facetro-frontend.web.app/404');
+    }
+
+    try {
+        const responseStream = await minioClient.getObject(process.env.MINIO_BUCKET_NAME, filename);
+        res.set('Content-Type', 'image/jpeg');
+        responseStream.pipe(res);
+    } catch (e) {
+        console.error('Error fetching image from minio: ', e);
+        res.redirect('https://facetro-frontend.web.app/404');  // Redirect jika gambar tidak ditemukan
+    }
 });
+
 
 // get config vars
 app.use(cors())
