@@ -16,7 +16,6 @@ const makeBondingBox = async (base64String, bbox, filename) => {
             fill="none" stroke="green" stroke-width="8"/>
       </svg> `
     );
-    let result = false
     try {
         const imageBuffer = await sharp(makeBufferFromBase64(base64String))
             .composite([
