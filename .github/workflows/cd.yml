@@ -12,11 +12,10 @@ jobs:
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
-        password: ${{ secrets.PASSWORD }}
+        key: ${{ secrets.PRIVATE_KEY }}
         port: 22
         script: | 
-          cd /home/iqbal/facetro-be
-          npm install
-          git reset --hard && git clean -df
-          git pull origin master
-          pm2 restart 2
+          cd /home/xmod3905/facetro-be
+          sudo npm install
+          sudo git reset --hard && git clean -df
+          sudo git pull origin master

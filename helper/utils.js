@@ -16,7 +16,6 @@ const makeBondingBox = async (base64String, bbox, filename) => {
             fill="none" stroke="green" stroke-width="8"/>
       </svg> `
     );
-    let result = false
     try {
         const imageBuffer = await sharp(makeBufferFromBase64(base64String))
             .composite([
@@ -43,9 +42,7 @@ const makeBondingBox = async (base64String, bbox, filename) => {
 		imageBuffer.length,
 		{'Content-Type': 'image/jpeg'}
 	);
-
-	const fileUrl = `${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${process.env.MINIO_BUCKET_NAME}/${savedFilename}`;
-	return fileUrl;
+	return savedFilename;
     } catch (error) {
         console.error(error)
 	return false;
