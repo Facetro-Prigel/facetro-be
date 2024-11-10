@@ -31,13 +31,12 @@ const compareFace = async (base64image, dbSignature) => {
 
 const makeTelegramNotification = async (image, ml_result, nameImage, teleParams)=>{
     const image2tele = await utils.makeBondingBox(image, ml_result.bbox, nameImage)
-    console.log(teleParams)
     if(image2tele){
         setTimeout(async () => { 
             try {
             const { data } = await axios.post(`${process.env.TELE_URL}notify`, { 
-                'user': teleParams[0],
-                'ml_result': ml_result,
+                'user_tele_id': teleParams[0].telegramId ?? false,
+                'ml_result': ml_result.isMatch,
                 'notify_to': teleParams[1],
                 'request_image_path': image2tele,
                 'caption_for_else': teleParams[2],
