@@ -21,7 +21,7 @@ app.get('/photos/:filename', async (req, res) => {
 
     // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
     if (!referer && !origin) {
-        return res.redirect('https://facetro-frontend.web.app/404');
+        return res.redirect(`${process.env.FRONTEND_URL}/404`);
     }
 
     try {
@@ -30,7 +30,7 @@ app.get('/photos/:filename', async (req, res) => {
         responseStream.pipe(res);
     } catch (e) {
         console.error('Error fetching image from minio: ', e);
-        res.redirect('https://facetro-frontend.web.app/404');  // Redirect jika gambar tidak ditemukan
+        res.redirect(`${process.env.FRONTEND_URL}/404`);  // Redirect jika gambar tidak ditemukan
     }
 });
 

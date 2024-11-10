@@ -139,7 +139,7 @@ module.exports = {
   unnes_image: async (req, res) => {
     try {
       const identityNumber = req.body.identity_number
-      let url = `https://duanol.unnes.ac.id/v2/primer/user_ava/${identityNumber}/541.aspx`
+      let url = `${process.env.UNNES_API}/primer/user_ava/${identityNumber}/541.aspx`
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
         headers: {
