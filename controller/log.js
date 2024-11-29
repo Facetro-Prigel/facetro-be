@@ -23,6 +23,8 @@ const compareFace = async (base64image, dbSignature) => {
             return { error: e.response.data.message, code: e.response.status };
         }else{
             console.error(`Face recognation service dont response!`);
+            console.error('details');
+            console.error(e)
             return { error: `Terjadi kesalahan pada sistem pengenalan wajah`, code: 500 };
         }
     }

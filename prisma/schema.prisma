@@ -31,6 +31,8 @@ model User {
   phoneNumber    String?
   telegramId     BigInt?
   telegramToken  String?
+  birtdayPhoto   String?
+  birtdayBbox    Json?
   nfc_data       String?  @unique
   createdAt      DateTime   @default(now())
   modifiedAt     DateTime   @default(now())

@@ -1,5 +1,3 @@
-const dotenv = require('dotenv');
-dotenv.config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const {PrismaClient} =require('@prisma/client')
@@ -150,8 +148,9 @@ console.table({
     timeStyle: "long",
     dateStyle:"full"
   }), 
-  pesan: pesan.trim()
+  pesan: pesan.trim(),
 })
+console.table(process.env)
 app.get('/',(req, res) => {
   res.json({msg:'Hello!'});
 });

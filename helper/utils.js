@@ -22,31 +22,110 @@ const makeBondingBox = async (base64String, bbox, filename) => {
                 { input: redBox, top: bbox[1], left: bbox[0] },
                 { input: 'logo-unnes-horizontal.png', top: 25, left: 25 }
             ])
-	.jpeg()
-	.toBuffer()
-//	.toFile(savedFilename, (err, info)=> {
-//		if(e){
-//			return false;
-//		}
-//		else{
-//			return savedFilename;
-//		}
-//	});
-//	result = savedFilename;
-//	return result;
+            .jpeg()
+            .toBuffer()
+        //	.toFile(savedFilename, (err, info)=> {
+        //		if(e){
+        //			return false;
+        //		}
+        //		else{
+        //			return savedFilename;
+        //		}
+        //	});
+        //	result = savedFilename;
+        //	return result;
 
-	await minio_client.putObject(
-		process.env.MINIO_BUCKET_NAME,
-		savedFilename,
-		imageBuffer,
-		imageBuffer.length,
-		{'Content-Type': 'image/jpeg'}
-	);
-	return savedFilename;
+        await minio_client.putObject(
+            process.env.MINIO_BUCKET_NAME,
+            savedFilename,
+            imageBuffer,
+            imageBuffer.length,
+            { 'Content-Type': 'image/jpeg' }
+        );
+        return savedFilename;
     } catch (error) {
         console.error(error)
-	return false;
+        return false;
     }
+}
+const transformSentence = (sentence) => {
+    const academicTitlesRegex = /\b(?:S\.?T\.?|M\.?Sc\.?|Ph\.?D\.?|Dr\.?|Ir\.?|M\.?A\.?|B\.?S\.?|B\.?A\.?|MBA|M\.?D\.)\b/g;
+    const academicTitlesRegexSub = /\b(([\w]+[.][\w]+)([.][\w])*)/g;
+    const cleanedString = sentence.replace(academicTitlesRegex, '').replace(academicTitlesRegexSub, '').trim().replace('  ', '').replaceAll('.', '').replaceAll(',', '').trim();
+    console.info(cleanedString)
+    const words = cleanedString.split(" ");
+    const transformedWords = words.map((word, index) => {
+        if (index === 0 || index === 1) {
+            return word;
+        } else {
+            return word[0].toUpperCase() + ".";
+        }
+    });
+    const transformedSentence = transformedWords.join(" ");
+    return transformedSentence;
+}
+
+const MakeBirthdayCard = async (imagePath, date, name, bbox, age) => {
+    if (name.length > 14) {
+        name = transformSentence(name)
+    }
+    const datePlaceholder = Buffer.from(`<svg width="277" height="1739" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 275px; fill: black; } </style> <text x="280" y="190" text-anchor="end" dominant-baseline="middle" transform="rotate(-90, 150, 150)"> ${date} </text> </svg> `);
+    const namePlaceHolder = Buffer.from(`<svg width="2156" height="386" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 275px; fill: white; } </style> <text x="1078" y="275" text-anchor="middle" dominant-baseline="middle"> ${name} </text> </svg> `);
+    const agePlaceHolder = Buffer.from(`<svg width="2156" height="300" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 250px; fill: orange; } </style> <text x="1078" y="175" text-anchor="middle" dominant-baseline="middle">ke-${age}</text> </svg> `);
+    let result = false
+    const factor = 835 / bbox[2]
+    try {
+        // Get Image Meta
+        const image_meta = await sharp(imagePath)
+            .metadata()
+            .then((metadata) => {
+                return metadata
+            })
+            .catch((err) => {
+                console.error('Error reading image:', err);
+            });
+        const bboxNew = [parseInt(bbox[0] * factor), parseInt(bbox[1] * factor)]
+        // Image Resize
+        const imageResize = await sharp(imagePath)
+            .resize(parseInt(image_meta.width * factor), parseInt(image_meta.height * factor))
+            .toBuffer()
+            .then((data) => {
+                return data
+            })
+            .catch((err) => {
+                console.error('Error during image processing:', err);
+                res.status(500).send('Error processing image');
+            });
+        // Image Masking
+        const imageCroped = await sharp({
+            create: {
+                width: 3001,
+                height: 4001,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 }
+            }
+        }).composite([
+            { input: imageResize, top: 634 - bboxNew[1], left: 1080 - bboxNew[0] },
+            { input: 'birthday_template/mask.png', blend: 'dest-in' }
+        ]).png().toBuffer().then((data) => {
+            return data
+        })
+
+        // Image Composit
+        const finalImage = await sharp('birthday_template/bg.jpg')  // Gambar latar
+            .composite([
+                { input: agePlaceHolder, top: 3200, left: 416 },
+                { input: namePlaceHolder, top: 3393, left: 416 },
+                { input: imageCroped, top: 0, left: 0 },
+                { input: datePlaceholder, top: 774, left: 2556 },
+            ]).toBuffer().then((data) => {
+                return data
+            })
+        result = finalImage
+    } catch (error) {
+        console.error(error)
+    }
+    return result
 }
 module.exports = {
     arrayToHuman: (arrayData) => {
@@ -70,14 +149,15 @@ module.exports = {
 
     saveImage: async (base64String, filePath) => {
         const buffer = makeBufferFromBase64(base64String);
-	const bucketName = process.env.MINIO_BUCKET_NAME;
+        const bucketName = process.env.MINIO_BUCKET_NAME;
 
-	try {
-		await minio_client.putObject(bucketName, filePath, buffer, buffer.length);
-		console.log(`Gambar berhasil disimpan di minio dengan path: ${filePath}`);
-	}catch (e){
-	console.error('Gagal menyimpan gambar ke minio: ' + e)
-	}
+        try {
+            await minio_client.putObject(bucketName, filePath, buffer, buffer.length);
+            console.log(`Gambar berhasil disimpan di minio dengan path: ${filePath}`);
+        } catch (e) {
+            console.error(`Gagal menyimpan gambar ke minio: ${e} (${bucketName})`)
+            console.table(minio_client)
+        }
     },
     fileToBase64: (filePath) => {
         return new Promise((resolve, reject) => {
@@ -154,5 +234,5 @@ module.exports = {
             token: generat.generateString(8)
         })
     },
-    makeBufferFromBase64, makeBondingBox
+    makeBufferFromBase64, makeBondingBox, MakeBirthdayCard
 }

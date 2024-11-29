@@ -1,10 +1,7 @@
 const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcrypt');
 const prisma = new PrismaClient
-// get config vars
-dotenv.config();
 const checkPermission = async (user, text) =>{
   return await prisma.user.findFirst({
     where: {
