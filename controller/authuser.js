@@ -77,6 +77,7 @@ module.exports = {
       { uuid: results.uuid, email: results.email, name: results.name},
       process.env.SECRET_TOKEN
     );
-    return res.json({ token: token, name: results.name, avatar: results.avatar, bbox: results.bbox, user_roles:user_roles, user_permission: user_permission});
+    console.log(JSON.stringify(results.uuid));
+    return res.json({ token: token, name: results.name, uuid: results.uuid, avatar: results.avatar, bbox: results.bbox, user_roles:user_roles, user_permission: user_permission});
   }
 };

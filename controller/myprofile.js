@@ -163,17 +163,19 @@ module.exports = {
     let image = req.body.image
     let datas = {}
     let config_u = { headers: { "Content-Type": "application/json", } }
+    console.log('ok');
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
-    }).catch((e) => {
-      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!" })
+    }).catch(( e) => {
+      return res.status(400).json({ msg: `Tidak atau terdapat banyak wajah! : ${e}`})
     })
+    console.log('ok1');
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return res.status(201).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid })
+      return res.status(200).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid, path: datas.image_path })
     } catch (e) {
       console.error("gagal menyimpan gambar")
     }
@@ -243,19 +245,11 @@ module.exports = {
     if (!user) {
       return res.status(404).json({ msg: "Pengguna tidak ditemukan / tidak dapat diubah" });
     }
-    await prisma.userGroup.deleteMany({
-      where: { userUuid: uuid }
-    })
-    await prisma.roleUser.deleteMany({
-      where: { userUuid: uuid }
-    })
-    await prisma.permissionUser.deleteMany({
-      where: { userUuid: uuid }
-    })
     var data = await inputInsertUpdate(req, 'up')
     if (data.status == false) {
       return res.status(400).json({ msg: data.msg, code: 400, validateError: data.validateError })
     }
+    console.log(`data: ${data}`);
     data = data.data
     data.modifiedAt = new Date()
     const updateUser = await prisma.user.update({
