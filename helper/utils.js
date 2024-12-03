@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const minio_client = require('../minioClient');
+
 const makeBufferFromBase64 = (base64String) => {
     const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
@@ -65,11 +66,22 @@ const transformSentence = (sentence) => {
     return transformedSentence;
 }
 
-const MakeBirthdayCard = async (imagePath, date, name, bbox, age) => {
+const MakeBirthdayCard = async (imagePath, date, name, bbox) => {
     if (name.length > 14) {
         name = transformSentence(name)
     }
-    const datePlaceholder = Buffer.from(`<svg width="277" height="1739" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 275px; fill: black; } </style> <text x="280" y="190" text-anchor="end" dominant-baseline="middle" transform="rotate(-90, 150, 150)"> ${date} </text> </svg> `);
+    
+    const thisYear= new Date().getFullYear();
+    const dateObj = new Date(date)
+    
+    const age = thisYear - dateObj.getFullYear()
+    
+    const dateValue = dateObj.toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        dateStyle: "long"
+      })
+
+    const datePlaceholder = Buffer.from(`<svg width="277" height="1739" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 275px; fill: black; } </style> <text x="280" y="190" text-anchor="end" dominant-baseline="middle" transform="rotate(-90, 150, 150)"> ${dateValue} </text> </svg> `);
     const namePlaceHolder = Buffer.from(`<svg width="2156" height="386" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 275px; fill: white; } </style> <text x="1078" y="275" text-anchor="middle" dominant-baseline="middle"> ${name} </text> </svg> `);
     const agePlaceHolder = Buffer.from(`<svg width="2156" height="300" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 250px; fill: orange; } </style> <text x="1078" y="175" text-anchor="middle" dominant-baseline="middle">ke-${age}</text> </svg> `);
     let result = false
@@ -147,10 +159,8 @@ module.exports = {
         return buffer
     },
 
-    saveImage: async (base64String, filePath) => {
+    saveImage: async (base64String, filePath, bucketName = process.env.MINIO_BUCKET_NAME) => {
         const buffer = makeBufferFromBase64(base64String);
-        const bucketName = process.env.MINIO_BUCKET_NAME;
-
         try {
             await minio_client.putObject(bucketName, filePath, buffer, buffer.length);
             console.log(`Gambar berhasil disimpan di minio dengan path: ${filePath}`);
