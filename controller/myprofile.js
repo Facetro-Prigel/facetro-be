@@ -163,13 +163,11 @@ module.exports = {
     let image = req.body.image
     let datas = {}
     let config_u = { headers: { "Content-Type": "application/json", } }
-    console.log('ok');
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch(( e) => {
-      return res.status(400).json({ msg: `Tidak atau terdapat banyak wajah! : ${e}`})
+      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!"})
     })
-    console.log('ok1');
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
