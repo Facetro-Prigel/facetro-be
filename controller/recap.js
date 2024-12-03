@@ -1,11 +1,4 @@
 const { PrismaClient } = require('@prisma/client')
-
-const generator = require('../helper/generator')
-const utils = require('../helper/utils')
-const { bot } = require('../helper/telegram')
-const { fetchLog, handleGetLog } = require('../controller/log')
-const axios = require('axios')
-const role_utils = require('../helper/role_utils');
 const prisma = new PrismaClient()
 
 class RecapGenerator {
@@ -79,46 +72,62 @@ class RecapGenerator {
 
         cell.alignment = { horizontal: 'center' };
     }
-async createCalendarExcel() {
-    for (const key of Object.keys(this.data)) {
-        this.user = key;
-        const worksheet = this.workbook.addWorksheet(key);
+    async createCalendarExcel() {
+        for (const key of Object.keys(this.data)) {
+            this.user = key;
+            const worksheet = this.workbook.addWorksheet(key);
 
-        const sortedData = Object.values(this.data[key]).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        const start = sortedData[0].createdAt; 
-        const end = sortedData[sortedData.length - 1].createdAt;
+            const sortedData = Object.values(this.data[key]).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            const start = sortedData[0].createdAt; 
+            const end = sortedData[sortedData.length - 1].createdAt;
 
-        // Proses batch di sini
-        await this.processUserSheetInBatches(start, end, worksheet);
+            // Proses batch di sini
+            await this.processUserSheetInBatches(start, end, worksheet);
+        }
+
+        return this.workbook.xlsx.writeBuffer();
     }
 
-    return this.workbook.xlsx.writeBuffer();
-}
+    async processUserSheetInBatches(start, end, worksheet) {
+        let currentDate = new Date(start);
+        const endDate = new Date(end);
+        const batchSize = 7; // misalnya batch mingguan
+        const batch = [];
 
-async processUserSheetInBatches(start, end, worksheet) {
-    let currentDate = new Date(start);
-    const endDate = new Date(end);
-    const batchSize = 7; // misalnya batch mingguan
-    const batch = [];
+        while (currentDate <= endDate) {
+            batch.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
 
-    while (currentDate <= endDate) {
-        batch.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
+            // Jika batch penuh atau mencapai akhir bulan
+            if (batch.length === batchSize || currentDate.getMonth() !== batch[0].getMonth()) {
+                await this.processBatch(batch, worksheet);
+                batch.length = 0;
+            }
+        }
+    }
 
-        // Jika batch penuh atau mencapai akhir bulan
-        if (batch.length === batchSize || currentDate.getMonth() !== batch[0].getMonth()) {
-            await this.processBatch(batch, worksheet);
-            batch.length = 0;
+    async processBatch(batch, worksheet) {
+        for (const date of batch) {
+            this.placeDate(worksheet, date);
+            if (date.getDay() === 6) this.row++;
         }
     }
 }
 
-async processBatch(batch, worksheet) {
-    for (const date of batch) {
-        this.placeDate(worksheet, date);
-        if (date.getDay() === 6) this.row++;
-    }
-}
+const fetchLog = async (users) => {
+    const logs = await prisma.log.findMany({
+        where: {
+            user: {
+                uuid: {
+                    in: users
+                }
+            }
+        },
+        orderBy: {
+            createdAt: 'asc'
+        }
+    });
+    return logs;
 }
 
 module.exports = {
@@ -160,5 +169,9 @@ module.exports = {
         res.send(buffer);
     },
     
-    handleGetLog
+    handleGetLog: async (req, res) => {
+        const users = req.body ? req.body.users : [req.params.uuid];
+        const results = await fetchLog(users);
+        return res.status(200).json(results);
+    }
 }
