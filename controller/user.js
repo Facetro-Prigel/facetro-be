@@ -4,6 +4,7 @@ const { sendMail } = require('../helper/mailer');
 const utils = require("../helper/utils");
 const axios = require("axios");
 const role_utils = require("../helper/role_utils");
+const minioClient = require('../minioClient')
 const prisma = new PrismaClient();
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
@@ -136,6 +137,85 @@ const checkDeleteUpdate = async (uuid, reqs) => {
   return user
 }
 module.exports = {
+  birthday_image: async (req, res) => {
+    var uuid = req.params.uuid;
+    isExist = await prisma.user.findUnique({
+      where: {
+        uuid: uuid,
+        AND: [
+          {
+            birtdayPhoto: {
+              not: null,
+            },
+          },
+          {
+            birtdayPhoto: {
+              not: "",
+            },
+          },
+          {
+            birtdayBbox: {
+              not: null,
+            },
+          },
+          {
+            birtdayBbox: {
+              not: "",
+            },
+          },
+        ],
+      },
+      select: {
+        name: true,
+        birtday: true,
+        birtdayPhoto: true,
+        birtdayBbox: true,
+      }
+    });
+    if (!isExist) {
+      return res.sendFile('/home/app/no_images.png')
+    }
+    try {
+      const stream = await minioClient.getObject('birthday', isExist.birtdayPhoto);
+      const chunks = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+      buffer = Buffer.concat(chunks);
+      let BirthdayCard = await utils.MakeBirthdayCard(buffer, isExist.birtday, isExist.name, isExist.birtdayBbox)
+      res.set("Content-Type", "image/jpeg");
+      return res.send(BirthdayCard);
+    } catch (error) {
+      console.log(error)
+      return res.sendFile('/home/app/no_images.png')
+    }
+  },
+  updload_birthday: async (req, res) => {
+    let image = req.body.image
+    let uuid  = req.body.uuid
+    let datas = {}
+    let config_u = { headers: { "Content-Type": "application/json", } }
+    await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
+      datas = res.data
+    }).catch((e) => {
+      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!" })
+    })
+    try {
+      requestImagePath = `${genPass.generateString(15)}.png`
+      utils.saveImage(image, requestImagePath, 'birthday')
+      datas.image_path = requestImagePath
+      await prisma.user.update({
+        where: { uuid: uuid },
+        data: {
+          birtdayPhoto: requestImagePath,
+          birtdayBbox: datas.bbox
+        }
+      })
+      return res.status(201).json({ msg: "Gambar berhasil disimpan" })
+    } catch (e) {
+      console.error("gagal menyimpan gambar")
+    }
+  },
   unnes_image: async (req, res) => {
     try {
       const identityNumber = req.body.identity_number
@@ -183,9 +263,9 @@ module.exports = {
     isExist = await prisma.user.findMany({
       orderBy: [
         {
-            createdAt: 'desc'
+          createdAt: 'desc'
         }
-    ],
+      ],
       select: {
         uuid: true,
         name: true,
@@ -220,7 +300,6 @@ module.exports = {
     var uuid = req.params.uuid;
     let isExist;
     isExist = await prisma.user.findUnique({
-      
       where: { uuid: uuid },
       select: {
         uuid: true,
@@ -286,7 +365,7 @@ module.exports = {
     if (variabel.status == false) {
       return res.status(400).json({ msg: variabel.msg, code: 400, validateError: variabel.validateError })
     }
-    if(variabel.data.nfc_data == '3D002CE6'){
+    if (variabel.data.nfc_data == '3D002CE6') {
       try {
         const updatedPerson = await prisma.user.updateMany({
           where: {

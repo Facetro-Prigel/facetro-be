@@ -179,11 +179,10 @@ module.exports = {
     }
   },
   getter: async (req, res) => {
-    var uuid = req.params.uuid;
     let isExist;
     isExist = await prisma.user.findUnique({
       
-      where: { uuid: uuid },
+      where: { uuid: req.user.uuid },
       select: {
         uuid: true,
         name: true,
