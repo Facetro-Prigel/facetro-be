@@ -1,5 +1,5 @@
 const Minio = require('minio');
-
+require('dotenv').config();
 
 
 const minio_client = new Minio.Client({

@@ -5,6 +5,7 @@ const utils = require("../helper/utils");
 const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const prisma = new PrismaClient();
+require('dotenv').config();
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
@@ -237,7 +238,7 @@ module.exports = {
     res.status(200).json({ data: isExist, code: 200 });
   },
   update: async (req, res) => {
-    const uuid = req.params.uuid;
+    const uuid = req.user.uuid;
     const user = await checkDeleteUpdate(uuid, req)
     if (!user) {
       return res.status(404).json({ msg: "Pengguna tidak ditemukan / tidak dapat diubah" });

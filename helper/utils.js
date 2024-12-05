@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const minio_client = require('../minioClient');
+require('dotenv').config();
+
 
 const makeBufferFromBase64 = (base64String) => {
     const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
