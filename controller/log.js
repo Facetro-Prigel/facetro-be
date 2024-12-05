@@ -214,9 +214,14 @@ module.exports = {
                 }
                 // Check is thare have log data
                 const now = new Date()
-                const gteValue = `${now.getFullYear()}-${generator.generateZero(now.getMonth() + 1)}-${generator.generateZero(now.getDate())}T00:00:00.000+07:00`
+                const gteValue = new Date(
+                    new Intl.DateTimeFormat("en-US", {
+                      timeZone: "Asia/Jakarta",
+                      hourCycle: "h23",
+                    }).format(new Date())
+                  );
                 whereCluse.type = "Login"
-                whereCluse.createdAt = { gte: new Date(gteValue).toISOString() }
+                whereCluse.createdAt = { gte: gteValue.toISOString() }
                 let todayLog = await prisma.log.findFirst({
                     where: whereCluse
                 })
