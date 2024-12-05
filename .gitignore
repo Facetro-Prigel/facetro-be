@@ -1,7 +1,6 @@
 node_modules/
 # Keep environment variables out of version control
 .env
-.github/
 migrations/
 photos/
 test_*
