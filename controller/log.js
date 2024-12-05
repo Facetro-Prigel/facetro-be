@@ -6,6 +6,7 @@ const { bot } = require('../helper/telegram')
 const axios = require('axios')
 const role_utils = require('../helper/role_utils');
 const prisma = new PrismaClient()
+require('dotenv').config();
 
 const compareFace = async (base64image, dbSignature) => {
     try {

@@ -4,6 +4,8 @@ const genPass = require('../helper/generator');
 const utils = require('../helper/utils');
 const bcrypt = require("bcrypt");
 const prisma = new PrismaClient();
+require('dotenv').config();
+
 module.exports = {
   login: async (req, res) => {
     if (!req.body.email || !req.body.password) {

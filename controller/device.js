@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client')
 const generator = require('../helper/generator')
 const prisma = new PrismaClient()
 const utils = require('../helper/utils')
+require('dotenv').config();
 const checkDeleteUpdate = async (uuid, reqs) => {
   const user = await prisma.device.findUnique({
     where: {

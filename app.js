@@ -10,6 +10,7 @@ const server = require('http').createServer(app);
 var cors = require('cors');
 const minioClient = require('./minioClient')
 const prisma= new PrismaClient(); 
+require('dotenv').config();
 
 app.get('/photos/:filename', async (req, res) => {
     const filename = 'photos/' + req.params.filename;
