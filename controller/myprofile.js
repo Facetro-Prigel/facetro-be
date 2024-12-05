@@ -108,18 +108,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
 const checkDeleteUpdate = async (uuid, reqs) => {
   const user = await prisma.user.findUnique({
     where: {
-      uuid: uuid,
-      NOT: [{
-        roleuser: {
-          some: {
-            role: {
-              is: {
-                guardName: 'super_admin'
-              }
-            }
-          }
-        }
-      }]
+      uuid: uuid
     },
     select: {
       createdAt: true,
