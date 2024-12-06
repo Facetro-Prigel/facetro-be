@@ -19,7 +19,7 @@ app.get('/photos/:filename', async (req, res) => {
 
     // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
     if (!referer && !origin) {
-        return res.redirect(`${process.env.FRONTEND_URL}/404`);
+        return res.redirect(`${process.env.FRONTEND_URL}404`);
     }
 
     try {
