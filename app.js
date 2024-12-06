@@ -14,12 +14,14 @@ const prisma= new PrismaClient();
 app.get('/photos/:filename', async (req, res) => {
     const filename = 'photos/' + req.params.filename;
 
+    const limk_404 = process.env.FRONTEND_URL + "/404"
+
     const referer = req.get('Referer');
     const origin = req.get('Origin');
 
     // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
     if (!referer && !origin) {
-        return res.redirect(`${process.env.FRONTEND_URL}404`);
+        return res.redirect(link_404);
     }
 
     try {
@@ -28,7 +30,7 @@ app.get('/photos/:filename', async (req, res) => {
         responseStream.pipe(res);
     } catch (e) {
         console.error('Error fetching image from minio: ', e);
-        res.redirect(`${process.env.FRONTEND_URL}/404`);  // Redirect jika gambar tidak ditemukan
+        res.redirect(link_404);  // Redirect jika gambar tidak ditemukan
     }
 });
 
