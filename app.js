@@ -14,7 +14,7 @@ const prisma= new PrismaClient();
 app.get('/photos/:filename', async (req, res) => {
     const filename = 'photos/' + req.params.filename;
 
-    const limk_404 = process.env.FRONTEND_URL + "/404"
+    const link_404 = process.env.FRONTEND_URL + "/404"
 
     const referer = req.get('Referer');
     const origin = req.get('Origin');
