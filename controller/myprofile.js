@@ -155,8 +155,8 @@ module.exports = {
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
-    }).catch(( e) => {
-      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!"})
+    }).catch((e) => {
+      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!" })
     })
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
@@ -168,10 +168,37 @@ module.exports = {
       console.error("gagal menyimpan gambar")
     }
   },
+  sumarry: async (req, res) => {
+    const gteValue = new Date(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Jakarta",
+        hourCycle: "h23",
+      }).format(new Date())
+    );
+    let it = await prisma.log.findMany({
+      where: {
+        userUuid: req.user.uuid,
+        createdAt: { gte: gteValue.toISOString() },
+        isMatch: true
+      },
+      select: {
+        createdAt: true,
+        bbox: true,
+        imagePath: true,
+        type: true,
+        device: {
+          select: {
+            name: true,
+          }
+        }
+      }
+    })
+    
+    return res.status(200).json({ data: it, code: 200 });
+  },
   getter: async (req, res) => {
     let isExist;
     isExist = await prisma.user.findUnique({
-      
       where: { uuid: req.user.uuid },
       select: {
         uuid: true,
