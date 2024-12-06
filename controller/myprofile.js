@@ -191,9 +191,13 @@ module.exports = {
             name: true,
           }
         }
-      }
+      }, orderBy: [
+        {
+          createdAt: 'desc'
+        }
+      ]
     })
-    
+
     return res.status(200).json({ data: it, code: 200 });
   },
   getter: async (req, res) => {
