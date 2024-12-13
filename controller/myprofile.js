@@ -237,8 +237,7 @@ module.exports = {
     res.status(200).json({ data: isExist, code: 200 });
   },
   update: async (req, res) => {
-    const uuid = req.params.uuid;
-    const user = await checkDeleteUpdate(uuid, req)
+    const user = await checkDeleteUpdate(req.user.uuid, req)
     if (!user) {
       return res.status(404).json({ msg: "Pengguna tidak ditemukan / tidak dapat diubah" });
     }
@@ -250,7 +249,7 @@ module.exports = {
     data = data.data
     data.modifiedAt = new Date()
     const updateUser = await prisma.user.update({
-      where: { uuid: uuid },
+      where: { uuid: req.user.uuid },
       data: data
     });
     utils.webSockerUpdate(req)
