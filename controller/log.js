@@ -476,6 +476,7 @@ module.exports = {
           },
         ],
         select: {
+          type: true,
           isMatch: true,
           imagePath: true,
           bbox: true,

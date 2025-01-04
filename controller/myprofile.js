@@ -138,6 +138,7 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 module.exports = {
   unnes_image: async (req, res) => {
     try {
+      console.log(JSON.stringify(req.body));
       const identityNumber = req.body.identity_number
       let url = `${process.env.UNNES_API}/primer/user_ava/${identityNumber}/541.aspx`
       const response = await axios.get(url, {
@@ -245,7 +246,6 @@ module.exports = {
     if (data.status == false) {
       return res.status(400).json({ msg: data.msg, code: 400, validateError: data.validateError })
     }
-    console.log(`data: ${data}`);
     data = data.data
     data.modifiedAt = new Date()
     const updateUser = await prisma.user.update({
