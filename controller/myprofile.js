@@ -138,7 +138,6 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 module.exports = {
   unnes_image: async (req, res) => {
     try {
-      console.log(JSON.stringify(req.body));
       const identityNumber = req.body.identity_number
       let url = `${process.env.UNNES_API}/primer/user_ava/${identityNumber}/541.aspx`
       const response = await axios.get(url, {
