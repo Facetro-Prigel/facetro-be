@@ -1,7 +1,7 @@
 FROM node:22-bookworm-slim
 
 # Install curl and tar
-RUN apt-get update && apt-get install -y curl tar git xfonts-utils && \
+RUN apt-get update && apt-get install -y curl tar git openssl xfonts-utils && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/app

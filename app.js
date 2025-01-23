@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const {PrismaClient} =require('@prisma/client')
+const { PrismaClient } = require('@prisma/client')
 const middleware = require('./middleware');
 const allRoutes = require("./routes");
 const { Server } = require('socket.io');
@@ -9,10 +9,11 @@ const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
 const minioClient = require('./minioClient')
-const prisma= new PrismaClient(); 
+const prisma = new PrismaClient();
+require('dotenv').config();
 
 app.get('/photos/:filename', async (req, res) => {
-    const filename = 'photos/' + req.params.filename;
+  const filename = 'photos/' + req.params.filename;
 
     const link_404 = process.env.FRONTEND_URL + "/404"
 
@@ -130,34 +131,39 @@ BigInt.prototype.toJSON = function () {
 //       tampilkansemua(req, res, element);
 //     }
 //   });
-// });
-console.info("=======Bejalan Menggunakan Versi=======")
-let data_commit = execSync("git show --summary").toString().split(/\r?\n/)
-let penulis = data_commit[1]
-let waktu = data_commit[2]
-let pesan =  data_commit[4]
-console.log(data_commit[1].indexOf("Merge:"))
-if(data_commit[1].indexOf("Merge:") != -1){
-  penulis = data_commit[2]
-  waktu = data_commit[3]
-  pesan =  data_commit[5]
+// });'
+try {
+  console.info("=======Bejalan Menggunakan Versi=======")
+  let data_commit = execSync("git show --summary").toString().split(/\r?\n/)
+  let penulis = data_commit[1]
+  let waktu = data_commit[2]
+  let pesan = data_commit[4]
+  console.log(data_commit[1].indexOf("Merge:"))
+  if (data_commit[1].indexOf("Merge:") != -1) {
+    penulis = data_commit[2]
+    waktu = data_commit[3]
+    pesan = data_commit[5]
+  }
+  console.table({
+    hash: data_commit[0].replace("commit ", ""),
+    penulis: penulis.replace("Author: ", ""),
+    waktu: new Date(waktu.replace("Date:", "").trim()).toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      timeStyle: "long",
+      dateStyle: "full"
+    }),
+    pesan: pesan.trim(),
+  })
+} catch (error) {
+  console.error('".git" tidak ada!')
 }
-console.table({
-  hash: data_commit[0].replace("commit ", ""),
-  penulis: penulis.replace("Author: ", ""), 
-  waktu: new Date(waktu.replace("Date:", "").trim()).toLocaleString('id-ID', {
-    timeZone: 'Asia/Jakarta',
-    timeStyle: "long",
-    dateStyle:"full"
-  }), 
-  pesan: pesan.trim(),
-})
+
 console.table(process.env)
-app.get('/',(req, res) => {
-  res.json({msg:'Hello!'});
+app.get('/', (req, res) => {
+  res.json({ msg: 'Hello!' });
 });
 
-server.listen(process.env.PORT,'0.0.0.0', () => {
-  console.log(`Aplikasi berjalan di port ${ process.env.PORT }`);
+server.listen(process.env.PORT, '0.0.0.0', () => {
+  console.log(`Aplikasi berjalan di port ${process.env.PORT}`);
 });
 

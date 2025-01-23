@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-
+require('dotenv').config();
 const utils = require('../../helper/utils');
 const axios = require('axios');
 const ml_url = process.env.ML_URL

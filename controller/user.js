@@ -6,6 +6,8 @@ const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const minioClient = require('../minioClient')
 const prisma = new PrismaClient();
+require('dotenv').config();
+
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
