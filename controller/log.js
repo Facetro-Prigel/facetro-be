@@ -254,9 +254,13 @@ module.exports = {
             signature: isExist.signature,
           });
 
+          const startMLTime = process.hrtime();
+
           // Check to ML (Face Recognations)
           let [selected_server_image, ml_result, four_last_signatures_process] =
             await checkMachineLearning(image, four_last_signatures);
+
+          const endMLTime = process.hrtime(startMLTime);
 
           // Check is thare have log data
           const now = new Date();
@@ -318,7 +322,9 @@ module.exports = {
           const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded);
           const totalTimeNeeded =
             endTotalTimeNeeded[0] * 1000 + endTotalTimeNeeded[1] / 1e6;
+          const mlTimeNeeded = endMLTime[0] * 1000 + endMLTime[1]/1e6;
           logData.otherData = {
+            mlTimeNeeded: mlTimeNeeded,
             totalTimeNeeded: totalTimeNeeded,
             dataComparisonCandidate: four_last_signatures,
             dataComparisonCandidateAfterProcess: four_last_signatures_process,
@@ -360,7 +366,9 @@ module.exports = {
             captionForElse,
             captionThatUser,
           ];
-          // makeTelegramNotification(image, ml_result, nameImage, telegramParams)
+          try {
+            await makeTelegramNotification(image, ml_result, nameImage, telegramParams)
+          } catch (error) {}
           const io = req.app.get("socketio");
           if (ml_result.isMatch) {
             io.emit("logger update", {
@@ -398,9 +406,12 @@ module.exports = {
             signature: isExist.signature,
           });
 
+          const startMLTime = process.hrtime();
+
           // Check to ML (Face Recognations)
           let [selected_server_image, ml_result, four_last_signatures_process] =
             await checkMachineLearning(image, four_last_signatures);
+          const endMLTime = process.hrtime(startMLTime);
 
           const now = new Date();
 
@@ -441,7 +452,9 @@ module.exports = {
           const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded);
           const totalTimeNeeded =
             endTotalTimeNeeded[0] * 1000 + endTotalTimeNeeded[1] / 1e6;
+          const mlTimeNeeded = endMLTime[0] * 1000 + endMLTime[1]/1e6;
           logData.otherData = {
+            mlTimeNeeded: mlTimeNeeded,
             totalTimeNeeded: totalTimeNeeded,
             dataComparisonCandidate: four_last_signatures,
             dataComparisonCandidateAfterProcess: four_last_signatures_process,

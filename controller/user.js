@@ -6,8 +6,6 @@ const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const minioClient = require('../minioClient')
 const prisma = new PrismaClient();
-require('dotenv').config();
-
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
@@ -220,6 +218,7 @@ module.exports = {
   },
   unnes_image: async (req, res) => {
     try {
+      console.log(JSON.stringify(req.body));
       const identityNumber = req.body.identity_number
       let url = `${process.env.UNNES_API}/primer/user_ava/${identityNumber}/541.aspx`
       const response = await axios.get(url, {

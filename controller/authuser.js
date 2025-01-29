@@ -4,9 +4,52 @@ const genPass = require('../helper/generator');
 const utils = require('../helper/utils');
 const bcrypt = require("bcrypt");
 const prisma = new PrismaClient();
-require('dotenv').config();
-
 module.exports = {
+  change_password: async (req, res) => {
+    const { uuid, old_password, new_password } = req.body;
+
+    if (!uuid || !old_password || !new_password) {
+      return res.status(400).json({ msg: "Semua field (password lama, password baru) harus diisi!" });
+    }
+  
+    try {
+      const user = await prisma.user.findUnique({
+        where: {
+          uuid: uuid
+        }
+      });
+  
+      if (!user) {
+        return res.status(404).json({ msg: "User tidak ditemukan!" });
+      }
+  
+      const isOldPasswordValid = await bcrypt.compare(old_password, user.password);
+      if (!isOldPasswordValid) {
+        return res.status(403).json({ msg: "Password lama salah!" });
+      }
+
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/;
+      if (!passwordRegex.test(new_password)) {
+        return res.status(400).json({
+          msg: "Pastikan password mengandung kombinasi huruf besar, huruf kecil, angka, dan simbol (&%$) dengan panjang minimal 6 karakter.",
+        });
+      }
+  
+      await prisma.user.update({
+        where: {
+          uuid: uuid
+        },
+        data: {
+          password: await genPass.generatePassword(new_password)
+        }
+      });
+  
+      return res.status(200).json({ msg: "Password berhasil diubah!" });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ msg: "Terjadi kesalahan saat mengubah password." });
+    }
+  },
   login: async (req, res) => {
     if (!req.body.email || !req.body.password) {
       return res.status(400).json({ msg: "Masukan Email atau Password " });
