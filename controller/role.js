@@ -23,13 +23,12 @@ const inputInsertUpdate = async (req) => {
   }
   if (req.asign_role_to_permision && req.body.permisions) {
     data.permisionrole = {
-      create: req.body.permisions.map((projectItems) => {
-        if (projectItems != "") {
-          return { permission: { connect: { uuid: projectItems } } }
-        }
-      })
+      deleteMany: {}, // Hapus semua relasi sebelumnya
+      create: req.body.permisions
+        .filter(permissionUuid => permissionUuid !== "")
+        .map(permissionUuid => ({ permission: { connect: { uuid: permissionUuid } } }))
     }
-  }
+  }  
   return data
 }
 module.exports = {
@@ -73,8 +72,8 @@ module.exports = {
 
   insert: async (req, res) => {
     try {
+      console.log(JSON.stringify(req.body));
       let data = await inputInsertUpdate(req)
-      // return res.status(200).json({ msg: data });
       data.guardName = utils.toSnakeCase(req.body.guardName) ?? utils.toSnakeCase(req.body.name)
       let result = await prisma.role.create({
         data: data
