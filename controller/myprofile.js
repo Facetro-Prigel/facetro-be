@@ -9,25 +9,25 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
     name: "Huruf besar, kecil, dan simbol ('), (.), dan (,)",
-    identityNumber: "Hanya angka",
+    identity_number: "Hanya angka",
     password: "Minimal 6 karakter kombinasi huruf besar, kecil, angka, dan simbol '&', '%', atau '$'",
     batch: "Angka dan boleh kosong",
     birthday: "Format ulang tahun yyyy-mm-dd",
     program_study: "Huruf besar, kecil, dan boleh kosong",
-    phoneNumber: "Format nomor telepon dan boleh kosong",
-    telegramId: "Angka dan boleh kosong",
+    phone_number: "Format nomor telepon dan boleh kosong",
+    telegram_id: "Angka dan boleh kosong",
     nfc_data: "Kode heksadesimal dan boleh kosong"
   };
   const validationRules = {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Format email standar
     name: /^[A-Za-z' .,]+$/, // Huruf besar, kecil, dan simbol '
-    identityNumber: /^\d+$/, // Hanya angka
+    identity_number: /^\d+$/, // Hanya angka
     password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/, // Kombinasi huruf besar, kecil, angka, dan simbol & % $
     batch: /^\d*$/, // Angka dan boleh kosong
     birthday: /^\d{4}-\d{2}-\d{2}$/, // Format ulang tahun yyyy-mm-dd
     program_study: /^[A-Za-z\s]*$/, // Huruf besar, kecil, dan boleh kosong
-    phoneNumber: /^[\d{3}-\d{3}-\d{4}+]*$/, // Nomor telepon boleh kosong
-    telegramId: /^[0-9]*$/, // Angka dan boleh kosong
+    phone_number: /^[\d{3}-\d{3}-\d{4}+]*$/, // Nomor telepon boleh kosong
+    telegram_id: /^[0-9]*$/, // Angka dan boleh kosong
     nfc_data: /^[0-9a-fA-F]*$/ // Kode heksadesimal dan boleh kosong
   };
 
@@ -52,20 +52,20 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   let data = {
     email: req.body.email,
     name: req.body.name,
-    identityNumber: parseInt(req.body.identityNumber).toString(),
+    identity_number: parseInt(req.body.identity_number).toString(),
     batch: parseInt(req.body.batch),
     birtday: new Date(req.body.birthday),
     program_study: req.body.program_study,
-    phoneNumber: req.body.phoneNumber,
-    telegramId: parseInt(req.body.telegramId),
-    telegramToken: genPass.generateString(10),
+    phone_number: req.body.phone_number,
+    telegram_id: parseInt(req.body.telegram_id),
+    telegram_token: genPass.generateString(10),
     nfc_data: req.body.nfc_data
   };
   if (req.body.password) {
     data.password = await genPass.generatePassword(req.body.password)
   }
   if (req.asign_user_to_group && req.body.usergroup) {
-    data.usergroup = {
+    data.user_group = {
       create: req.body.usergroup.map((projectItems) => {
         if (projectItems != "") {
           return { group: { connect: { uuid: projectItems } } }
@@ -74,7 +74,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     }
   }
   if (req.asign_user_to_permision && req.body.permission) {
-    data.permissionUser = {
+    data.permission_user = {
       create: req.body.permission.map((permissionItems) => {
         if (permissionItems != "") {
           return { permission: { connect: { uuid: permissionItems } } }
@@ -83,7 +83,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     }
   }
   if (req.asign_user_to_role && req.body.role) {
-    data.roleuser = {
+    data.role_user = {
       create: req.body.role.map((roleItems) => {
         if (roleItems != "") {
           return { role: { connect: { uuid: roleItems } } }
@@ -109,11 +109,11 @@ const checkDeleteUpdate = async (uuid, reqs) => {
     where: {
       uuid: uuid,
       NOT: [{
-        roleuser: {
+        role_user: {
           some: {
             role: {
               is: {
-                guardName: 'super_admin'
+                guard_name: 'super_admin'
               }
             }
           }
@@ -121,12 +121,12 @@ const checkDeleteUpdate = async (uuid, reqs) => {
       }]
     },
     select: {
-      createdAt: true,
-      roleuser: {
+      created_at: true,
+      role_user: {
         select: {
           role: {
             select: {
-              guardName: true
+              guard_name: true
             }
           }
         }
@@ -139,8 +139,8 @@ module.exports = {
   unnes_image: async (req, res) => {
     try {
       console.log(JSON.stringify(req.body));
-      const identityNumber = req.body.identity_number
-      let url = `${process.env.UNNES_API}/primer/user_ava/${identityNumber}/541.aspx`
+      const identity_number = req.body.identity_number
+      let url = `${process.env.UNNES_API}/primer/user_ava/${identity_number}/541.aspx`
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
         headers: {
@@ -151,12 +151,12 @@ module.exports = {
       const mimeType = response.headers['content-type'];
       const base64Data = `data:${mimeType};base64,${base64Image}`;
       if (mimeType == 'image-png') {
-        return res.status(404).json({ msg: "Gambar tersebut tidak tersedia" })
+        return res.status(404).json(utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`));
       }
 
       return res.status(200).json({ msg: "Gambar UNNES berhasil diambil", data: base64Data })
     } catch (error) {
-      return res.status(400).json({ msg: "Gagal mengambil data", msg: error })
+      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/unnes_image/${identity_number}`));
     }
 
   },
@@ -167,7 +167,7 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch(( e) => {
-      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!"})
+      return res.status(400).json(utils.createResponse(400, "Bad Request", "Tidak atau terdapat banyak wajah!", `/image`));
     })
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
@@ -177,6 +177,7 @@ module.exports = {
       return res.status(200).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid, path: datas.image_path })
     } catch (e) {
       console.error("gagal menyimpan gambar")
+      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`));
     }
   },
   getter: async (req, res) => {
@@ -187,41 +188,41 @@ module.exports = {
       select: {
         uuid: true,
         name: true,
-        identityNumber: true,
+        identity_number: true,
         email: true,
         batch: true,
         birtday: true,
         program_study: true,
         bbox: true,
         avatar: true,
-        phoneNumber: true,
-        telegramId: true,
+        phone_number: true,
+        telegram_id: true,
         nfc_data: true,
-        permissionUser: {
+        permission_user: {
           select: {
             uuid: true,
             permission: {
               select: {
                 uuid: true,
                 name: true,
-                guardName: true
+                guard_name: true
               }
             },
           },
         },
-        roleuser: {
+        role_user: {
           select: {
             uuid: true,
             role: {
               select: {
                 uuid: true,
                 name: true,
-                guardName: true
+                guard_name: true
               }
             },
           },
         },
-        usergroup: {
+        user_group: {
           select: {
             uuid: true,
             group: {
@@ -240,14 +241,14 @@ module.exports = {
   update: async (req, res) => {
     const user = await checkDeleteUpdate(req.user.uuid, req)
     if (!user) {
-      return res.status(404).json({ msg: "Pengguna tidak ditemukan / tidak dapat diubah" });
+      return res.status(404).json(utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan", `/myprofile/${req.user.uuid}`));
     }
     var data = await inputInsertUpdate(req, 'up')
     if (data.status == false) {
       return res.status(400).json({ msg: data.msg, code: 400, validateError: data.validateError })
     }
     data = data.data
-    data.modifiedAt = new Date()
+    data.modified_at = new Date()
     const updateUser = await prisma.user.update({
       where: { uuid: req.user.uuid },
       data: data

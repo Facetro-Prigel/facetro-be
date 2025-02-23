@@ -16,65 +16,74 @@ const checkDeleteUpdate = async (uuid, reqs) => {
   }
 module.exports = {
     getter_all: async (req, res) => {
-        let isExist;
-        isExist = await prisma.group.findMany({
-            select: {
-                uuid: true,
-                name: true,
-                locations: true,
-                device: {
-                    select: {
-                        name: true,
-                        locations: true
+        let is_exist;
+        try {
+            is_exist = await prisma.group.findMany({
+                select: {
+                    uuid: true,
+                    name: true,
+                    locations: true,
+                    device: {
+                        select: {
+                            name: true,
+                            locations: true
+                        },
+                    },
+                    users: {
+                        select: {
+                            name: true,
+                            avatar:true,
+                            bbox:true
+                        },
                     },
                 },
-                users: {
-                    select: {
-                        name: true,
-                        avatar:true,
-                        bbox:true
-                    },
-                },
-            },
-        });
-        res.status(200).json({ data: isExist, code: 200 });
+            });
+        } catch (error) {
+            console.error("Error while inserting group:", error);
+            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group"));
+        }
+        res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil ditemukan", "/group", is_exist));
     },
     getter: async (req, res) => {
-        var uuid = req.params.uuid;
-        let isExist;
-        isExist = await prisma.group.findUnique({
-            where: { uuid: uuid },
-            select: {
-                name: true,
-                locations: true,
-                device: {
-                    select: {
-                        uuid: true,
-                        name: true,
-                        locations: true
+        let is_exist;
+        try {
+            var uuid = req.params.uuid;
+            is_exist = await prisma.group.findUnique({
+                where: { uuid: uuid },
+                select: {
+                    name: true,
+                    locations: true,
+                    device: {
+                        select: {
+                            uuid: true,
+                            name: true,
+                            locations: true
+                        },
                     },
-                },
-                users: {
-                    select: {
-                        uuid: true,
-                        name: true
+                    users: {
+                        select: {
+                            uuid: true,
+                            name: true
+                        },
                     },
-                },
-                usergroup: {
-                    select: {
-                        user: {
-                            select: {
-                                uuid: true,
-                                name: true,
-                                avatar:true
+                    user_group: {
+                        select: {
+                            user: {
+                                select: {
+                                    uuid: true,
+                                    name: true,
+                                    avatar:true
+                                }
                             }
                         }
                     }
-                }
-            },
-        });
-
-        res.status(200).json({ data: isExist, code: 200 });
+                },
+            });
+        } catch (error) {
+            console.error("Error while inserting group:", error);
+            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`));
+        }
+        res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil ditemukan", `/group/${uuid}`, is_exist));
     },
     
     insert: async (req, res) => {
@@ -85,7 +94,7 @@ module.exports = {
                     locations: req.body.location,
                     users: {
                         connect: {
-                            uuid: req.body.notifyTo
+                            uuid: req.body.notify_to
                         }
                     },
                     device: {
@@ -97,29 +106,34 @@ module.exports = {
             })
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
+            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group"));
         }
         utils.webSockerUpdate(req)
-        return res.status(200).json({ msg: "Grup sudah ditambahkan"});
+        return res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil ditambahkan", "/group"));
 
     },
     deleter: async (req, res)=>{
         let uuid = req.params.uuid
-        let check = await checkDeleteUpdate(uuid)
-        if(!check){
-            return res.status(400).json({ msg: "Grup tidak ditemukan"});
+        try {
+            let check = await checkDeleteUpdate(uuid)
+            if(!check){
+                return res.status(404).json(utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`));
+            }
+            await prisma.group.delete({where: { uuid: uuid }})
+        } catch (error) {
+            console.error("Error while inserting group:", error);
+            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`));
         }
-        await prisma.group.delete({where: { uuid: uuid }})
         utils.webSockerUpdate(req)
-        return res.status(200).json({ msg: "Grup berhasil dihapus"})
+        return res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil dihapus", `/group/${uuid}`));
     },
     update: async(req, res)=>{
         let uuid = req.params.uuid
-        let check = await checkDeleteUpdate(uuid)
-        if(!check){
-            return res.status(400).json({ msg: "Grup tidak ditemukan"});
-        }
         try {
+            let check = await checkDeleteUpdate(uuid)
+            if(!check){
+                return res.status(404).json(utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`));
+            }
             let data ={
                 name: req.body.name,
                 locations: req.body.location,
@@ -131,10 +145,10 @@ module.exports = {
                     }
                 }
             }
-            if(req.body.notifyTo){
+            if(req.body.notify_to){
                 data.users = {
                     connect: {
-                        uuid: req.body.notifyTo
+                        uuid: req.body.notify_to
                     }
                 }
             }
@@ -146,9 +160,9 @@ module.exports = {
             })
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
+            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`));
         }
         utils.webSockerUpdate(req)
-        return res.status(200).json({ msg: "Grup berhasil ubah"})
+        return res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil diperbarui", `/group/${uuid}`));
     }
 };

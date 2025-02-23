@@ -9,26 +9,26 @@ const checkPermission = async (user, text) =>{
     where: {
       uuid: user["uuid"],
       OR: [{
-        permissionUser: {
+        permission_user: {
           some: {
             permission: {
               is: {
-                guardName: text
+                guard_name: text
               }
             }
           }
         }
       },
       {
-        roleuser: {
+        role_user: {
           some: {
             role: {
               is: {
-                permisionrole: {
+                permission_role: {
                   some: {
                     permission: {
                       is: {
-                        guardName: text
+                        guard_name: text
                       }
                     }
                   }
@@ -39,11 +39,11 @@ const checkPermission = async (user, text) =>{
         }
       },
       {
-        roleuser: {
+        role_user: {
           some: {
             role: {
               is: {
-                guardName: 'super_admin'
+                guard_name: 'super_admin'
               }
             }
           }
@@ -52,16 +52,16 @@ const checkPermission = async (user, text) =>{
       ]
     },
     include: {
-      permissionUser: {
+      permission_user: {
         include: {
           permission: true
         }
       },
-      roleuser: {
+      role_user: {
         include: {
           role: {
             include: {
-              permisionrole: {
+              permision_role: {
                 include: {
                   permission: true
                 }
@@ -84,7 +84,7 @@ exports.authorization = (text = '', child_permission = []) => {
       if (text != '') {
         let thare_premission = await checkPermission(user, text)
         if (!thare_premission){ 
-          permission_name = await prisma.permission.findUnique({where:{guardName: text}, select:{name: true}})
+          permission_name = await prisma.permission.findUnique({where:{guard_name: text}, select:{name: true}})
           return await res.status(403).json({ msg: `Anda tidak memiliki izin untuk melakukan '${ permission_name.name ?? text }'`, code: 401 }) }
         if (child_permission.length){
           for (const permission_i of child_permission) {

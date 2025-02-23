@@ -4,6 +4,27 @@ const sharp = require('sharp');
 const minio_client = require('../minioClient');
 require('dotenv').config();
 
+const timeToHuman = (time) => {
+    let s = new Date(time).toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        timeStyle: "long",
+        dateStyle: "full"
+    })
+    return s
+}
+const createResponse = (status, title, detail, instance, data=undefined) => {
+    let response = {
+        status,
+        title,
+        detail,
+        instance,
+        timestamp: timeToHuman(new Date().toISOString())
+      };
+    if (data) {
+        response.data = data;
+    }
+    return response;
+};
 
 const makeBufferFromBase64 = (base64String) => {
     const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
@@ -246,5 +267,5 @@ module.exports = {
             token: generat.generateString(8)
         })
     },
-    makeBufferFromBase64, makeBondingBox, MakeBirthdayCard
+    makeBufferFromBase64, makeBondingBox, MakeBirthdayCard, createResponse, timeToHuman
 }

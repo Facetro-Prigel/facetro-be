@@ -1,0 +1,23 @@
+{
+    overlay: [
+        {
+            input: ""
+            position: {
+                top: ,
+                left
+            }
+        },
+        {
+            input: ""
+            position: {
+                top: ,
+                left
+            }
+        }
+    ],
+    facePlacement: {
+        top: 0,
+        left: 0,
+        length: 0
+    }
+}

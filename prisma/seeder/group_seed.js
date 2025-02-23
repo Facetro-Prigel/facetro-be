@@ -112,7 +112,7 @@ exports.run = async () => {
                 locations: i.device,
                 users: {
                     connect: {
-                        identityNumber: i.notify_to,
+                        identity_number: i.notify_to,
                     }
                 },
                 device: {

@@ -34,9 +34,9 @@ const getFaceSignature = async (file) =>{
 exports.run = async () => {
     const users = await prisma.user.findMany()
     for (let user of users) {
-        let hu = await getFaceSignature(`./inital_photos/${user.identityNumber}.jpg`)
+        let hu = await getFaceSignature(`./inital_photos/${user.identity_number}.jpg`)
         let newName = generator.generateString(20)+".jpg"
-        utils.copyAndRenameImage(`./inital_photos/${user.identityNumber}.jpg`, "./photos", newName)
+        utils.copyAndRenameImage(`./inital_photos/${user.identity_number}.jpg`, "./photos", newName)
         await prisma.user.update({where:{
             uuid:user.uuid
         }, data:{
