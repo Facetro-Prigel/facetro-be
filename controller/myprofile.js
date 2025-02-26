@@ -151,12 +151,12 @@ module.exports = {
       const mimeType = response.headers['content-type'];
       const base64Data = `data:${mimeType};base64,${base64Image}`;
       if (mimeType == 'image-png') {
-        return res.status(404).json(utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`));
+        return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
       }
 
-      return res.status(200).json({ msg: "Gambar UNNES berhasil diambil", data: base64Data })
+      return utils.createResponse(200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
     } catch (error) {
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/unnes_image/${identity_number}`));
+      return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
     }
 
   },
@@ -167,17 +167,17 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch(( e) => {
-      return res.status(400).json(utils.createResponse(400, "Bad Request", "Tidak atau terdapat banyak wajah!", `/image`));
+      return utils.createResponse(400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
     })
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return res.status(200).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid, path: datas.image_path })
+      return utils.createResponse(201, "Created", "gambar berhasil disimpan", `/image`, {file_uuid: uuid.uuid, path: datas.image_path})
     } catch (e) {
       console.error("gagal menyimpan gambar")
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
     }
   },
   getter: async (req, res) => {
@@ -235,17 +235,16 @@ module.exports = {
         },
       },
     });
-
-    res.status(200).json({ data: isExist, code: 200 });
+    return utils.createResponse(200, "Success", "Pengguna berhasil ditemukan", `/myprofile/${req.user.uuid}`, { data: isExist });
   },
   update: async (req, res) => {
     const user = await checkDeleteUpdate(req.user.uuid, req)
     if (!user) {
-      return res.status(404).json(utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan", `/myprofile/${req.user.uuid}`));
+      return utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan", `/myprofile/${req.user.uuid}`);
     }
     var data = await inputInsertUpdate(req, 'up')
     if (data.status == false) {
-      return res.status(400).json({ msg: data.msg, code: 400, validateError: data.validateError })
+      return utils.createResponse(400, "Bad Request", data.validateError, `/myprofile/${req.user.uuid}`, { validateError: data.validateError }); // may need to be changed if necessary
     }
     data = data.data
     data.modified_at = new Date()
@@ -254,6 +253,6 @@ module.exports = {
       data: data
     });
     utils.webSockerUpdate(req)
-    return res.status(200).json({ message: "Pengguna berhasil diperbarui", code: 200 });
+    return utils.createResponse(200, "Success", "Pengguna berhasil diperbarui", `/myprofile/${req.user.uuid}`);
   },
 };

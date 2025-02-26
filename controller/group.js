@@ -40,9 +40,9 @@ module.exports = {
             });
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group"));
+            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group");
         }
-        res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil ditemukan", "/group", is_exist));
+        return utils.createResponse(200, "Success", "Grup berhasil ditemukan", "/group", is_exist);
     },
     getter: async (req, res) => {
         let is_exist;
@@ -81,9 +81,9 @@ module.exports = {
             });
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`));
+            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
         }
-        res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil ditemukan", `/group/${uuid}`, is_exist));
+        return utils.createResponse(200, "Success", "Grup berhasil ditemukan", `/group/${uuid}`, is_exist);
     },
     
     insert: async (req, res) => {
@@ -106,33 +106,32 @@ module.exports = {
             })
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group"));
+            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group");
         }
         utils.webSockerUpdate(req)
-        return res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil ditambahkan", "/group"));
-
+        return utils.createResponse(200, "Success", "Grup berhasil ditambahkan", "/group");
     },
     deleter: async (req, res)=>{
         let uuid = req.params.uuid
         try {
             let check = await checkDeleteUpdate(uuid)
             if(!check){
-                return res.status(404).json(utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`));
+                return utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`);
             }
             await prisma.group.delete({where: { uuid: uuid }})
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`));
+            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
         }
         utils.webSockerUpdate(req)
-        return res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil dihapus", `/group/${uuid}`));
+        return utils.createResponse(200, "Success", "Grup berhasil dihapus", `/group/${uuid}`);
     },
     update: async(req, res)=>{
         let uuid = req.params.uuid
         try {
             let check = await checkDeleteUpdate(uuid)
             if(!check){
-                return res.status(404).json(utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`));
+                return utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`);
             }
             let data ={
                 name: req.body.name,
@@ -160,9 +159,9 @@ module.exports = {
             })
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`));
+            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
         }
         utils.webSockerUpdate(req)
-        return res.status(200).json(utils.createResponse(200, "Success", "Grup berhasil diperbarui", `/group/${uuid}`));
+        return utils.createResponse(200, "Success", "Grup berhasil diupdate", `/group/${uuid}`);
     }
 };

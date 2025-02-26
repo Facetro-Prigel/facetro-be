@@ -100,6 +100,87 @@ const makeTelegramNotification = async (
     }, 1000);
   }
 };
+
+const checkPermission = async (user_uuid, permission) => {
+  try {
+      const access = await prisma.user.findFirst({
+          where: {
+              uuid: user_uuid,
+              OR: [
+                  {
+                      roleuser: {
+                          some: {
+                              role: {
+                                  guardName: 'super_admin'
+                              }
+                          }
+                      }
+                  },
+                  {
+                      permissionUser: {
+                          some: {
+                              permission: {
+                                  guardName: "log_anywhere"
+                              }
+                          }
+                      }
+                  },
+                  {
+                      roleuser: {
+                          some: {
+                              role: {
+                                  permisionrole: {
+                                      some: {
+                                          permission: {
+                                              guardName: "log_anywhere"
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  }
+              ]
+          },
+          select: {
+              uuid: true,
+              roleuser: {
+                  select: {
+                      role: {
+                          select: {
+                              guardName: true
+                          }
+                      }
+                  }
+              },
+              permissionUser: {
+                  select: {
+                      permission: {
+                          select: {
+                              guardName: true
+                          }
+                      }
+                  }
+              }
+          }
+      });
+
+      return Boolean(access);
+  } catch (error) {
+      console.error("Error checking access:", error);
+      return false;
+  }
+};
+
+const checkAccess = async (user, device) => {
+  for (let i = 0; i < user.usergroup.length; i++) {
+      if (user.usergroup[i].group.devices == device) {
+          return true;
+      }
+  }
+  return false;
+}          
+
 module.exports = {
   log: async (req, res) => {
       const startTotalTimeNeeded = process.hrtime();
@@ -143,78 +224,9 @@ module.exports = {
         whereCluse.user_uuid = is_exist.uuid;
         whereCluse.is_match = true;
 
-        let isCanPresenceAnyware = await prisma.user.findFirst({
-          where: {
-            uuid: is_exist["uuid"],
-            OR: [
-              {
-                role_user: {
-                  some: {
-                    role: {
-                      is: {
-                        guard_name: "super_admin",
-                      },
-                    },
-                  },
-                },
-              },
-              {
-                permission_user: {
-                  some: {
-                    permission: {
-                      is: {
-                        guard_name: "log_anywhere",
-                      },
-                    },
-                  },
-                },
-              },
-              {
-                role_user: {
-                  some: {
-                    role: {
-                      is: {
-                        permission_role: {
-                          some: {
-                            permission: {
-                              is: {
-                                guard_name: "log_anywhere",
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-          include: {
-            permission_user: {
-              include: {
-                permission: true,
-              },
-            },
-            role_user: {
-              include: {
-                role: {
-                  include: {
-                    permission_role: {
-                      include: {
-                        permission: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        });
-
         let isDeviceOk = false;
 
-        if (!isCanPresenceAnyware) {
+        if (!checkPermission(is_exist.uuid, "log_anywhere")) {
           for (let i = 0; i < is_exist.user_group.length; i++) {
             if (is_exist.user_group[i].group.devices == req.device.uuid) {
               isDeviceOk = true;
@@ -222,10 +234,12 @@ module.exports = {
             }
           }
           if (!isDeviceOk) {
-            return res.status(403).json(utils.createResponse(403, "Forbidden", "Anda tidak boleh presensi di sini", `/log/${body.type}/${identity}`));
+            return utils.createResponse(res, 403, "Forbidden", "Anda tidak boleh presensi di sini", `/log/${body.type}/${identity}`);
           }
           whereCluse.device_uuid = req.device.uuid;
         }
+
+        console.log(JSON.stringify(whereCluse));
 
         if (Object.keys(body).length == 3 && body.identity != undefined) {
           if (body.type == "log") {
@@ -378,7 +392,7 @@ module.exports = {
                 time: result.startTime,
               });
             }
-            return res.status(202).json({ result });
+            return utils.createResponse(res, 200, "Success", "Presensi Berhasil", "/log", { result });
           } else if (body.type == "door") {
             const nameImage = `${generator.generateString(23)}.jpg`;
             let requestImagePath = `photos/${nameImage}`;
@@ -457,25 +471,267 @@ module.exports = {
               dataComparisonCandidateAfterProcess: four_last_signatures_process,
             };
             await prisma.log.create({ data: logData });
-            return res.status(202).json({ result: result });
+            return utils.createResponse(res, 200, "Success", "Presensi Berhasil", "/log", { result });
           }
         }
-        return res.status(400).json(utils.createResponse(400, "Bad Request", "Permintaan tidak valid", `/log/${body.type}/${identity}`));
     } catch (e) {
       console.error(
         e,
         "\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala"
       );
       if (e.message == "ComparationError") {
-        return res
-          .status(401)
-          .json(utils.createResponse(401, "Unauthorized", "Tidak ada atau terdapat banyak wajah", `/log/${body.type}/${identity}`));
+        return utils.createResponse(res, 403, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/log/${body.type}/${identity}`);
       }
-      return res
-        .status(500)
-        .json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/log/${body.type}/${identity}`));
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/log/${body.type}/${identity}`);
     }
   },
+  realtime: async (req, res) => {
+    try {
+        const start_total_time_needed = process.hrtime();
+        if (Object.keys(req.body).length !== 2) {
+            return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log/realtime");
+        }
+
+        let { image, type } = req.body;
+        const device_uuid = req.device.uuid;
+
+        if (!utils.verifyImage(image)) {
+          return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", "/log/realtime");
+        }
+
+        // grab users from device
+        const allowed_users = await prisma.user.findMany({
+            where: {
+                usergroup: {
+                    some: {
+                        group: {
+                            device: { uuid: device_uuid }
+                        }
+                    }
+                }
+            },
+            select: { uuid: true }
+        });
+
+        // may need another alternatives to ensure safety
+        const users_log_data = await prisma.$queryRawUnsafe(`
+            SELECT userUuid, imagePath, createdAt FROM (
+                SELECT 
+                    userUuid, imagePath, signature, bbox,
+                    createdAt, ROW_NUMBER() OVER (PARTITION BY userUuid ORDER BY createdAt DESC) as row_num
+                FROM \`Log\`
+                WHERE userUuid IN (${allowed_users.map((u) => `"${u.uuid}"`).join(",")})
+            ) AS sq
+            WHERE row_num <= 4
+        `);
+
+        const ml_res = await axios.post(ml_url, 
+            { image, data: users_log_data }, 
+            {
+                headers: { 'Content-Type': 'application/json' },
+                validateStatus: (status) => status < 500
+            }
+        );
+
+        if (ml_res.status >= 400) {
+          return utils.createResponse(res, ml_res.status, ml_res.title, "Gagal memproses data dari ML API", "/log/realtime");
+        }
+
+        let user = await prisma.user.findFirst({
+            where: {
+                uuid: ml_res.data.user_uuid
+            },
+            include: {
+                roleuser: {
+                    include: {
+                        role: true
+                    }
+                },
+                usergroup: {
+                    include: {
+                        group: {
+                            include: {
+                                users: true
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        const image_name=`${generator.generateString(23)}.jpg`
+        const image_path = `photos/${image_name}`
+        utils.saveImage(image, image_path)
+        
+        if (type === "log") {
+            if (!checkPermission(user.uuid, "log_anywhere")) {
+                if (!checkAccess(user, req.device.uuid)){
+                    return utils.createResponse(res, 403, "Forbidden", "Anda tidak boleh presensi di sini", "/log/realtime");
+                }
+
+                //formatting log data for frontend and db
+                const gte_value = new Date(
+                    new Intl.DateTimeFormat("en-US", {
+                      timeZone: "Asia/Jakarta",
+                      hourCycle: "h23",
+                    }).format(new Date())
+                  );
+
+                const now = new Date();
+                let log_data = {
+                    userUuid: user_uuid,
+                    bbox: ml_res.data.compared_bbox,
+                    imagePath: image_path,
+                    deviceUuid: device_uuid,
+                    signature: ml_res.data.signature, // may not have been implemented yet
+                    isMatch: ml_res.data.isMatch,
+                    createdAt: now
+                }
+                let log_result = {
+                    data: {
+                        name: user.name,
+                        role: user.roleuser.map(roleUser => roleUser.role.name),
+                        group: user.usergroup.map(userGroup => userGroup.group.name),
+                        identity: user.identityNumber,
+                        device: req.device.name,
+                        serverData: {
+                            image: ml_res.compared_image, // is not the same with previous imlementation. may need to be revised
+                            bbox: ml_res.compared_bbox,
+                        },
+                    },
+                };
+
+                let start_time_to_human, end_time_to_human, end_captions, caption_for_else;
+                log_result.startTime = now.toISOString();
+
+                // grab today's log if there is any
+                let today_log_query = {
+                    type: type,
+                    createdAt: {gte: gte_value.toISOString()},
+                    isMatch: "true",
+                    userUuid: user_uuid
+                }
+                let today_log = await prisma.log.findFirst({where: today_log_query})
+                
+                if (today_log) {
+                    log_data.type = "Logout"
+                    log_result.startTime = today_log.createdAt.toISOString()
+                    log_result.endTime = now.toISOString()
+                    end_time_to_human = utils.timeToHuman(log_result.endTime)
+                    let time_diff = utils.countDiff(now.getTime() - today_log.createdAt.getTime())
+                    end_captions = `\npulang pada \n > ${end_time_to_human} \nWaktu yang dihabiskan \n > ${time_diff} di ${req.device.name}`
+                }
+
+                // Other data
+                start_time_to_human = utils.timeToHuman(log_result.startTime)
+                const end_total_time_needed = process.hrtime(start_total_time_needed)
+                const total_time_needed = (end_total_time_needed[0] * 1000) + (end_total_time_needed[1] / 1e6);
+                log_data.otherData = {
+                    'totalTimeNeeded': total_time_needed,
+                    'dataComparisonCandidate': four_last_signatures,
+                    'dataComparisonCandidateAfterProcess': four_last_signatures_process,
+                }
+                await prisma.log.create({ data: log_data })
+                let caption_that_user = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${start_time_to_human}`
+                caption_that_user += end_captions ?? ''
+                caption_for_else = `Nama: \n > ${user.name} \nNomor Identitas:\n > ${user.identityNumber} \nProdi: \n > ${user.program_study} \nAngkatan: \n > ${user.batch}   \nProyek: \n > `
+                caption_for_else += utils.arrayToHuman(user.usergroup.map((t) => {
+                    return t.group.name
+                })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${start_time_to_human}`
+                caption_for_else += end_captions ?? ''
+                log_result.endTime = now.toISOString()
+                log_result.endCaptions = end_captions ?? ''
+
+                // Send to Telegram!
+                let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegramId')
+                let admin_users = await role_utils.getUserWithRole('admin', 'telegramId')
+                let notify_to_group_users = user.usergroup.map((t) => {
+                    return t.group.telegramId
+                })
+
+                let notify_to = new Set([...super_admin_users, ...admin_users, ...notify_to_group_users])
+
+                const telegram_params = [user, [...notify_to], caption_for_else, caption_that_user]
+                await utils.sendTelegram(telegram_params)
+
+                return utils.createResponse(200, "Success", "Presensi berhasil dilakukan", `/device/${req.device.uuid}`, log_result)
+            }
+        } else if (type === "door") {
+            if (!checkPermission(user.uuid, "door_anywhere")) {
+                if (!checkAccess(user, req.device.uuid)){
+                    return utils.createResponse(403, "Forbidden", "Anda tidak memiliki akses", `/device/${req.device.uuid}`);
+                }
+                    //formatting log data for frontend and db
+                    const gte_value = new Date(
+                        new Intl.DateTimeFormat("en-US", {
+                            timeZone: "Asia/Jakarta",
+                            hourCycle: "h23",
+                        }).format(new Date())
+                        );
+
+                    const now = new Date();
+                    let log_data = {
+                        userUuid: user_uuid,
+                        bbox: ml_res.data.compared_bbox,
+                        imagePath: image_path,
+                        deviceUuid: device_uuid,
+                        signature: ml_res.data.signature, // may not have been implemented yet
+                        isMatch: ml_res.data.isMatch,
+                        createdAt: now
+                    }
+                    let log_result = {
+                        data: {
+                            name: user.name,
+                            role: user.roleuser.map(roleUser => roleUser.role.name),
+                            group: user.usergroup.map(userGroup => userGroup.group.name),
+                            identity: user.identityNumber,
+                            device: req.device.name,
+                            serverData: {
+                                image: ml_res.compared_image, // is not the same with previous imlementation. may need to be revised
+                                bbox: ml_res.compared_bbox,
+                            },
+                        },
+                    };
+
+                    let start_time_to_human, end_time_to_human, end_captions, caption_for_else;
+                    log_result.startTime = now.toISOString();
+
+                    // grab today's log if there is any
+                    let today_log_query = {
+                        type: type,
+                        createdAt: {gte: gte_value.toISOString()},
+                        isMatch: "true",
+                        userUuid: user_uuid
+                    }
+                    let today_log = await prisma.log.findFirst({where: today_log_query})
+                    
+                    if (today_log) {
+                        log_data.type = "Logout"
+                        log_result.startTime = today_log.createdAt.toISOString()
+                        log_result.endTime = now.toISOString()
+                        end_time_to_human = utils.timeToHuman(log_result.endTime)
+                        let time_diff = utils.countDiff(now.getTime() - today_log.createdAt.getTime())
+                        end_captions = `\npulang pada \n > ${end_time_to_human} \nWaktu yang dihabiskan \n > ${time_diff} di ${req.device.name}`
+                    }
+
+                    // Other data
+                    start_time_to_human = utils.timeToHuman(log_result.startTime)
+                    const end_total_time_needed = process.hrtime(start_total_time_needed)
+                    const total_time_needed = (end_total_time_needed[0] * 1000) + (end_total_time_needed[1] / 1e6);
+                    log_data.otherData = {
+                        'totalTimeNeeded': total_time_needed,
+                        'dataComparisonCandidate': four_last_signatures,
+                        'dataComparisonCandidateAfterProcess': four_last_signatures_process,
+                    }
+                    await prisma.log.create({ data: log_data })
+                    return utils.createResponse(200, "Success", "Presensi berhasil dilakukan", `/device/${req.device.uuid}`, log_result)
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${req.device.uuid}`);
+    }
+},
   getLog: (type, filter) => {
     return async (req, res) => {
       let query = {
@@ -534,7 +790,7 @@ module.exports = {
             }),
           });
         }
-        return res.json(showLogs);
+        return utils.createResponse(200, "Success", "Log berhasil diambil", `/log/${type}${filter}`, showLogs);
       } else if (type == "door") {
         query.where = { type: "Door" };
         let logDatas = await prisma.log.findMany(query);
@@ -554,10 +810,10 @@ module.exports = {
             }),
           });
         }
-        return res.status(202).json(showLogs);
+        return utils.createResponse(200, "Success", "Log berhasil diambil", `/log/${type}${filter}`, showLogs);
       }
       filter = filter ? `/${filter}` : "";
-      return res.status(404).json(utils.createResponse(404, "Not Found", "Log tidak ditemukan", `/log/${type}${filter}`));
+      return utils.createResponse(404, "Not Found", "Log tidak ditemukan", `/log/${type}${filter}`);
     };
   },
   cardlessRequest: async (req, res) => {
@@ -565,7 +821,7 @@ module.exports = {
     const numericUUID = utils.uuidToDecimal(req.user.uuid).slice(0, 20);
     const secret_key = BigInt(numericUUID) % BigInt(n);
     const public_key = secret_key ** BigInt(2) % BigInt(n);
-    return res.json({
+    return utils.createResponse(200, "Success", "Kredensial berhasil diambil", "/cardless/verify", {
       public_key: public_key.toString(),
       email: req.user.email,
     });
@@ -591,7 +847,7 @@ module.exports = {
       });
       numericUUID = utils.uuidToDecimal(user.uuid).slice(0, 20);
     } catch (error) {
-      return res.status(401).json(utils.createResponse(401, "Unauthorized", "Kredensial tidak ditemukan!", "/cardless/verify"));
+      return utils.createResponse(401, "Unauthorized", "Kredensial tidak ditemukan!", "/cardless/verify");
     }
     secretKey = BigInt(numericUUID) % BigInt(n);
 
@@ -605,8 +861,8 @@ module.exports = {
     const expectedResponse =
       (x * (BigInt(publicKey) ** BigInt(challenge) % BigInt(n))) % BigInt(n);
     if (y ** BigInt(2) % BigInt(n) === expectedResponse) {
-      return res.status(202).json({ msg: "Akses diizinkan!" });
+      return utils.createResponse(200, "Success", "Akses diizinkan!", "/cardless/verify");
     }
-    return res.status(403).json(utils.createResponse(403, "Forbidden", "Kredensial tidak cocok!", "/cardless/verify"));
+    return utils.createResponse(403, "Forbidden", "Kredensial tidak cocok!", "/cardless/verify");
   },
 };

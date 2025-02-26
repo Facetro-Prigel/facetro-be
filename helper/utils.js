@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const minio_client = require('../minioClient');
-require('dotenv').config();
+
+const process = require('dotenv').config();
 
 const timeToHuman = (time) => {
     let s = new Date(time).toLocaleString('id-ID', {
@@ -12,18 +13,15 @@ const timeToHuman = (time) => {
     })
     return s
 }
-const createResponse = (status, title, detail, instance, data=undefined) => {
-    let response = {
-        status,
-        title,
-        detail,
-        instance,
-        timestamp: timeToHuman(new Date().toISOString())
-      };
-    if (data) {
-        response.data = data;
-    }
-    return response;
+const createResponse = (res, status, title, detail, instance, data=undefined) => {
+    res.status = status;
+    res.title = title;
+    res.detail = detail;
+    res.instance = instance;
+    res.container_id = process.env.CONTAINER_ID;
+    res.timestamp = new Date().toISOString();
+    if (data) res.data = data;
+    return res;
 };
 
 const makeBufferFromBase64 = (base64String) => {

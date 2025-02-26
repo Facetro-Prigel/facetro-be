@@ -43,7 +43,7 @@ module.exports = {
       },
     });
 
-    res.status(200).json({ data: is_exist, code: 200 });
+    return utils.createResponse(200, "Success", "Peran berhasil ditemukan", "/role", { data: is_exist });
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
@@ -67,7 +67,7 @@ module.exports = {
         }
       },
     });
-    res.status(200).json({ data: is_exist, code: 200 });
+    return utils.createResponse(200, "Success", "Peran berhasil ditemukan", `/role/${uuid}`, { data: is_exist });
   },
 
   insert: async (req, res) => {
@@ -79,26 +79,26 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/role"));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/role");
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Peran sudah ditambahkan" });
+    return utils.createResponse(200, "Success", "Peran berhasil ditambahkan", "/role");
   },
   deleter: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return res.status(404).json(utils.createResponse(404, "Not Found", "Peran tidak ditemukan atau tidak dapat dihapus", `/role/${uuid}`));
+      return utils.createResponse(404, "Not Found", "Peran tidak ditemukan atau tidak dapat dihapus", `/role/${uuid}`);
     }
     await prisma.role.delete({ where: { uuid: uuid } })
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Peran berhasil dihapus " })
+    return utils.createResponse(200, "Success", "Peran berhasil dihapus", `/role/${uuid}`);
   },
   update: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return res.status(404).json(utils.createResponse(404, "Not Found", "Peran tidak ditemukan atau tidak dapat diubah", `/role/${uuid}`));
+      return utils.createResponse(404, "Not Found", "Peran tidak ditemukan atau tidak dapat diubah", `/role/${uuid}`);
     }
     try {
       let data = await inputInsertUpdate(req)
@@ -113,9 +113,9 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/role/${uuid}`));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/role/${uuid}`); 
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Peran berhasil ubah" })
+    return utils.createResponse(200, "Success", "Peran berhasil diubah", `/role/${uuid}`);
   }
 };

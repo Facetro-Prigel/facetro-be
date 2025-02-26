@@ -1,8 +1,9 @@
 const express = require("express");
 const route = express.Router();
-const { log, getLog, cardlessRequest, cardlessVerify } = require('../controller/log')
+const { log, realtime, getLog, cardlessRequest, cardlessVerify } = require('../controller/log')
 const middleware = require('../middleware')
 route.post("/", middleware.deviceAuth, log)
+route.post("/realtime", middleware.deviceAuth, realtime)
 route.get("/presence/device/:uuid", middleware.authorization(), getLog("log", "device"))
 route.get("/presence/user/:uuid", middleware.authorization(), getLog("log", "user"))
 route.get("/presence", middleware.authorization(), getLog("log"))

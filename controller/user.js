@@ -198,7 +198,7 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch((e) => {
-      return res.status(401).json(utils.createResponse(401, "Unauthorized", "Tidak ada atau terdapat banyak wajah!", `/birthday`));
+      return utils.createResponse(401, "Unauthorized", "Tidak ada atau terdapat banyak wajah!", `/birthday`);
     })
     try {
       requestImagePath = `${genPass.generateString(15)}.png`
@@ -211,10 +211,10 @@ module.exports = {
           birthday_bbox: datas.bbox
         }
       })
-      return res.status(200).json({ msg: "Gambar berhasil disimpan" })
+      return utils.createResponse(201, "Created", "gambar berhasil disimpan", `/birthday`);
     } catch (e) {
       console.error("gagal menyimpan gambar")
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/birthday`));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/birthday`);
     }
   },
   unnes_image: async (req, res) => {
@@ -232,12 +232,12 @@ module.exports = {
       const mimeType = response.headers['content-type'];
       const base64Data = `data:${mimeType};base64,${base64Image}`;
       if (mimeType == 'image-png') {
-        return res.status(404).json(utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`));
+        return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
       }
 
-      return res.status(200).json({ msg: "Gambar UNNES berhasil diambil", data: base64Data })
+      return utils.createResponse(200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
     } catch (error) {
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/unnes_image/${identity_number}`));
+      return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
     }
 
   },
@@ -248,17 +248,18 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch((e) => {
-      return res.status(401).json(utils.createResponse(401, "Unauthorized", "Tidak ada atau terdapat banyak wajah!", `/image`));
+      return utils.createResponse(400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
     })
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return res.status(201).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid })
+      return utils.createResponse(201, "Created", "gambar berhasil disimpan", `/image`, { file_uuid: uuid.uuid, path: datas.image_path })
+      res.status(201).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid })
     } catch (e) {
       console.error("gagal menyimpan gambar")
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
     }
   },
   getter_all: async (req, res) => {
@@ -297,7 +298,7 @@ module.exports = {
       }
     });
 
-    res.status(200).json({ data: isExist, code: 200 });
+    return utils.createResponse(200, "Success", "User berhasil ditemukan", "/user", { data: isExist });
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
@@ -355,7 +356,7 @@ module.exports = {
       },
     });
 
-    res.status(200).json({ data: isExist, code: 200 });
+    return utils.createResponse(200, "Success", "User berhasil ditemukan", `/user/${uuid}`, { data: isExist });
   },
 
   insert: async (req, res) => {
@@ -363,10 +364,10 @@ module.exports = {
     try {
       variabel = await inputInsertUpdate(req, 'in')
     } catch (error) {
-      return res.status(400).json(utils.createResponse(400, "Bad Request", "Input yang diberikan tidak valid!", "/user"));
+      return utils.createResponse(400, "Bad Request", "Input yang diberikan tidak valid!", "/user");
     }
     if (variabel.status == false) {
-      return res.status(400).json(utils.createResponse(400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${variabel.msg}\n${variabel.validateError}`, "/user"))
+      return utils.createResponse(400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${variabel.msg}\n${variabel.validateError}`, "/user");
     }
     if (variabel.data.nfc_data == '3D002CE6') {
       try {
@@ -390,10 +391,10 @@ module.exports = {
 
       // sendMail({ name: variabel.name, email: variabel.email, password: req.body.password, token: variabel.telegram_token, bimbingan: utils.arrayToHuman(ss) });
       utils.webSockerUpdate(req)
-      return res.status(200).json({ msg: "Selamat pengguna berhasil dibuat" });
+      return utils.createResponse(200, "Success", "Selamat pengguna berhasil dibuat", "/user");
     } catch (error) {
       console.error("Error while inserting user:", error);
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user"));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user");
     }
   },
 
@@ -402,7 +403,7 @@ module.exports = {
     const uuid = req.params.uuid;
     const user = await checkDeleteUpdate(uuid, req)
     if (!user) {
-      return res.status(404).json({ msg: "Pengguna tidak ditemukan / tidak dapat diubah" });
+      return utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan / tidak dapat diubah", `/user/${uuid}`);
     }
     await prisma.userGroup.deleteMany({
       where: { userUuid: uuid }
@@ -415,7 +416,7 @@ module.exports = {
     })
     var data = await inputInsertUpdate(req, 'up')
     if (data.status == false) {
-      return res.status(400).json({ msg: data.msg, code: 400, validateError: data.validateError })
+      return utils.createResponse(400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${data.msg}\n${data.validateError}`, `/user/${uuid}`);
     }
     data = data.data
     data.modifiedAt = new Date()
@@ -424,20 +425,20 @@ module.exports = {
       data: data
     });
     utils.webSockerUpdate(req)
-    return res.status(200).json({ message: "Pengguna berhasil diperbarui", code: 200 });
+    return utils.createResponse(200, "Success", "Pengguna berhasil diperbarui", `/user/${uuid}`);
   },
 
   deleteUser: async (req, res) => {
     const uuid = req.params.uuid;
     const user = await checkDeleteUpdate(uuid, req)
     if (!user) {
-      return res.status(404).json({ error: "Pengguna tidak ditemukan / tidak dapat dihapus" });
+      return utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan / tidak dapat dihapus", `/user/${uuid}`);
     }
     const deletedUser = await prisma.user.delete({
       where: { uuid: uuid }
     });
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Pengguna berhasil dihapus", code: 200 });
+    return utils.createResponse(200, "Success", "Pengguna berhasil dihapus", `/user/${uuid}`);
   },
 
 };

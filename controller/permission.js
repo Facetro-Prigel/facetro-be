@@ -23,7 +23,7 @@ module.exports = {
         description: true,
       },
     });
-    res.status(200).json({ data: is_exist, code: 200 });
+    return utils.createResponse(200, "Success", "Izin berhasil ditemukan", "/permission", { data: is_exist });
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
@@ -37,7 +37,7 @@ module.exports = {
         description: true,
       },
     });
-    res.status(200).json({ data: is_exist, code: 200 });
+    return utils.createResponse(200, "Success", "Izin berhasil ditemukan", `/permission/${uuid}`, { data: is_exist });
   },
 
   insert: async (req, res) => {
@@ -50,26 +50,26 @@ module.exports = {
       await prisma.permission.create({data: data})
     } catch (error) {
       console.error("Error while inserting permission:", error);
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/permission"));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/permission");
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Izin sudah ditambahkan" });
+    return utils.createResponse(200, "Success", "Izin berhasil ditambahkan", "/permission");
   },
   deleter: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return res.status(404).json(utils.createResponse(404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`));
+      return utils.createResponse(404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
     }
     await prisma.permission.delete({ where: { uuid: uuid } })
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Izin berhasil dihapus" })
+    return utils.createResponse(200, "Success", "Izin berhasil dihapus", `/permission/${uuid}`);
   },
   update: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return res.status(404).json(utils.createResponse(404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`));
+      return utils.createResponse(404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
     }
     try {
       let data = {
@@ -87,9 +87,9 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting permission:", error);
-      return res.status(500).json(utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`));
+      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Izin berhasil ubah" })
+    return utils.createResponse(200, "Success", "Izin berhasil diupdate", `/permission/${uuid}`);
   }
 };
