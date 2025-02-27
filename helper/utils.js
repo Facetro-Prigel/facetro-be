@@ -3,7 +3,7 @@ const path = require('path');
 const sharp = require('sharp');
 const minio_client = require('../minioClient');
 
-const process = require('dotenv').config();
+require('dotenv').config();
 
 const timeToHuman = (time) => {
     let s = new Date(time).toLocaleString('id-ID', {

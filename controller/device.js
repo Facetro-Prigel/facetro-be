@@ -1,8 +1,7 @@
 const { PrismaClient } = require('@prisma/client')
 const generator = require('../helper/generator')
 const prisma = new PrismaClient()
-const utils = require('../helper/utils');
-const { UNABLE_TO_FIND_POSTINSTALL_TRIGGER_JSON_PARSE_ERROR } = require('@prisma/client/scripts/postinstall.js');
+const utils = require('../helper/utils')
 require('dotenv').config();
 const checkDeleteUpdate = async (uuid, reqs) => {
   const user = await prisma.device.findUnique({
@@ -17,23 +16,21 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 }
 module.exports = {
   register: async (req, res) => {
-    let token = req.body.token;
-    let results;
-    if (!token) {
-      return utils.createResponse(400, "Bad Request", "Mohon masukkan token!", "/device/register");
+    let results, token;
+    if (!req.body.token) {
+      return utils.createResponse(res, 400, "Bad Request", "Mohon masukkan token!", "/device/register");
     }
     try {
-      results = await prisma.device.findUnique({
+       results = await prisma.device.findUnique({
         where: {
           token: req.body.token,
         }
       })
-
       if (!results) { 
-        return utils.createResponse(404, "Not Found", "Token tidak ditemukan!", "/device/register") 
+        return utils.createResponse(res, 404, "Not Found", "Token tidak ditemukan!", "/device/register") 
       }
       let identityKey = generator.generateString(10)
-      token = generator.generateAccessToken({ uuid: results.uuid, identityKey: identityKey }, process.env.SECRET_DEVICE_TOKEN)
+       token = generator.generateAccessToken({ uuid: results.uuid, identityKey: identityKey }, process.env.SECRET_DEVICE_TOKEN)
       await prisma.device.update({
         where: {
           token: req.body.token,
@@ -46,15 +43,15 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device/register"); 
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device/register"); 
     }
-    
-    // return utils.createResponse(200, "Success", "Token berhasil diaktifkan!", "/device/register", { 'access_token': token, 'refresh_token': token, 'name': results.name, 'uuid': results.uuid, 'nfc_list': [ntar dulu]}); 
+    return utils.createResponse(res, 200, "Success", "Token berhasil diaktifkan!", "/device/register", { 'token': token, 'name': results.name, 'uuid': results.uuid });
+    // return utils.createResponse(res, 200, "Success", "Token berhasil diaktifkan!", "/device/register", { 'access_token': token, 'refresh_token': token, 'name': results.name, 'uuid': results.uuid, 'nfc_list': [ntar dulu]}); 
   },
   getter_all: async (req, res) => {
-    let is_exist;
+    let isExist;
     try {
-      is_exist = await prisma.device.findMany({
+      isExist = await prisma.device.findMany({
         select: {
           uuid: true,
           name: true,
@@ -65,16 +62,15 @@ module.exports = {
       });
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device");
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device");
     }
-
-    return utils.createResponse(200, "Success", "Device berhasil ditemukan", "/device", {data: is_exist});
+    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", "/device", {data: isExist});
   },
   getter: async (req, res) => {
-    let is_exist;
     var uuid = req.params.uuid;
+    let isExist;
     try {
-      is_exist = await prisma.device.findUnique({
+      isExist = await prisma.device.findUnique({
         where: { uuid: uuid },
         select: {
           name: true,
@@ -90,10 +86,10 @@ module.exports = {
       });
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
     }
 
-    return utils.createResponse(200, "Success", "Device berhasil ditemukan", `/device/${uuid}`, {data: is_exist});
+    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", `/device/${uuid}`, {data: isExist});
   },
 
   insert: async (req, res) => {
@@ -111,35 +107,35 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device");
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device");
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Perangkat berhasil ditambahkan", "/device");
+    return utils.createResponse(res, 200, "Success", "Perangkat berhasil ditambahkan", "/device");
   },
   deleter: async (req, res) => {
     let uuid = req.params.uuid
-    try {
-      let check = await checkDeleteUpdate(uuid)
+    let check = await checkDeleteUpdate(uuid)
 
-      if (!check) {
-        return utils.createResponse(404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`);
-      }
+    if (!check) {
+      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`);
+    }
+    try {
       await prisma.device.delete({ where: { uuid: uuid } })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Perangkat berhasil dihapus", `/device/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Perangkat berhasil dihapus", `/device/${uuid}`);
   },
   update: async (req, res) => {
     let uuid = req.params.uuid
+    let check = await checkDeleteUpdate(uuid)
+    
+    if (!check) {
+      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`); 
+    }
     try {
-      let check = await checkDeleteUpdate(uuid)
-      
-      if (!check) {
-        return utils.createResponse(404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`); 
-      }
       let data = {
         name: req.body.name,
         locations: req.body.location,
@@ -155,9 +151,9 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`);
   }
 };
