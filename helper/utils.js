@@ -14,14 +14,12 @@ const timeToHuman = (time) => {
     return s
 }
 const createResponse = (res, status, title, detail, instance, data=undefined) => {
-    res.status = status;
     res.title = title;
     res.detail = detail;
     res.instance = instance;
     res.container_id = process.env.CONTAINER_ID;
     res.timestamp = new Date().toISOString();
-    if (data) res.data = data;
-    return res;
+    res.status(status).json(data);
 };
 
 const makeBufferFromBase64 = (base64String) => {
