@@ -164,7 +164,7 @@ const checkPermission = async (user_uuid, permission) => {
     return false;
   }          
 
-const telegramPreprocessing = async (req, captionForElse, isExist, startTimeToHuman, ml_result, image, nameImage) => {
+const telegramPreprocessing = async (req, captionForElse, isExist, startTimeToHuman, ml_result, image, nameImage, endCaptions) => {
     let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
     captionThatUser += endCaptions ?? ''
     captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identityNumber} \nProdi: \n > ${isExist.program_study} \nAngkatan: \n > ${isExist.batch}   \nProyek: \n > `
@@ -191,7 +191,7 @@ const telegramPreprocessing = async (req, captionForElse, isExist, startTimeToHu
     }
 }
 
-const saveLogData = async (startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData) => {
+const saveLogData = async (user, startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData) => {
     const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded);
     const totalTimeNeeded =
       endTotalTimeNeeded[0] * 1000 + endTotalTimeNeeded[1] / 1e6;
@@ -201,18 +201,20 @@ const saveLogData = async (startTotalTimeNeeded, endMLTime, four_last_signatures
       totalTimeNeeded: totalTimeNeeded,
       dataComparisonCandidate: four_last_signatures,
       dataComparisonCandidateAfterProcess: four_last_signatures_process,
+      user: null
     };
 
     await prisma.log.create({ data: logData });
+    return
 }
 
-const processLogDataV1 = (type, req, now, requestImagePath, isExist, ml_result) => {
+const processLogDataV1 = (type, device_uuid, now, requestImagePath, user, ml_result) => {
     // process create log data
     let logData = {
-        userUuid: isExist.uuid,
+        userUuid: user.uuid,
         bbox: ml_result.bbox,
         imagePath: requestImagePath,
-        deviceUuid: req.device.uuid,
+        deviceUuid: device_uuid,
         signature: ml_result.signature,
         isMatch: ml_result.isMatch,
         createdAt: now
@@ -221,17 +223,18 @@ const processLogDataV1 = (type, req, now, requestImagePath, isExist, ml_result) 
     return logData
 }
 
-const processResultV1 = (isExist, ml_result, req, requestImagePath, selected_server_image) => {
+const processResultV1 = (user, ml_result, device_name, requestImagePath, selected_server_image) => {
+    console.log(JSON.stringify(user));
     let result = {
-        name: isExist.name,
-        role: isExist.roleuser.map((i) => {
+        name: user.name,
+        role: user.roleuser.map((i) => {
             return i.role.name
         }),
-        group: isExist.usergroup.map((i) => {
+        group: user.usergroup.map((i) => {
             return i.group.name
         }),
-        identity: isExist.identityNumber,
-        device: req.device.name,
+        identity: user.identityNumber,
+        device: device_name,
         isMatch: ml_result.isMatch,
         clientData: {
             image: requestImagePath,
@@ -245,9 +248,9 @@ const processResultV1 = (isExist, ml_result, req, requestImagePath, selected_ser
     return result
 }
 
-const getUserSignatures = async (user, whereClause) => {
-    const four_last_signatures = await prisma.log.findMany({
-        where: whereClause,
+const getUserSignatures = async (user, where_clause) => {
+    let four_last_signatures = await prisma.log.findMany({
+        where: where_clause,
         take: 4,
         orderBy: {
             createdAt: "desc",
@@ -263,6 +266,7 @@ const getUserSignatures = async (user, whereClause) => {
         bbox: user.bbox,
         signature: user.signature,
     });
+    
     return four_last_signatures
 }
 
@@ -316,7 +320,7 @@ module.exports = {
                 if (body.type == "log") {
 
                     //grab 4 last logs and 1 avatar to compare
-                    const four_last_signatures = getUserSignatures(whereCluse);
+                    let four_last_signatures = await getUserSignatures(isExist, whereCluse);
 
                     // Check to ML (Face Recognations)
                     const startMLTime = process.hrtime();
@@ -331,8 +335,8 @@ module.exports = {
                     let todayLog = await prisma.log.findFirst({
                         where: whereCluse
                     })
-                    let logData = processLogDataV1(isExist, ml_result, req, now, requestImagePath, selected_server_image)
-                    result = processResultV1(type, req, now, requestImagePath, isExist, ml_result)
+                    let logData = processLogDataV1(isExist, ml_result, req.device.uuid, now, requestImagePath, selected_server_image)
+                    result = processResultV1(isExist, req.device.name, now, requestImagePath, isExist, ml_result)
                     let startTimeToHuman, endTimeToHuman, endCaptions, captionForElse
                     result.startTime = now.toISOString()
 
@@ -348,13 +352,13 @@ module.exports = {
                     startTimeToHuman = utils.timeToHuman(result.startTime)
                     // Other data
                     try {
-                        saveLogData(startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData)
+                        await saveLogData(startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData)
                     } catch (error) {
                         console.error("Terjadi error saat mau menyipan log data", error);
                     }
 
                     try {
-                        telegramPreprocessing(req, captionForElse, isExist, startTimeToHuman, ml_result, image, nameImage)
+                        await telegramPreprocessing(req, captionForElse, isExist, startTimeToHuman, ml_result, image, nameImage, endCaptions)
                     } catch (error) {
                         console.error("Terjadi error saat mau mengirim log ke telegram", error);
                     }
@@ -378,11 +382,11 @@ module.exports = {
                     
                     const now = new Date();
                     
-                    let logData = processLogDataV1(isExist, ml_result, req, now, requestImagePath, selected_server_image)
-                    result = processResultV1(type, req, now, requestImagePath, isExist, ml_result)
+                    let logData = processLogDataV1(isExist, ml_result, req.device.uuid, now, requestImagePath, selected_server_image)
+                    result = processResultV1(isExist, req.device.name, now, requestImagePath, isExist, ml_result)
                     // Other data
                     try {
-                        saveLogData(startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData)
+                        await saveLogData(startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData)
                     } catch (error) {
                         console.error("Terjadi error saat mau menyipan log data", error);
                     }
@@ -395,6 +399,7 @@ module.exports = {
         } catch (e) {
           console.error(e,"\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala");
           if (e.message == "ComparationError") {
+            console.error(`Face recognation service dont response!`, e);
             return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", "/log");
           }
           return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/log");
@@ -411,7 +416,7 @@ module.exports = {
             const device_uuid = req.device.uuid;
     
             if (!utils.verifyImage(image)) {
-              return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", "/log/realtime");
+                return utils.createResponse(res, 400, "Bad Request", "Gambar tidak valid!", "/log/realtime");
             }
     
             // grab users from device
@@ -447,18 +452,18 @@ module.exports = {
                 },
             });
             
-            const groupedLogs = users_log_data.reduce((acc, log) => {
+            const grouped_logs = users_log_data.reduce((acc, log) => {
                 if (!acc[log.userUuid]) acc[log.userUuid] = [];
                 if (acc[log.userUuid].length < 4) acc[log.userUuid].push(log);
                 return acc;
             }, {});
             
             // Konversi ke array
-            const finalResult = Object.values(groupedLogs).flat();            
+            const final_result = Object.values(grouped_logs).flat();            
     
             const startMLTime = process.hrtime();
-            const ml_res = await axios.post(ml_url, 
-                { image, data: users_log_data }, 
+            const ml_res = await axios.post(process.env.ML_URL + 'match', 
+                { image, data: final_result }, 
                 {
                     headers: { 'Content-Type': 'application/json' },
                     validateStatus: (status) => status < 500
@@ -467,7 +472,8 @@ module.exports = {
             const endMLTime = process.hrtime(startMLTime);
     
             if (ml_res.status >= 400) {
-              return utils.createResponse(res, ml_res.status, ml_res.title, "Gagal memproses data dari ML API", "/log/realtime");
+                console.log("c")
+                return utils.createResponse(res, ml_res.status, ml_res.title, "Gagal memproses data dari ML API", "/log/realtime");
             }
     
             let user = await prisma.user.findFirst({

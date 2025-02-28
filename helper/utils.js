@@ -159,6 +159,18 @@ const MakeBirthdayCard = async (imagePath, date, name, bbox) => {
     return result
 }
 module.exports = {
+    verifyImage: async (base64String) => {
+        if (!base64String.startsWith('data:image/jpeg;base64,')) {
+            return false
+        }
+        const imageBuffer = Buffer.from(base64String.split(',')[1], 'base64');
+        const metadata = await sharp(imageBuffer).metadata();
+        
+        if (metadata.width !== 160 || metadata.height !== 160) {
+            return false
+        }
+        return true
+    },
     arrayToHuman: (arrayData) => {
         if (Array.isArray(arrayData)) {
             if (arrayData.length == 0) {
