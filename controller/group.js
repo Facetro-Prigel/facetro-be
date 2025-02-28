@@ -16,9 +16,9 @@ const checkDeleteUpdate = async (uuid, reqs) => {
   }
 module.exports = {
     getter_all: async (req, res) => {
-        let is_exist;
+        let groups;
         try {
-            is_exist = await prisma.group.findMany({
+            groups = await prisma.group.findMany({
                 select: {
                     uuid: true,
                     name: true,
@@ -40,15 +40,15 @@ module.exports = {
             });
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group");
+            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group");
         }
-        return utils.createResponse(200, "Success", "Grup berhasil ditemukan", "/group", is_exist);
+        return utils.createResponse(res, 200, "Success", "Grup berhasil ditemukan", "/group", groups);
     },
     getter: async (req, res) => {
-        let is_exist;
+        let group;
+        let uuid = req.params.uuid;
         try {
-            var uuid = req.params.uuid;
-            is_exist = await prisma.group.findUnique({
+            group = await prisma.group.findUnique({
                 where: { uuid: uuid },
                 select: {
                     name: true,
@@ -81,14 +81,14 @@ module.exports = {
             });
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
+            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
         }
-        return utils.createResponse(200, "Success", "Grup berhasil ditemukan", `/group/${uuid}`, is_exist);
+        return utils.createResponse(res, 200, "Success", "Grup berhasil ditemukan", `/group/${uuid}`, group);
     },
     
     insert: async (req, res) => {
         try {
-            let result = await prisma.group.create({
+            await prisma.group.create({
                 data: {
                     name: req.body.name,
                     locations: req.body.location,
@@ -106,32 +106,32 @@ module.exports = {
             })
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group");
+            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group");
         }
         utils.webSockerUpdate(req)
-        return utils.createResponse(200, "Success", "Grup berhasil ditambahkan", "/group");
+        return utils.createResponse(res, 200, "Success", "Grup berhasil ditambahkan", "/group");
     },
     deleter: async (req, res)=>{
         let uuid = req.params.uuid
         try {
             let check = await checkDeleteUpdate(uuid)
             if(!check){
-                return utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`);
+                return utils.createResponse(res, 404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`);
             }
             await prisma.group.delete({where: { uuid: uuid }})
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
+            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
         }
         utils.webSockerUpdate(req)
-        return utils.createResponse(200, "Success", "Grup berhasil dihapus", `/group/${uuid}`);
+        return utils.createResponse(res, 200, "Success", "Grup berhasil dihapus", `/group/${uuid}`);
     },
     update: async(req, res)=>{
         let uuid = req.params.uuid
         try {
             let check = await checkDeleteUpdate(uuid)
             if(!check){
-                return utils.createResponse(404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`);
+                return utils.createResponse(res, 404, "Not Found", "Grup tidak ditemukan", `/group/${uuid}`);
             }
             let data ={
                 name: req.body.name,
@@ -151,7 +151,7 @@ module.exports = {
                     }
                 }
             }
-            let result = await prisma.group.update({
+            await prisma.group.update({
                 where:{
                     uuid: uuid
                 },
@@ -159,9 +159,9 @@ module.exports = {
             })
         } catch (error) {
             console.error("Error while inserting group:", error);
-            return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
+            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
         }
         utils.webSockerUpdate(req)
-        return utils.createResponse(200, "Success", "Grup berhasil diupdate", `/group/${uuid}`);
+        return utils.createResponse(res, 200, "Success", "Grup berhasil diupdate", `/group/${uuid}`);
     }
 };

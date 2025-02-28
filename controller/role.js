@@ -33,41 +33,48 @@ const inputInsertUpdate = async (req) => {
 }
 module.exports = {
   getter_all: async (req, res) => {
-    let is_exist;
-    
-    is_exist = await prisma.role.findMany({
-      select: {
-        uuid: true,
-        name: true,
-        description: true,
-      },
-    });
+    let roles;
+    try {
+      roles = await prisma.role.findMany({
+        select: {
+          uuid: true,
+          name: true,
+          description: true,
+        },
+      });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/role");
+    }
 
-    return utils.createResponse(200, "Success", "Peran berhasil ditemukan", "/role", { data: is_exist });
+    return utils.createResponse(res, 200, "Success", "Peran berhasil ditemukan", "/role", roles);
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
-    let is_exist;
-    is_exist = await prisma.role.findUnique({
-      where: { uuid: uuid },
-      select: {
-        uuid: true,
-        name: true,
-        guard_name: true,
-        description: true,
-        permission_role: {
-          select: {
-            permission: {
-              select:{
-                name: true,
-                uuid: true
+    let role;
+    try {
+      role = await prisma.role.findUnique({
+        where: { uuid: uuid },
+        select: {
+          uuid: true,
+          name: true,
+          guard_name: true,
+          description: true,
+          permission_role: {
+            select: {
+              permission: {
+                select:{
+                  name: true,
+                  uuid: true
+                }
               }
             }
           }
-        }
-      },
-    });
-    return utils.createResponse(200, "Success", "Peran berhasil ditemukan", `/role/${uuid}`, { data: is_exist });
+        },
+      });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/role/${uuid}`);
+    }
+    return utils.createResponse(res, 200, "Success", "Peran berhasil ditemukan", `/role/${uuid}`, role);
   },
 
   insert: async (req, res) => {
@@ -79,26 +86,26 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/role");
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/role");
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Peran berhasil ditambahkan", "/role");
+    return utils.createResponse(res, 200, "Success", "Peran berhasil ditambahkan", "/role");
   },
   deleter: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return utils.createResponse(404, "Not Found", "Peran tidak ditemukan atau tidak dapat dihapus", `/role/${uuid}`);
+      return utils.createResponse(res, 404, "Not Found", "Peran tidak ditemukan atau tidak dapat dihapus", `/role/${uuid}`);
     }
     await prisma.role.delete({ where: { uuid: uuid } })
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Peran berhasil dihapus", `/role/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Peran berhasil dihapus", `/role/${uuid}`);
   },
   update: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return utils.createResponse(404, "Not Found", "Peran tidak ditemukan atau tidak dapat diubah", `/role/${uuid}`);
+      return utils.createResponse(res, 404, "Not Found", "Peran tidak ditemukan atau tidak dapat diubah", `/role/${uuid}`);
     }
     try {
       let data = await inputInsertUpdate(req)
@@ -113,9 +120,9 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/role/${uuid}`); 
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/role/${uuid}`); 
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Peran berhasil diubah", `/role/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Peran berhasil diubah", `/role/${uuid}`);
   }
 };

@@ -15,29 +15,34 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 }
 module.exports = {
   getter_all: async (req, res) => {
-    let is_exist;
-    is_exist = await prisma.permission.findMany({
+    let permissions;
+    permissions = await prisma.permission.findMany({
       select: {
         uuid: true,
         name: true,
         description: true,
       },
     });
-    return utils.createResponse(200, "Success", "Izin berhasil ditemukan", "/permission", { data: is_exist });
+    return utils.createResponse(res, 200, "Success", "Izin berhasil ditemukan", "/permission", permissions);
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
-    let is_exist;
-    is_exist = await prisma.permission.findUnique({
-      where: { uuid: uuid },
-      select: {
-        uuid: true,
-        name: true,
-        guard_name: true, 
-        description: true,
-      },
-    });
-    return utils.createResponse(200, "Success", "Izin berhasil ditemukan", `/permission/${uuid}`, { data: is_exist });
+    let permission;
+    try {
+      permission = await prisma.permission.findUnique({
+        where: { uuid: uuid },
+        select: {
+          uuid: true,
+          name: true,
+          guard_name: true, 
+          description: true,
+        },
+      });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
+    }
+
+    return utils.createResponse(res, 200, "Success", "Izin berhasil ditemukan", `/permission/${uuid}`, permission);
   },
 
   insert: async (req, res) => {
@@ -50,26 +55,31 @@ module.exports = {
       await prisma.permission.create({data: data})
     } catch (error) {
       console.error("Error while inserting permission:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/permission");
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/permission");
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Izin berhasil ditambahkan", "/permission");
+    return utils.createResponse(res, 200, "Success", "Izin berhasil ditambahkan", "/permission");
   },
   deleter: async (req, res) => {
     let uuid = req.params.uuid
-    let check = await checkDeleteUpdate(uuid)
-    if (!check) {
-      return utils.createResponse(404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
+    try {
+      let check = await checkDeleteUpdate(uuid)
+      if (!check) {
+        return utils.createResponse(res, 404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
+      }
+      await prisma.permission.delete({ where: { uuid: uuid } })
+    } catch (error) {
+      console.error("Error while inserting permission:", error);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
     }
-    await prisma.permission.delete({ where: { uuid: uuid } })
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Izin berhasil dihapus", `/permission/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Izin berhasil dihapus", `/permission/${uuid}`);
   },
   update: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return utils.createResponse(404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
+      return utils.createResponse(res, 404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
     }
     try {
       let data = {
@@ -87,9 +97,9 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting permission:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Izin berhasil diupdate", `/permission/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Izin berhasil diupdate", `/permission/${uuid}`);
   }
 };

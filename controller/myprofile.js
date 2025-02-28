@@ -138,7 +138,6 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 module.exports = {
   unnes_image: async (req, res) => {
     try {
-      console.log(JSON.stringify(req.body));
       const identity_number = req.body.identity_number
       let url = `${process.env.UNNES_API}/primer/user_ava/${identity_number}/541.aspx`
       const response = await axios.get(url, {
@@ -151,12 +150,12 @@ module.exports = {
       const mimeType = response.headers['content-type'];
       const base64Data = `data:${mimeType};base64,${base64Image}`;
       if (mimeType == 'image-png') {
-        return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
+        return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
       }
 
-      return utils.createResponse(200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
+      return utils.createResponse(res, 200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
     } catch (error) {
-      return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat mengambil gambar dari UNNES", `/unnes_image/${identity_number}`);
     }
 
   },
@@ -167,22 +166,25 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch(( e) => {
-      return utils.createResponse(400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
+      return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
     })
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return utils.createResponse(201, "Created", "gambar berhasil disimpan", `/image`, {file_uuid: uuid.uuid, path: datas.image_path})
+      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/image`, {file_uuid: uuid.uuid, path: datas.image_path})
     } catch (e) {
       console.error("gagal menyimpan gambar")
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
     }
   },
   getter: async (req, res) => {
-    let isExist;
-    isExist = await prisma.user.findUnique({
+    let user_data;
+    let uuid = req.user.uuid;
+    try {
+      
+    user_data = await prisma.user.findUnique({
       
       where: { uuid: req.user.uuid },
       select: {
@@ -235,24 +237,32 @@ module.exports = {
         },
       },
     });
-    return utils.createResponse(200, "Success", "Pengguna berhasil ditemukan", `/myprofile/${req.user.uuid}`, { data: isExist });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/myprofile/${uuid}`);
+    }
+    return utils.createResponse(res, 200, "Success", "Pengguna berhasil ditemukan", `/myprofile/${uuid}`, user_data);
   },
   update: async (req, res) => {
-    const user = await checkDeleteUpdate(req.user.uuid, req)
-    if (!user) {
-      return utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan", `/myprofile/${req.user.uuid}`);
+    let uuid = req.user.uuid
+    try {
+      const user = await checkDeleteUpdate(req.user.uuid, req)
+      if (!user) {
+        return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan", `/myprofile/${req.user.uuid}`);
+      }
+      var data = await inputInsertUpdate(req, 'up')
+      if (data.status == false) {
+        return utils.createResponse(res, 400, "Bad Request", data.validateError, `/myprofile/${req.user.uuid}`, { validateError: data.validateError }); // may need to be changed if necessary
+      }
+      data = data.data
+      data.modified_at = new Date()
+      const updateUser = await prisma.user.update({
+        where: { uuid: req.user.uuid },
+        data: data
+      });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/myprofile/${req.user.uuid}`);
     }
-    var data = await inputInsertUpdate(req, 'up')
-    if (data.status == false) {
-      return utils.createResponse(400, "Bad Request", data.validateError, `/myprofile/${req.user.uuid}`, { validateError: data.validateError }); // may need to be changed if necessary
-    }
-    data = data.data
-    data.modified_at = new Date()
-    const updateUser = await prisma.user.update({
-      where: { uuid: req.user.uuid },
-      data: data
-    });
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Pengguna berhasil diperbarui", `/myprofile/${req.user.uuid}`);
+    return utils.createResponse(res, 200, "Success", "Pengguna berhasil diperbarui", `/myprofile/${uuid}`);
   },
 };

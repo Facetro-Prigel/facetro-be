@@ -206,7 +206,7 @@ const saveLogData = async (startTotalTimeNeeded, endMLTime, four_last_signatures
     await prisma.log.create({ data: logData });
 }
 
-const processResult = (type, req, now, requestImagePath, isExist, ml_result) => {
+const processLogDataV1 = (type, req, now, requestImagePath, isExist, ml_result) => {
     // process create log data
     let logData = {
         userUuid: isExist.uuid,
@@ -221,7 +221,7 @@ const processResult = (type, req, now, requestImagePath, isExist, ml_result) => 
     return logData
 }
 
-const processLogData = (isExist, ml_result, req, now, requestImagePath, selected_server_image) => {
+const processResultV1 = (isExist, ml_result, req, requestImagePath, selected_server_image) => {
     let result = {
         name: isExist.name,
         role: isExist.roleuser.map((i) => {
@@ -331,8 +331,8 @@ module.exports = {
                     let todayLog = await prisma.log.findFirst({
                         where: whereCluse
                     })
-                    let logData = processLogData(isExist, ml_result, req, now, requestImagePath, selected_server_image)
-                    result = processResult(type, req, now, requestImagePath, isExist, ml_result)
+                    let logData = processLogDataV1(isExist, ml_result, req, now, requestImagePath, selected_server_image)
+                    result = processResultV1(type, req, now, requestImagePath, isExist, ml_result)
                     let startTimeToHuman, endTimeToHuman, endCaptions, captionForElse
                     result.startTime = now.toISOString()
 
@@ -378,8 +378,8 @@ module.exports = {
                     
                     const now = new Date();
                     
-                    let logData = processLogData(isExist, ml_result, req, now, requestImagePath, selected_server_image)
-                    result = processResult(type, req, now, requestImagePath, isExist, ml_result)
+                    let logData = processLogDataV1(isExist, ml_result, req, now, requestImagePath, selected_server_image)
+                    result = processResultV1(type, req, now, requestImagePath, isExist, ml_result)
                     // Other data
                     try {
                         saveLogData(startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData)
@@ -390,22 +390,14 @@ module.exports = {
                 const detail = body.type == "door" ? "Pintu berhasil dibuka" : "Presensi sudah tercatat";
                 return utils.createResponse(res, 202, "Accepted", detail, `/log/${body.type}/${identity}`, {result});
             }else{
-                res.status(400).json({ msg: "Request yang diminta salah", code: 400 });
+                return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log");
             }
         } catch (e) {
-          console.error(
-            e,
-            "\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala"
-          );
+          console.error(e,"\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala");
           if (e.message == "ComparationError") {
-            return utils.createResponse
-            res
-              .status(400)
-              .json({ msg: "tidak atau terdapat banyak wajah!", code: 400 });
+            return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", "/log");
           }
-          return res
-            .status(500)
-            .json({ msg: "Terjadi kesalahan pada server", code: 500 });
+          return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/log");
         }
       },
       realtime: async (req, res) => {
@@ -464,6 +456,7 @@ module.exports = {
             // Konversi ke array
             const finalResult = Object.values(groupedLogs).flat();            
     
+            const startMLTime = process.hrtime();
             const ml_res = await axios.post(ml_url, 
                 { image, data: users_log_data }, 
                 {
@@ -471,6 +464,7 @@ module.exports = {
                     validateStatus: (status) => status < 500
                 }
             );
+            const endMLTime = process.hrtime(startMLTime);
     
             if (ml_res.status >= 400) {
               return utils.createResponse(res, ml_res.status, ml_res.title, "Gagal memproses data dari ML API", "/log/realtime");
@@ -507,25 +501,22 @@ module.exports = {
                     if (!checkAccess(user, req.device.uuid)){
                         return utils.createResponse(res, 403, "Forbidden", "Anda tidak boleh presensi di sini", "/log/realtime");
                     }
-    
-                    //formatting log data for frontend and db
-                    const gte_value = new Date(
-                        new Intl.DateTimeFormat("en-US", {
-                          timeZone: "Asia/Jakarta",
-                          hourCycle: "h23",
-                        }).format(new Date())
-                      );
-    
+
                     const now = new Date();
-                    let log_data = {
-                        userUuid: user_uuid,
-                        bbox: ml_res.data.compared_bbox,
-                        imagePath: image_path,
-                        deviceUuid: device_uuid,
-                        signature: ml_res.data.signature, // may not have been implemented yet
-                        isMatch: ml_res.data.isMatch,
-                        createdAt: now
+
+                    //formatting log data for frontend and db
+                    const gte_value = `${now.getFullYear()}-${generator.generateZero(now.getMonth() + 1)}-${generator.generateZero(now.getDate())}T00:00:00.000+07:00`
+                    
+                    // grab today's log if there is any
+                    let today_log_query = {
+                        type: type,
+                        createdAt: {gte: new Date(gte_value).toISOString()},
+                        isMatch: "true",
+                        userUuid: user_uuid
                     }
+                    let today_log = await prisma.log.findFirst({where: today_log_query})
+
+                    let log_data = processLogDataV2(user_uuid, ml_res, image_path, device_uuid, now)
                     let log_result = {
                         data: {
                             name: user.name,
@@ -543,14 +534,7 @@ module.exports = {
                     let start_time_to_human, end_time_to_human, end_captions, caption_for_else;
                     log_result.startTime = now.toISOString();
     
-                    // grab today's log if there is any
-                    let today_log_query = {
-                        type: type,
-                        createdAt: {gte: gte_value.toISOString()},
-                        isMatch: "true",
-                        userUuid: user_uuid
-                    }
-                    let today_log = await prisma.log.findFirst({where: today_log_query})
+
                     
                     if (today_log) {
                         log_data.type = "Logout"
@@ -672,56 +656,62 @@ module.exports = {
         }
     },
     getLog: async (req, res) => {
-        let logDatas = await prisma.log.findMany({
-            orderBy: [
-                {
-                    createdAt: 'desc'
-                }
-            ],
-            select: {
-                isMatch: true,
-                imagePath: true,
-                bbox: true,
-                user: {
-                    select: {
-                        name: true,
-                        identityNumber: true,
-                        usergroup: {
-                            select: {
-                                group: {
-                                  select: {
-                                    name: true
-                                  }
-                                },
-                              },
+        let logDatas;
+        try {
+            await prisma.log.findMany({
+                orderBy: [
+                    {
+                        createdAt: 'desc'
+                    }
+                ],
+                select: {
+                    isMatch: true,
+                    imagePath: true,
+                    bbox: true,
+                    user: {
+                        select: {
+                            name: true,
+                            identityNumber: true,
+                            usergroup: {
+                                select: {
+                                    group: {
+                                      select: {
+                                        name: true
+                                      }
+                                    },
+                                  },
+                            }
+                        }
+                    },
+                    createdAt: true,
+                    device: {
+                        select: {
+                            name: true,
                         }
                     }
-                },
-                createdAt: true,
-                device: {
-                    select: {
-                        name: true,
-                    }
                 }
-            }
-        })
-        let showLogs = [];
-        for (const log of logDatas) {
-            showLogs.push({
-                name: log.user.name,
-                nim: log.user.identityNumber,
-                device: log.device.name,
-                image: log.imagePath,
-                bbox: log.bbox,
-                type: log.type,
-                isMatch: log.isMatch,
-                inTime: log.createdAt,
-                group: log.user.usergroup.map((uy)=>{
-                    return uy.group.name
-                })
             })
+            let showLogs = [];
+            for (const log of logDatas) {
+                showLogs.push({
+                    name: log.user.name,
+                    nim: log.user.identityNumber,
+                    device: log.device.name,
+                    image: log.imagePath,
+                    bbox: log.bbox,
+                    type: log.type,
+                    isMatch: log.isMatch,
+                    inTime: log.createdAt,
+                    group: log.user.usergroup.map((uy)=>{
+                        return uy.group.name
+                    })
+                })
+            }
+        } catch (error) {
+            console.error("Error while inserting group:", error);
+            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/log`);
         }
-        return res.json(showLogs)
+        return utils.createResponse(res, 200, "Success", "Log berhasil diambil", `/log`, showLogs);
     },
     cardlessRequest: async (req, res) => {
         const n = 3191103090
@@ -750,7 +740,7 @@ module.exports = {
             })
             numericUUID = utils.uuidToDecimal(user.uuid).slice(0, 20)
         } catch (error) {
-            return res.status(403).json({ msg: "Kradensisal tidak cocok!" })
+            return utils.createResponse(res, 403, "Forbidden", "Kradensisal tidak cocok!", `/user/${user.uuid}`);
         }
         secretKey = BigInt(numericUUID) % BigInt(n);
 
@@ -763,8 +753,8 @@ module.exports = {
         // Verify
         const expectedResponse = (x * (BigInt(publicKey) ** BigInt(challenge) % BigInt(n))) % BigInt(n);
         if ((y ** BigInt(2)) % BigInt(n) === expectedResponse) {
-            return res.status(202).json({ msg: "Akses diizinkan!" })
+            return utils.createResponse(res, 200, "Success", "Akses diizinkan!", `/user/${user.uuid}`);
         }
-        return res.status(403).json({ msg: "Kradensisal tidak cocok!" })
+        return utils.createResponse(res, 403, "Forbidden", "Kradensisal tidak cocok!", `/user/${user.uuid}`);
     }
 }

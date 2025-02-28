@@ -198,7 +198,7 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch((e) => {
-      return utils.createResponse(401, "Unauthorized", "Tidak ada atau terdapat banyak wajah!", `/birthday`);
+      return utils.createResponse(res, 401, "Unauthorized", "Tidak ada atau terdapat banyak wajah!", `/birthday`);
     })
     try {
       requestImagePath = `${genPass.generateString(15)}.png`
@@ -211,10 +211,10 @@ module.exports = {
           birthday_bbox: datas.bbox
         }
       })
-      return utils.createResponse(201, "Created", "gambar berhasil disimpan", `/birthday`);
+      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/birthday`);
     } catch (e) {
       console.error("gagal menyimpan gambar")
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/birthday`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/birthday`);
     }
   },
   unnes_image: async (req, res) => {
@@ -232,12 +232,12 @@ module.exports = {
       const mimeType = response.headers['content-type'];
       const base64Data = `data:${mimeType};base64,${base64Image}`;
       if (mimeType == 'image-png') {
-        return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
+        return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
       }
 
-      return utils.createResponse(200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
+      return utils.createResponse(res, 200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
     } catch (error) {
-      return utils.createResponse(404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
+      return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
     }
 
   },
@@ -248,115 +248,124 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch((e) => {
-      return utils.createResponse(400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
+      return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
     })
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return utils.createResponse(201, "Created", "gambar berhasil disimpan", `/image`, { file_uuid: uuid.uuid, path: datas.image_path })
-      res.status(201).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid })
+      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/image`, { file_uuid: uuid.uuid, path: datas.image_path })
     } catch (e) {
       console.error("gagal menyimpan gambar")
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
     }
   },
   getter_all: async (req, res) => {
-    let isExist;
-    isExist = await prisma.user.findMany({
-      orderBy: [
-        {
-          created_at: 'desc'
+    let users;
+    try {
+      users = await prisma.user.findMany({
+        orderBy: [
+          {
+            created_at: 'desc'
+          }
+        ],
+        select: {
+          uuid: true,
+          name: true,
+          identity_number: true,
+          avatar: true,
+          bbox: true,
+          created_at: true,
+          role_user: {
+            select: {
+              role: {
+                select: {
+                  name: true
+                }
+              },
+            },
+          },
+          user_group: {
+            select: {
+              group: {
+                select: {
+                  name: true
+                }
+              },
+            },
+          },
         }
-      ],
-      select: {
-        uuid: true,
-        name: true,
-        identity_number: true,
-        avatar: true,
-        bbox: true,
-        created_at: true,
-        role_user: {
-          select: {
-            role: {
-              select: {
-                name: true
-              }
-            },
-          },
-        },
-        user_group: {
-          select: {
-            group: {
-              select: {
-                name: true
-              }
-            },
-          },
-        },
-      }
-    });
+      });
+    } catch (error) {
+      console.error("Terjadi masalah saat mengambil data user", error);
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user");
+    }
 
-    return utils.createResponse(200, "Success", "User berhasil ditemukan", "/user", { data: isExist });
+    return utils.createResponse(res, 200, "Success", "User berhasil ditemukan", "/user", users);
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
-    let isExist;
-    isExist = await prisma.user.findUnique({
-      where: { uuid: uuid },
-      select: {
-        uuid: true,
-        name: true,
-        identity_number: true,
-        email: true,
-        batch: true,
-        birthday: true,
-        program_study: true,
-        bbox: true,
-        avatar: true,
-        phone_number: true,
-        telegram_id: true,
-        nfc_data: true,
-        permission_user: {
-          select: {
-            uuid: true,
-            permission: {
-              select: {
-                uuid: true,
-                name: true,
-                guard_name: true
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { uuid: uuid },
+        select: {
+          uuid: true,
+          name: true,
+          identity_number: true,
+          email: true,
+          batch: true,
+          birthday: true,
+          program_study: true,
+          bbox: true,
+          avatar: true,
+          phone_number: true,
+          telegram_id: true,
+          nfc_data: true,
+          permission_user: {
+            select: {
+              uuid: true,
+              permission: {
+                select: {
+                  uuid: true,
+                  name: true,
+                  guard_name: true
+                }
+              },
+            },
+          },
+          role_user: {
+            select: {
+              uuid: true,
+              role: {
+                select: {
+                  uuid: true,
+                  name: true,
+                  guard_name: true
+                }
+              },
+            },
+          },
+          user_group: {
+            select: {
+              uuid: true,
+              group: {
+                select: {
+                  uuid: true,
+                  name: true
+                }
               }
             },
           },
         },
-        role_user: {
-          select: {
-            uuid: true,
-            role: {
-              select: {
-                uuid: true,
-                name: true,
-                guard_name: true
-              }
-            },
-          },
-        },
-        user_group: {
-          select: {
-            uuid: true,
-            group: {
-              select: {
-                uuid: true,
-                name: true
-              }
-            }
-          },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      console.error("Terjadi masalah saat mengambil data user", error);
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
+    }
 
-    return utils.createResponse(200, "Success", "User berhasil ditemukan", `/user/${uuid}`, { data: isExist });
+    return utils.createResponse(res, 200, "Success", "User berhasil ditemukan", `/user/${uuid}`, user);
   },
 
   insert: async (req, res) => {
@@ -364,10 +373,10 @@ module.exports = {
     try {
       variabel = await inputInsertUpdate(req, 'in')
     } catch (error) {
-      return utils.createResponse(400, "Bad Request", "Input yang diberikan tidak valid!", "/user");
+      return utils.createResponse(res, 400, "Bad Request", "Input yang diberikan tidak valid!", "/user");
     }
     if (variabel.status == false) {
-      return utils.createResponse(400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${variabel.msg}\n${variabel.validateError}`, "/user");
+      return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${variabel.msg}\n${variabel.validateError}`, "/user");
     }
     if (variabel.data.nfc_data == '3D002CE6') {
       try {
@@ -391,54 +400,64 @@ module.exports = {
 
       // sendMail({ name: variabel.name, email: variabel.email, password: req.body.password, token: variabel.telegram_token, bimbingan: utils.arrayToHuman(ss) });
       utils.webSockerUpdate(req)
-      return utils.createResponse(200, "Success", "Selamat pengguna berhasil dibuat", "/user");
+      return utils.createResponse(res, 200, "Success", "Selamat pengguna berhasil dibuat", "/user");
     } catch (error) {
       console.error("Error while inserting user:", error);
-      return utils.createResponse(500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user");
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user");
     }
   },
 
 
   update: async (req, res) => {
     const uuid = req.params.uuid;
-    const user = await checkDeleteUpdate(uuid, req)
-    if (!user) {
-      return utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan / tidak dapat diubah", `/user/${uuid}`);
+    try {
+      const user = await checkDeleteUpdate(uuid, req)
+      if (!user) {
+        return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat diubah", `/user/${uuid}`);
+      }
+      await prisma.userGroup.deleteMany({
+        where: { userUuid: uuid }
+      })
+      await prisma.roleUser.deleteMany({
+        where: { userUuid: uuid }
+      })
+      await prisma.permissionUser.deleteMany({
+        where: { userUuid: uuid }
+      })
+      var data = await inputInsertUpdate(req, 'up')
+      if (data.status == false) {
+        return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${data.msg}\n${data.validateError}`, `/user/${uuid}`);
+      }
+      data = data.data
+      data.modifiedAt = new Date()
+      const updateUser = await prisma.user.update({
+        where: { uuid: uuid },
+        data: data
+      });
+    } catch (error) {
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
     }
-    await prisma.userGroup.deleteMany({
-      where: { userUuid: uuid }
-    })
-    await prisma.roleUser.deleteMany({
-      where: { userUuid: uuid }
-    })
-    await prisma.permissionUser.deleteMany({
-      where: { userUuid: uuid }
-    })
-    var data = await inputInsertUpdate(req, 'up')
-    if (data.status == false) {
-      return utils.createResponse(400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${data.msg}\n${data.validateError}`, `/user/${uuid}`);
-    }
-    data = data.data
-    data.modifiedAt = new Date()
-    const updateUser = await prisma.user.update({
-      where: { uuid: uuid },
-      data: data
-    });
+
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Pengguna berhasil diperbarui", `/user/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Pengguna berhasil diperbarui", `/user/${uuid}`);
   },
 
   deleteUser: async (req, res) => {
     const uuid = req.params.uuid;
+    try {
+      
     const user = await checkDeleteUpdate(uuid, req)
     if (!user) {
-      return utils.createResponse(404, "Not Found", "Pengguna tidak ditemukan / tidak dapat dihapus", `/user/${uuid}`);
+      return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat dihapus", `/user/${uuid}`);
     }
     const deletedUser = await prisma.user.delete({
       where: { uuid: uuid }
     });
+    } catch (error) {
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
+    }
     utils.webSockerUpdate(req)
-    return utils.createResponse(200, "Success", "Pengguna berhasil dihapus", `/user/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Pengguna berhasil dihapus", `/user/${uuid}`);
   },
 
 };
