@@ -13,10 +13,9 @@ model User {
   identity_number  String      @unique
   password         String
   email            String      @unique
-  bbox             Json?
   avatar           String?
+  bbox             Json?
   signature        String?
-  phone_number     String?
   telegram_id      BigInt?
   telegram_token   String?
   nfc_data         String      @unique
@@ -25,17 +24,16 @@ model User {
   log              Log[]
   role_user        RoleUser[]
   permission_user  PermissionUser[]
-  userDetails      UserDetails?
+  user_details     UserDetails?
 }
 
 model UserDetails {
   uuid           String   @id @default(uuid())
   user_uuid      String   @unique
+  phone_number   String?
   batch          Int?
   birthday       DateTime?
   program_study  String?
-  birthday_photo String?
-  birthday_bbox  Json?
   created_at     DateTime @default(now())
   modified_at    DateTime @updatedAt
   user           User     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
