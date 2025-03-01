@@ -191,7 +191,7 @@ const telegramPreprocessing = async (req, captionForElse, isExist, startTimeToHu
     }
 }
 
-const saveLogData = async (user, startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData) => {
+const saveLogData = async (startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData) => {
     const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded);
     const totalTimeNeeded =
       endTotalTimeNeeded[0] * 1000 + endTotalTimeNeeded[1] / 1e6;
@@ -201,10 +201,9 @@ const saveLogData = async (user, startTotalTimeNeeded, endMLTime, four_last_sign
       totalTimeNeeded: totalTimeNeeded,
       dataComparisonCandidate: four_last_signatures,
       dataComparisonCandidateAfterProcess: four_last_signatures_process,
-      user: null
     };
 
-    await prisma.log.create({ data: logData });
+    await prisma.log.create(logData);
     return
 }
 
@@ -224,7 +223,6 @@ const processLogDataV1 = (type, device_uuid, now, requestImagePath, user, ml_res
 }
 
 const processResultV1 = (user, ml_result, device_name, requestImagePath, selected_server_image) => {
-    console.log(JSON.stringify(user));
     let result = {
         name: user.name,
         role: user.roleuser.map((i) => {
@@ -459,7 +457,7 @@ module.exports = {
             }, {});
             
             // Konversi ke array
-            const final_result = Object.values(grouped_logs).flat();            
+            const final_result = Object.values(grouped_logs).flat();
     
             const startMLTime = process.hrtime();
             const ml_res = await axios.post(process.env.ML_URL + 'match', 
