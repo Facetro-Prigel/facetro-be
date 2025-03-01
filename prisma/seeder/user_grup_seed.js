@@ -64,10 +64,10 @@ exports.run = async () => {
     user_groupsa.forEach(async (items) => {
         let data = {
             where: {
-                identity_number: items.nim,
+                identityNumber: items.nim,
             },
             data: {
-                user_group: {
+                usergroup: {
                     create: items.project.map((projectItems) => {
                         console.log(projectItems)
                         return { group: { connect: { name: projectItems } } }
@@ -86,10 +86,10 @@ exports.run = async () => {
         .on('data', async (row) => {
             let data = {
                 where: {
-                    identity_number: row.identity,
+                    identityNumber: row.identity,
                 },
                 data: {
-                    user_group: {
+                    usergroup: {
                         create: row.group.split('.').map((projectItems) => {
                             if(projectItems != ""){
                                 return { group: { connect: { name: projectItems } } }
@@ -99,10 +99,10 @@ exports.run = async () => {
                 },
             }
             try{
-                console.log(`Name ${row.name} -> ${JSON.stringify(data.data.user_group.create)}`)
+                console.log(`Name ${row.name} -> ${JSON.stringify(data.data.usergroup.create)}`)
                 await prisma.user.update(data)
             }catch(e){
-                console.error(`Error User->Group (${row.name} -> ${JSON.stringify(data.data.user_group.create)})`)
+                console.error(`Error User->Group (${row.name} -> ${JSON.stringify(data.data.usergroup.create)})`)
             }
         })
 }

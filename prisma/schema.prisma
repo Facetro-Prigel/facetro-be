@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,116 +10,91 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  uuid             String      @id @default(uuid())
-  name             String
-  identity_number  String      @unique
-  password         String
-  email            String      @unique
-  bbox             Json?
-  avatar           String?
-  signature        String?
-  phone_number     String?
-  telegram_id      BigInt?
-  telegram_token   String?
-  nfc_data         String      @unique
-  groups           Group[]
-  user_group       UserGroup[]
-  log              Log[]
-  role_user        RoleUser[]
-  permission_user  PermissionUser[]
-  userDetails      UserDetails?
-}
 
-model UserDetails {
-  uuid           String   @id @default(uuid())
-  user_uuid      String   @unique
+// Define your schema using Prisma
+// This file will be automatically generated based on your schema definition
+
+
+// Define the User model
+model User {
+  uuid           String    @id @default(uuid()) @map(name: "uuid")
+  name           String
+  identityNumber String    @unique   
+  password       String     
+  email          String    @unique
   batch          Int?
-  birthday       DateTime?
-  program_study  String?
-  birthday_photo String?
-  birthday_bbox  Json?
-  created_at     DateTime @default(now())
-  modified_at    DateTime @updatedAt
-  user           User     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
+  birtday        DateTime? @db.Date()
+  program_study  String? 
+  bbox           Json?
+  avatar         String?
+  signature      String?   @db.Text() 
+  phoneNumber    String?
+  telegramId     BigInt?
+  telegramToken  String?
+  birtdayPhoto   String?
+  birtdayBbox    Json?
+  nfc_data       String?  @unique
+  createdAt      DateTime   @default(now())
+  modifiedAt     DateTime   @default(now())
+  groups          Group[]
+  usergroup       UserGroup[]
+  log             Log[]   
+  roleuser        RoleUser[]
+  permissionUser  PermissionUser[]
 }
 
 model Group {
-  uuid             String     @id @default(uuid())
-  name             String     @unique
-  parent_group_uuid String?
-  locations        String
-  notify_to        String
-  devices          String
-  users            User[]
-  device           Device[]
-  user_group       UserGroup[]
-  door_group       DoorGroup[]
-  presence_group   PresenceGroup[]
+  uuid       String    @id @default(uuid()) @map(name: "uuid")
+  name       String    @unique
+  locations  String
+  //one-to-many
+  users      User    @relation(fields: [notify_to], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  notify_to  String
+  device     Device  @relation(fields: [devices], references: [uuid], onDelete: Cascade, onUpdate: Cascade)  
+  devices    String   
+  usergroup  UserGroup[]
 }
-
-model DoorGroup {
-  uuid        String   @id @default(uuid())
-  created_at  DateTime @default(now())
-  modified_at DateTime @updatedAt
-  device_uuid String
-  group_uuid  String
-  device      Device   @relation(fields: [device_uuid], references: [uuid], onDelete: Cascade)
-  group       Group    @relation(fields: [group_uuid], references: [uuid], onDelete: Cascade)
-}
-
-model PresenceGroup {
-  uuid        String   @id @default(uuid())
-  created_at  DateTime @default(now())
-  modified_at DateTime @updatedAt
-  device_uuid String
-  group_uuid  String
-  device      Device   @relation(fields: [device_uuid], references: [uuid], onDelete: Cascade)
-  group       Group    @relation(fields: [group_uuid], references: [uuid], onDelete: Cascade)
-}
+  
 
 model Device {
-  uuid              String  @id @default(uuid())
-  name              String
-  locations         String  @unique
-  ip_address        String?
-  token             String? @unique
-  identity          String
-  groups            Group[]
-  log               Log[]
-  door_group        DoorGroup[]
-  presence_group    PresenceGroup[]
+  uuid        String   @id @default(uuid()) @map(name: "uuid")
+  name        String
+  locations   String   @unique
+  ip_address  String?
+  token       String?  @unique
+  identity    String
+  groups      Group[]
+  log         Log[]  
 }
-
-model TempData {
-  uuid        String   @id @default(uuid())
-  created_at  DateTime @default(now())
-  data        Json
+model TempData{
+  uuid       String     @id @default(uuid()) @map(name: "uuid")
+  createdAt  DateTime  @default(now())
+  data       Json
 }
-
 model UserGroup {
-  uuid        String   @id @default(uuid())
-  created_at  DateTime @default(now())
-  modified_at DateTime @updatedAt
-  user_uuid   String
-  group_uuid  String
-  user        User     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
-  group       Group    @relation(fields: [group_uuid], references: [uuid], onDelete: Cascade)
+  uuid       String     @id @default(uuid()) @map(name: "uuid")
+  createdAt  DateTime  @default(now())
+  modifiedAt DateTime  @default(now())
+
+  user       User      @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  userUuid   String
+  group      Group     @relation(fields: [groupUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  groupUuid  String
 }
 
 model Log {
-  uuid        String   @id @default(uuid())
-  type        absen
-  image_path  String
-  bbox        Json
-  signature   String
-  created_at  DateTime @default(now())
-  user_uuid   String
-  is_match    Boolean  @default(false)
-  device_uuid String
-  user        User     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
-  device      Device   @relation(fields: [device_uuid], references: [uuid], onDelete: Cascade)
-  other_data  Json?
+  uuid        String      @id @default(uuid()) @map(name: "uuid")
+  type        absen     // Assuming 'type' is a string field for the type of log
+  imagePath   String     @db.VarChar(255) // Assuming 'image_path' is a varchar field
+  bbox        Json   
+  signature   String      @db.Text()
+  createdAt   DateTime    @default(now())
+  user        User        @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  userUuid    String
+  isMatch     Boolean    @default(false)
+  device      Device      @relation(fields: [deviceUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  deviceUuid  String
+  otherData   Json?
 }
 
 enum absen {
@@ -126,53 +104,59 @@ enum absen {
 }
 
 model Role {
-  uuid             String           @id @default(uuid())
-  name             String
-  guard_name       String           @unique
-  description      String?
-  created_at       DateTime         @default(now())
-  modified_at      DateTime         @updatedAt
-  role_user        RoleUser[]
-  permission_role  PermissionRole[]
+  uuid          String    @id @default(uuid()) @map(name: "uuid")
+  name          String
+  guardName     String    @unique
+  description   String?   @db.Text()
+  createdAt     DateTime  @default(now())
+  modifiedAt    DateTime  @default(now())
+
+  roleuser      RoleUser[]
+  permisionrole PermissionRole[]
 }
 
+// Define the RoleUser model
 model RoleUser {
-  uuid        String   @id @default(uuid())
-  user_uuid   String
-  role_uuid   String
-  created_at  DateTime @default(now())
-  modified_at DateTime @updatedAt
-  user        User     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
-  role        Role     @relation(fields: [role_uuid], references: [uuid], onDelete: Cascade)
+  uuid         String    @id @default(uuid()) @map(name: "uuid")
+  user         User      @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  userUuid     String
+  role         Role      @relation(fields: [roleUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  roleUuid     String
+  createdAt    DateTime  @default(now())
+  modifiedAt   DateTime  @default(now())
 }
 
+// Define the Permission model
 model Permission {
-  uuid             String           @id @default(uuid())
-  name             String
-  guard_name       String           @unique
-  description      String?
-  created_at       DateTime         @default(now())
-  modified_at      DateTime         @updatedAt
-  permission_role  PermissionRole[]
-  permission_user  PermissionUser[]
+  uuid          String   @id @default(uuid()) @map(name: "uuid")
+  name          String
+  guardName     String   @unique
+  description   String?  @db.Text()
+  createdAt     DateTime @default(now())
+  modifiedAt    DateTime @default(now())
+  permisionrole   PermissionRole[]
+  permissionUser  PermissionUser[]
 }
 
+// Define the PermissionRole model
 model PermissionRole {
-  uuid           String   @id @default(uuid())
-  created_at     DateTime @default(now())
-  modified_at    DateTime @updatedAt
-  permission_uuid String
-  role_uuid      String
-  permission     Permission @relation(fields: [permission_uuid], references: [uuid], onDelete: Cascade)
-  role          Role       @relation(fields: [role_uuid], references: [uuid], onDelete: Cascade)
+  uuid              String      @id @default(uuid()) @map(name: "uuid")
+  createdAt         DateTime    @default(now())
+  modifiedAt        DateTime    @default(now())
+  permission        Permission  @relation(fields: [permissionUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  permissionUuid    String
+  role              Role        @relation(fields: [roleUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  roleUuid          String
 }
 
+// Define the PermissionUser model
 model PermissionUser {
-  uuid           String   @id @default(uuid())
-  created_at     DateTime @default(now())
-  modified_at    DateTime @updatedAt
-  user_uuid      String
-  permission_uuid String
-  user           User      @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
-  permission     Permission @relation(fields: [permission_uuid], references: [uuid], onDelete: Cascade)
+  uuid              String      @id @default(uuid()) @map(name: "uuid")
+  createdAt         DateTime    @default(now())
+  modifiedAt        DateTime    @default(now())
+
+  user              User        @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  userUuid          String
+  permission        Permission  @relation(fields: [permissionUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  permissionUuid    String
 }
