@@ -155,5 +155,67 @@ module.exports = {
     }
     utils.webSockerUpdate(req)
     return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`);
-  }
+  },
+  nfc_get: async (req, res) => {
+    let uuid = req.device.uuid;
+    let nfcs = await prisma.device.findUnique({
+          where: { uuid: deviceUuid },
+          include: {
+              group: {
+                  include: {
+                      usergroup: {
+                          include: {
+                              user: {
+                                  include: {
+                                      nfc_data: true
+                                  }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+      });
+      console.log(JSON.stringify(nfcs));
+      utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`, nfcs);
+      //aku mau implement get nfc dari semua user yang terkait pada device tertentu
+      // jika di sql aku mengakses user ke device adalah sebagai berikut
+      // select u.uuid, ug.uuid, g.uuid, d.uuid from User u join UserGroup ug on u.uuid = ug.uuid join Group g on g.uuid = ug.uuid join Device d on d.uuid = g.devices
+    
+    if (!check) {
+      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`); 
+    }
+    return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`);
+  },
+  nfc_status: async (req, res) => {
+      let uuid = req.params.uuid
+      let nfc_data = await prisma.device.findUnique({
+        where: { uuid: deviceUuid },
+        include: {
+            group: {
+                include: {
+                    usergroup: {
+                        include: {
+                            user: true
+                        },
+                        orderBy: {
+                            user: {
+                                modified_at: 'desc'
+                            }
+                        },
+                        take: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    let latestModifiedAt = nfc_data?.group?.usergroup[0]?.user?.modified_at || null;
+    console.log(latestModifiedAt);
+    
+    if (!nfc_data) {
+      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`); 
+    }
+    return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`, nfc_data);
+  },
 };
