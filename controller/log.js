@@ -659,64 +659,64 @@ module.exports = {
             return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${req.device.uuid}`);
         }
     },
-    getLog: async (req, res) => {
-        let logDatas;
-        try {
-            await prisma.log.findMany({
-                orderBy: [
-                    {
-                        createdAt: 'desc'
-                    }
-                ],
-                select: {
-                    isMatch: true,
-                    imagePath: true,
-                    bbox: true,
-                    user: {
-                        select: {
-                            name: true,
-                            identityNumber: true,
-                            usergroup: {
-                                select: {
-                                    group: {
-                                      select: {
-                                        name: true
-                                      }
-                                    },
-                                  },
-                            }
-                        }
-                    },
-                    createdAt: true,
-                    device: {
-                        select: {
-                            name: true,
-                        }
-                    }
-                }
-            })
-            let showLogs = [];
-            for (const log of logDatas) {
-                showLogs.push({
-                    name: log.user.name,
-                    nim: log.user.identityNumber,
-                    device: log.device.name,
-                    image: log.imagePath,
-                    bbox: log.bbox,
-                    type: log.type,
-                    isMatch: log.isMatch,
-                    inTime: log.createdAt,
-                    group: log.user.usergroup.map((uy)=>{
-                        return uy.group.name
-                    })
-                })
+    getLog: (type, filter) => {
+        return async (req, res) => {
+          try {
+            let whereCondition = {};
+            
+            if (type === "log") {
+              whereCondition = {
+                OR: [{ type: "Login" }, { type: "Logout" }],
+                ...(filter ? { [filter]: { uuid: req.params.uuid } } : {}),
+              };
+            } else if (type === "door") {
+              whereCondition = { type: "Door" };
+            } else {
+              return utils.createResponse(res, 404, "Not Found", "Invalid log type", `/log/${type}`);
             }
-        } catch (error) {
-            console.error("Error while inserting group:", error);
-            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/log`);
-        }
-        return utils.createResponse(res, 200, "Success", "Log berhasil diambil", `/log`, showLogs);
-    },
+      
+            let logDatas = await prisma.log.findMany({
+              where: whereCondition,
+              orderBy: { createdAt: "desc" },
+              select: {
+                type: true,
+                isMatch: true,
+                imagePath: true,
+                bbox: true,
+                createdAt: true,
+                user: {
+                  select: {
+                    name: true,
+                    identityNumber: true,
+                    usergroup: {
+                      select: { group: { select: { name: true } } },
+                    },
+                  },
+                },
+                device: { select: { name: true } },
+              },
+            });
+      
+            let showLogs = logDatas.map((log) => ({
+              name: log.user?.name || null,
+              nim: log.user?.identityNumber || null,
+              device: log.device?.name || null,
+              image: log.imagePath,
+              bbox: log.bbox,
+              type: log.type,
+              isMatch: log.isMatch,
+              inTime: log.createdAt,
+              group: log.user?.usergroup?.map((ug) => ug.group.name) || [],
+            }));
+      
+            return utils.createResponse(res, 200, "Success", "Log berhasil diambil", `/log/${type}`, showLogs);
+          } catch (error) {
+            console.error("Error fetching logs:", error);
+            return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/log/${type}`);
+          }
+        };
+      },
+      
     cardlessRequest: async (req, res) => {
         const n = 3191103090
         const numericUUID = utils.uuidToDecimal(req.user.uuid).slice(0, 20)
