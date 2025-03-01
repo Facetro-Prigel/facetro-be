@@ -6,31 +6,29 @@ const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const minioClient = require('../minioClient')
 const prisma = new PrismaClient();
-require('dotenv').config();
-
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
     name: "Huruf besar, kecil, dan simbol ('), (.), dan (,)",
-    identityNumber: "Hanya angka",
+    identity_number: "Hanya angka",
     password: "Minimal 6 karakter kombinasi huruf besar, kecil, angka, dan simbol '&', '%', atau '$'",
     batch: "Angka dan boleh kosong",
     birthday: "Format ulang tahun yyyy-mm-dd",
     program_study: "Huruf besar, kecil, dan boleh kosong",
-    phoneNumber: "Format nomor telepon dan boleh kosong",
-    telegramId: "Angka dan boleh kosong",
+    phone_number: "Format nomor telepon dan boleh kosong",
+    telegram_id: "Angka dan boleh kosong",
     nfc_data: "Kode heksadesimal dan boleh kosong"
   };
   const validationRules = {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Format email standar
     name: /^[A-Za-z' .,]+$/, // Huruf besar, kecil, dan simbol '
-    identityNumber: /^\d+$/, // Hanya angka
+    identity_number: /^\d+$/, // Hanya angka
     password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/, // Kombinasi huruf besar, kecil, angka, dan simbol & % $
     batch: /^\d*$/, // Angka dan boleh kosong
     birthday: /^\d{4}-\d{2}-\d{2}$/, // Format ulang tahun yyyy-mm-dd
     program_study: /^[A-Za-z\s]*$/, // Huruf besar, kecil, dan boleh kosong
-    phoneNumber: /^[\d{3}-\d{3}-\d{4}+]*$/, // Nomor telepon boleh kosong
-    telegramId: /^[0-9]*$/, // Angka dan boleh kosong
+    phone_number: /^[\d{3}-\d{3}-\d{4}+]*$/, // Nomor telepon boleh kosong
+    telegram_id: /^[0-9]*$/, // Angka dan boleh kosong
     nfc_data: /^[0-9a-fA-F]*$/ // Kode heksadesimal dan boleh kosong
   };
 
@@ -55,20 +53,20 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   let data = {
     email: req.body.email,
     name: req.body.name,
-    identityNumber: parseInt(req.body.identityNumber).toString(),
+    identity_number: parseInt(req.body.identity_number).toString(),
     batch: parseInt(req.body.batch),
-    birtday: new Date(req.body.birthday),
+    birthday: new Date(req.body.birthday),
     program_study: req.body.program_study,
-    phoneNumber: req.body.phoneNumber,
-    telegramId: parseInt(req.body.telegramId),
-    telegramToken: genPass.generateString(10),
+    phone_number: req.body.phone_number,
+    telegram_id: parseInt(req.body.telegram_id),
+    telegram_token: genPass.generateString(10),
     nfc_data: req.body.nfc_data
   };
   if (req.body.password) {
     data.password = await genPass.generatePassword(req.body.password)
   }
   if (req.asign_user_to_group && req.body.usergroup) {
-    data.usergroup = {
+    data.user_group = {
       create: req.body.usergroup.map((projectItems) => {
         if (projectItems != "") {
           return { group: { connect: { uuid: projectItems } } }
@@ -77,7 +75,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     }
   }
   if (req.asign_user_to_permision && req.body.permission) {
-    data.permissionUser = {
+    data.permission_user = {
       create: req.body.permission.map((permissionItems) => {
         if (permissionItems != "") {
           return { permission: { connect: { uuid: permissionItems } } }
@@ -86,7 +84,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     }
   }
   if (req.asign_user_to_role && req.body.role) {
-    data.roleuser = {
+    data.role_user = {
       create: req.body.role.map((roleItems) => {
         if (roleItems != "") {
           return { role: { connect: { uuid: roleItems } } }
@@ -112,11 +110,11 @@ const checkDeleteUpdate = async (uuid, reqs) => {
     where: {
       uuid: uuid,
       NOT: [{
-        roleuser: {
+        role_user: {
           some: {
             role: {
               is: {
-                guardName: 'super_admin'
+                guard_name: 'super_admin'
               }
             }
           }
@@ -124,12 +122,12 @@ const checkDeleteUpdate = async (uuid, reqs) => {
       }]
     },
     select: {
-      createdAt: true,
-      roleuser: {
+      created_at: true,
+      role_user: {
         select: {
           role: {
             select: {
-              guardName: true
+              guard_name: true
             }
           }
         }
@@ -146,22 +144,22 @@ module.exports = {
         uuid: uuid,
         AND: [
           {
-            birtdayPhoto: {
+            birthday_photo: {
               not: null,
             },
           },
           {
-            birtdayPhoto: {
+            birthday_photo: {
               not: "",
             },
           },
           {
-            birtdayBbox: {
+            birthday_bbox: {
               not: null,
             },
           },
           {
-            birtdayBbox: {
+            birthday_bbox: {
               not: "",
             },
           },
@@ -169,22 +167,22 @@ module.exports = {
       },
       select: {
         name: true,
-        birtday: true,
-        birtdayPhoto: true,
-        birtdayBbox: true,
+        birthday: true,
+        birthday_photo: true,
+        birthday_bbox: true,
       }
     });
     if (!isExist) {
       return res.sendFile('/home/app/no_images.png')
     }
     try {
-      const stream = await minioClient.getObject('birthday', isExist.birtdayPhoto);
+      const stream = await minioClient.getObject('birthday', isExist.birthday_photo);
       const chunks = [];
       for await (const chunk of stream) {
         chunks.push(chunk);
       }
       buffer = Buffer.concat(chunks);
-      let BirthdayCard = await utils.MakeBirthdayCard(buffer, isExist.birtday, isExist.name, isExist.birtdayBbox)
+      let BirthdayCard = await utils.MakeBirthdayCard(buffer, isExist.birthday, isExist.name, isExist.birthday_bbox)
       res.set("Content-Type", "image/jpeg");
       return res.send(BirthdayCard);
     } catch (error) {
@@ -200,7 +198,7 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch((e) => {
-      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!" })
+      return utils.createResponse(res, 401, "Unauthorized", "Tidak ada atau terdapat banyak wajah!", `/birthday`);
     })
     try {
       requestImagePath = `${genPass.generateString(15)}.png`
@@ -209,19 +207,21 @@ module.exports = {
       await prisma.user.update({
         where: { uuid: uuid },
         data: {
-          birtdayPhoto: requestImagePath,
-          birtdayBbox: datas.bbox
+          birthday_photo: requestImagePath,
+          birthday_bbox: datas.bbox
         }
       })
-      return res.status(201).json({ msg: "Gambar berhasil disimpan" })
+      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/birthday`);
     } catch (e) {
       console.error("gagal menyimpan gambar")
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/birthday`);
     }
   },
   unnes_image: async (req, res) => {
     try {
-      const identityNumber = req.body.identity_number
-      let url = `${process.env.UNNES_API}/primer/user_ava/${identityNumber}/541.aspx`
+      console.log(JSON.stringify(req.body));
+      const identity_number = req.body.identity_number
+      let url = `${process.env.UNNES_API}/primer/user_ava/${identity_number}/541.aspx`
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
         headers: {
@@ -232,12 +232,12 @@ module.exports = {
       const mimeType = response.headers['content-type'];
       const base64Data = `data:${mimeType};base64,${base64Image}`;
       if (mimeType == 'image-png') {
-        return res.status(404).json({ msg: "Gambar tersebut tidak tersedia" })
+        return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
       }
 
-      return res.status(200).json({ msg: "Gambar UNNES berhasil diambil", data: base64Data })
+      return utils.createResponse(res, 200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
     } catch (error) {
-      return res.status(400).json({ msg: "Gagal mengambil data", msg: error })
+      return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
     }
 
   },
@@ -248,113 +248,124 @@ module.exports = {
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
     }).catch((e) => {
-      return res.status(400).json({ msg: "Tidak atau terdapat banyak wajah!" })
+      return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
     })
     try {
       requestImagePath = `photos/${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return res.status(201).json({ msg: "gambar berhasil disimpan", file_uuid: uuid.uuid })
+      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/image`, { file_uuid: uuid.uuid, path: datas.image_path })
     } catch (e) {
       console.error("gagal menyimpan gambar")
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
     }
   },
   getter_all: async (req, res) => {
-    let isExist;
-    isExist = await prisma.user.findMany({
-      orderBy: [
-        {
-          createdAt: 'desc'
+    let users;
+    try {
+      users = await prisma.user.findMany({
+        orderBy: [
+          {
+            created_at: 'desc'
+          }
+        ],
+        select: {
+          uuid: true,
+          name: true,
+          identity_number: true,
+          avatar: true,
+          bbox: true,
+          created_at: true,
+          role_user: {
+            select: {
+              role: {
+                select: {
+                  name: true
+                }
+              },
+            },
+          },
+          user_group: {
+            select: {
+              group: {
+                select: {
+                  name: true
+                }
+              },
+            },
+          },
         }
-      ],
-      select: {
-        uuid: true,
-        name: true,
-        identityNumber: true,
-        avatar: true,
-        bbox: true,
-        createdAt: true,
-        roleuser: {
-          select: {
-            role: {
-              select: {
-                name: true
-              }
-            },
-          },
-        },
-        usergroup: {
-          select: {
-            group: {
-              select: {
-                name: true
-              }
-            },
-          },
-        },
-      }
-    });
+      });
+    } catch (error) {
+      console.error("Terjadi masalah saat mengambil data user", error);
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user");
+    }
 
-    res.status(200).json({ data: isExist, code: 200 });
+    return utils.createResponse(res, 200, "Success", "User berhasil ditemukan", "/user", users);
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
-    let isExist;
-    isExist = await prisma.user.findUnique({
-      where: { uuid: uuid },
-      select: {
-        uuid: true,
-        name: true,
-        identityNumber: true,
-        email: true,
-        batch: true,
-        birtday: true,
-        program_study: true,
-        bbox: true,
-        avatar: true,
-        phoneNumber: true,
-        telegramId: true,
-        nfc_data: true,
-        permissionUser: {
-          select: {
-            uuid: true,
-            permission: {
-              select: {
-                uuid: true,
-                name: true,
-                guardName: true
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { uuid: uuid },
+        select: {
+          uuid: true,
+          name: true,
+          identity_number: true,
+          email: true,
+          batch: true,
+          birthday: true,
+          program_study: true,
+          bbox: true,
+          avatar: true,
+          phone_number: true,
+          telegram_id: true,
+          nfc_data: true,
+          permission_user: {
+            select: {
+              uuid: true,
+              permission: {
+                select: {
+                  uuid: true,
+                  name: true,
+                  guard_name: true
+                }
+              },
+            },
+          },
+          role_user: {
+            select: {
+              uuid: true,
+              role: {
+                select: {
+                  uuid: true,
+                  name: true,
+                  guard_name: true
+                }
+              },
+            },
+          },
+          user_group: {
+            select: {
+              uuid: true,
+              group: {
+                select: {
+                  uuid: true,
+                  name: true
+                }
               }
             },
           },
         },
-        roleuser: {
-          select: {
-            uuid: true,
-            role: {
-              select: {
-                uuid: true,
-                name: true,
-                guardName: true
-              }
-            },
-          },
-        },
-        usergroup: {
-          select: {
-            uuid: true,
-            group: {
-              select: {
-                uuid: true,
-                name: true
-              }
-            }
-          },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      console.error("Terjadi masalah saat mengambil data user", error);
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
+    }
 
-    res.status(200).json({ data: isExist, code: 200 });
+    return utils.createResponse(res, 200, "Success", "User berhasil ditemukan", `/user/${uuid}`, user);
   },
 
   insert: async (req, res) => {
@@ -362,10 +373,10 @@ module.exports = {
     try {
       variabel = await inputInsertUpdate(req, 'in')
     } catch (error) {
-      return res.status(400).json({ msg: "Input yang berikan tidak sesuai!" });
+      return utils.createResponse(res, 400, "Bad Request", "Input yang diberikan tidak valid!", "/user");
     }
     if (variabel.status == false) {
-      return res.status(400).json({ msg: variabel.msg, code: 400, validateError: variabel.validateError })
+      return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${variabel.msg}\n${variabel.validateError}`, "/user");
     }
     if (variabel.data.nfc_data == '3D002CE6') {
       try {
@@ -387,56 +398,66 @@ module.exports = {
         data: variabel.data
       });
 
-      // sendMail({ name: variabel.name, email: variabel.email, password: req.body.password, token: variabel.telegramToken, bimbingan: utils.arrayToHuman(ss) });
+      // sendMail({ name: variabel.name, email: variabel.email, password: req.body.password, token: variabel.telegram_token, bimbingan: utils.arrayToHuman(ss) });
       utils.webSockerUpdate(req)
-      return res.status(200).json({ msg: "Selamat pengguna berhasil dibuat" });
+      return utils.createResponse(res, 200, "Success", "Selamat pengguna berhasil dibuat", "/user");
     } catch (error) {
       console.error("Error while inserting user:", error);
-      return res.status(400).json({ msg: "Terjadi kesalahan saat memproses permintaan" });
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user");
     }
   },
 
 
   update: async (req, res) => {
     const uuid = req.params.uuid;
-    const user = await checkDeleteUpdate(uuid, req)
-    if (!user) {
-      return res.status(404).json({ msg: "Pengguna tidak ditemukan / tidak dapat diubah" });
+    try {
+      const user = await checkDeleteUpdate(uuid, req)
+      if (!user) {
+        return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat diubah", `/user/${uuid}`);
+      }
+      await prisma.userGroup.deleteMany({
+        where: { userUuid: uuid }
+      })
+      await prisma.roleUser.deleteMany({
+        where: { userUuid: uuid }
+      })
+      await prisma.permissionUser.deleteMany({
+        where: { userUuid: uuid }
+      })
+      var data = await inputInsertUpdate(req, 'up')
+      if (data.status == false) {
+        return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${data.msg}\n${data.validateError}`, `/user/${uuid}`);
+      }
+      data = data.data
+      data.modifiedAt = new Date()
+      const updateUser = await prisma.user.update({
+        where: { uuid: uuid },
+        data: data
+      });
+    } catch (error) {
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
     }
-    await prisma.userGroup.deleteMany({
-      where: { userUuid: uuid }
-    })
-    await prisma.roleUser.deleteMany({
-      where: { userUuid: uuid }
-    })
-    await prisma.permissionUser.deleteMany({
-      where: { userUuid: uuid }
-    })
-    var data = await inputInsertUpdate(req, 'up')
-    if (data.status == false) {
-      return res.status(400).json({ msg: data.msg, code: 400, validateError: data.validateError })
-    }
-    data = data.data
-    data.modifiedAt = new Date()
-    const updateUser = await prisma.user.update({
-      where: { uuid: uuid },
-      data: data
-    });
+
     utils.webSockerUpdate(req)
-    return res.status(200).json({ message: "Pengguna berhasil diperbarui", code: 200 });
+    return utils.createResponse(res, 200, "Success", "Pengguna berhasil diperbarui", `/user/${uuid}`);
   },
 
   deleteUser: async (req, res) => {
     const uuid = req.params.uuid;
+    try {
+      
     const user = await checkDeleteUpdate(uuid, req)
     if (!user) {
-      return res.status(404).json({ error: "Pengguna tidak ditemukan / tidak dapat dihapus" });
+      return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat dihapus", `/user/${uuid}`);
     }
     const deletedUser = await prisma.user.delete({
       where: { uuid: uuid }
     });
+    } catch (error) {
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
+    }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Pengguna berhasil dihapus", code: 200 });
+    return utils.createResponse(res, 200, "Success", "Pengguna berhasil dihapus", `/user/${uuid}`);
   },
 
 };

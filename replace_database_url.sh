@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # File schema.prisma yang akan diedit
 SCHEMA_FILE="prisma/schema.prisma"

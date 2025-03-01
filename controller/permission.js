@@ -15,71 +15,79 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 }
 module.exports = {
   getter_all: async (req, res) => {
-    let isExist;
-    isExist = await prisma.permission.findMany({
+    let permissions;
+    permissions = await prisma.permission.findMany({
       select: {
         uuid: true,
         name: true,
         description: true,
       },
     });
-    res.status(200).json({ data: isExist, code: 200 });
+    return utils.createResponse(res, 200, "Success", "Izin berhasil ditemukan", "/permission", permissions);
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
-    let isExist;
-    isExist = await prisma.permission.findUnique({
-      where: { uuid: uuid },
-      select: {
-        uuid: true,
-        name: true,
-        guardName: true, 
-        description: true,
-      },
-    });
-    res.status(200).json({ data: isExist, code: 200 });
+    let permission;
+    try {
+      permission = await prisma.permission.findUnique({
+        where: { uuid: uuid },
+        select: {
+          uuid: true,
+          name: true,
+          guard_name: true, 
+          description: true,
+        },
+      });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
+    }
+
+    return utils.createResponse(res, 200, "Success", "Izin berhasil ditemukan", `/permission/${uuid}`, permission);
   },
 
   insert: async (req, res) => {
     try {
       let data = {
         name: req.body.name,
-        guardName: utils.toSnakeCase(req.body.guardName) ?? utils.toSnakeCase(req.body.name),
+        guard_name: utils.toSnakeCase(req.body.guard_name) ?? utils.toSnakeCase(req.body.name),
         description: req.body.description
-      }
-      let result = await prisma.permission.create({
-        data: data
-      })
+      } 
+      await prisma.permission.create({data: data})
     } catch (error) {
       console.error("Error while inserting permission:", error);
-      return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/permission");
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Izin sudah ditambahkan" });
+    return utils.createResponse(res, 200, "Success", "Izin berhasil ditambahkan", "/permission");
   },
   deleter: async (req, res) => {
     let uuid = req.params.uuid
-    let check = await checkDeleteUpdate(uuid)
-    if (!check) {
-      return res.status(400).json({ msg: "Izin tidak ditemukan" });
+    try {
+      let check = await checkDeleteUpdate(uuid)
+      if (!check) {
+        return utils.createResponse(res, 404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
+      }
+      await prisma.permission.delete({ where: { uuid: uuid } })
+    } catch (error) {
+      console.error("Error while inserting permission:", error);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
     }
-    await prisma.permission.delete({ where: { uuid: uuid } })
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Izin berhasil dihapus" })
+    return utils.createResponse(res, 200, "Success", "Izin berhasil dihapus", `/permission/${uuid}`);
   },
   update: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return res.status(400).json({ msg: "Izin tidak ditemukan" });
+      return utils.createResponse(res, 404, "Not Found", "Izin tidak ditemukan", `/permission/${uuid}`);
     }
     try {
       let data = {
         name: req.body.name,
         description: req.body.description
       }
-      if (req.body.guardName) {
-        data.guardName = utils.toSnakeCase(req.body.guardName)
+      if (req.body.guard_name) {
+        data.guard_name = utils.toSnakeCase(req.body.guard_name)
       }
       let result = await prisma.permission.update({
         where: {
@@ -89,9 +97,9 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting permission:", error);
-      return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/permission/${uuid}`);
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Izin berhasil ubah" })
+    return utils.createResponse(res, 200, "Success", "Izin berhasil diupdate", `/permission/${uuid}`);
   }
 };

@@ -2,8 +2,25 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const minio_client = require('../minioClient');
+
 require('dotenv').config();
 
+const timeToHuman = (time) => {
+    let s = new Date(time).toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        timeStyle: "long",
+        dateStyle: "full"
+    })
+    return s
+}
+const createResponse = (res, status, title, detail, instance, data=undefined) => {
+    res.title = title;
+    res.detail = detail;
+    res.instance = instance;
+    res.container_id = process.env.CONTAINER_ID;
+    res.timestamp = new Date().toISOString();
+    res.status(status).json(data);
+};
 
 const makeBufferFromBase64 = (base64String) => {
     const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
@@ -142,6 +159,18 @@ const MakeBirthdayCard = async (imagePath, date, name, bbox) => {
     return result
 }
 module.exports = {
+    verifyImage: async (base64String) => {
+        if (!base64String.startsWith('data:image/jpeg;base64,')) {
+            return false
+        }
+        const imageBuffer = Buffer.from(base64String.split(',')[1], 'base64');
+        const metadata = await sharp(imageBuffer).metadata();
+        
+        if (metadata.width !== 160 || metadata.height !== 160) {
+            return false
+        }
+        return true
+    },
     arrayToHuman: (arrayData) => {
         if (Array.isArray(arrayData)) {
             if (arrayData.length == 0) {
@@ -246,5 +275,5 @@ module.exports = {
             token: generat.generateString(8)
         })
     },
-    makeBufferFromBase64, makeBondingBox, MakeBirthdayCard
+    makeBufferFromBase64, makeBondingBox, MakeBirthdayCard, createResponse, timeToHuman
 }
