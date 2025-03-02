@@ -5,12 +5,12 @@ exports.run = async () =>{
         data: [
             {
                 name: "Super Admin",
-                guardName: "super_admin",
+                guard_name: "super_admin",
                 description: "This role can doing anything"
             },
             {
                 name: "students",
-                guardName: "students",
+                guard_name: "students",
                 description: ""
             }
         ]
@@ -40,17 +40,18 @@ exports.run = async () =>{
         'asign_user_to_permision',
         'asign_user_to_role',
         'asign_role_to_permision',
-        'log_anywhere',
+        'presence_anywhere',
+        'open_door_anywhere',
         'download_photo'
     ]
     await prisma.role.create({
         data: {
             name: "Admin",
-            guardName: "admin",
+            guard_name: "admin",
             description: "This role can doing anything about administrations",
-            permisionrole: {
+            permission_role: {
                 create: admin_role.map((permissionItems) => {
-                    return {permission: {connect: {guardName:permissionItems}}}
+                    return {permission: {connect: {guard_name:permissionItems}}}
                 })
             }
         }
@@ -64,17 +65,4 @@ exports.run = async () =>{
         'asign_user_to_group',
         'log_anywhere'
     ]
-    await prisma.role.create({
-        data: {
-            name: "lecture",
-            guardName: "lecture",
-            description: "",
-            permisionrole: {
-                create: lecturePermission.map((permissionItems) => {
-                    return {permission: {connect: {guardName:permissionItems}}}
-                })
-            }
-        }
-    })
-
 }

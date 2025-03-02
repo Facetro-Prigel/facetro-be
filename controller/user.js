@@ -25,7 +25,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     identity_number: /^\d+$/, // Hanya angka
     password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/, // Kombinasi huruf besar, kecil, angka, dan simbol & % $
     batch: /^\d*$/, // Angka dan boleh kosong
-    birthday: /^\d{4}-\d{2}-\d{2}$/, // Format ulang tahun yyyy-mm-dd
+    birthday: /^(\d{4}-\d{2}-\d{2})?$/, // Format ulang tahun yyyy-mm-dd
     program_study: /^[A-Za-z\s]*$/, // Huruf besar, kecil, dan boleh kosong
     phone_number: /^[\d{3}-\d{3}-\d{4}+]*$/, // Nomor telepon boleh kosong
     telegram_id: /^[0-9]*$/, // Angka dan boleh kosong
@@ -54,14 +54,46 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     email: req.body.email,
     name: req.body.name,
     identity_number: parseInt(req.body.identity_number).toString(),
-    batch: parseInt(req.body.batch),
-    birthday: new Date(req.body.birthday),
-    program_study: req.body.program_study,
-    phone_number: req.body.phone_number,
     telegram_id: parseInt(req.body.telegram_id),
     telegram_token: genPass.generateString(10),
-    nfc_data: req.body.nfc_data
+    nfc_data: req.body.nfc_data,
+    user_details: {
+      phone_number: req.body.phone_number,
+      batch: parseInt(req.body.batch),
+      birthday: new Date(req.body.birthday),
+      program_study: req.body.program_study
+    }
   };
+  if (updateOrInsert == 'up') {
+    data.user_details= {
+      upsert: {
+        create: {
+          // Jika UserDetails belum ada, buat baru
+          phone_number: "987-654-3210",
+          batch: 2024,
+          birthday: new Date("1995-08-15"),
+          program_study: "Information Technology",
+        },
+        update: {
+          // Jika UserDetails sudah ada, perbarui data
+          phone_number: "987-654-3210",
+          batch: 2024,
+          birthday: new Date("1995-08-15"),
+          program_study: "Information Technology",
+        },
+      },
+    };
+  }else{
+    data.user_details= {
+        create: {
+          // Jika UserDetails belum ada, buat baru
+          phone_number: "987-654-3210",
+          batch: 2024,
+          birthday: new Date("1995-08-15"),
+          program_study: "Information Technology",
+        }
+    };
+  }
   if (req.body.password) {
     data.password = await genPass.generatePassword(req.body.password)
   }
@@ -192,7 +224,7 @@ module.exports = {
   },
   updload_birthday: async (req, res) => {
     let image = req.body.image
-    let uuid  = req.body.uuid
+    let uuid = req.body.uuid
     let datas = {}
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
@@ -315,12 +347,8 @@ module.exports = {
           name: true,
           identity_number: true,
           email: true,
-          batch: true,
-          birthday: true,
-          program_study: true,
           bbox: true,
           avatar: true,
-          phone_number: true,
           telegram_id: true,
           nfc_data: true,
           permission_user: {
@@ -358,6 +386,14 @@ module.exports = {
               }
             },
           },
+          user_details: {
+            select: {
+              phone_number: true,
+              batch: true,
+              birthday: true,
+              program_study: true
+            }
+          }
         },
       });
     } catch (error) {
@@ -376,7 +412,7 @@ module.exports = {
       return utils.createResponse(res, 400, "Bad Request", "Input yang diberikan tidak valid!", "/user");
     }
     if (variabel.status == false) {
-      return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${variabel.msg}\n${variabel.validateError}`, "/user");
+      return utils.createResponse(res, 400, "Bad Request", "Ada yang salah dengan input yang Anda berikan!", "/user", variabel.validateError);
     }
     if (variabel.data.nfc_data == '3D002CE6') {
       try {
@@ -416,28 +452,28 @@ module.exports = {
         return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat diubah", `/user/${uuid}`);
       }
       await prisma.userGroup.deleteMany({
-        where: { userUuid: uuid }
+        where: { user_uuid: uuid }
       })
       await prisma.roleUser.deleteMany({
-        where: { userUuid: uuid }
+        where: { user_uuid: uuid }
       })
       await prisma.permissionUser.deleteMany({
-        where: { userUuid: uuid }
+        where: { user_uuid: uuid }
       })
       var data = await inputInsertUpdate(req, 'up')
       if (data.status == false) {
-        return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!\nKeterangan: ${data.msg}\n${data.validateError}`, `/user/${uuid}`);
+        return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!`, `/user/${uuid}`, data.validateError);
       }
       data = data.data
-      data.modifiedAt = new Date()
-      const updateUser = await prisma.user.update({
+      data.modified_at = new Date()
+      await prisma.user.update({
         where: { uuid: uuid },
         data: data
       });
     } catch (error) {
-      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
+      console.log(error)
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permisntaan", `/user/${uuid}`);
     }
-
     utils.webSockerUpdate(req)
     return utils.createResponse(res, 200, "Success", "Pengguna berhasil diperbarui", `/user/${uuid}`);
   },
@@ -445,14 +481,14 @@ module.exports = {
   deleteUser: async (req, res) => {
     const uuid = req.params.uuid;
     try {
-      
-    const user = await checkDeleteUpdate(uuid, req)
-    if (!user) {
-      return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat dihapus", `/user/${uuid}`);
-    }
-    const deletedUser = await prisma.user.delete({
-      where: { uuid: uuid }
-    });
+
+      const user = await checkDeleteUpdate(uuid, req)
+      if (!user) {
+        return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat dihapus", `/user/${uuid}`);
+      }
+      const deletedUser = await prisma.user.delete({
+        where: { uuid: uuid }
+      });
     } catch (error) {
       utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}`);
     }

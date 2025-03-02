@@ -20,12 +20,16 @@ const replaceText = (text, replacements) => {
     return text;
 };
 const createResponse = (res, status, title, detail, instance, data=undefined) => {
-    res.title = title;
-    res.detail = detail;
-    res.instance = instance;
-    res.container_id = process.env.CONTAINER_ID;
-    res.timestamp = new Date().toISOString();
-    res.status(status).json(data);
+    responseData = {} 
+    responseData.title = title;
+    responseData.detail = detail;
+    responseData.instance = instance;
+    responseData.container_id = process.env.CONTAINER_ID;
+    responseData.timestamp = new Date().toISOString();
+    if(data){
+        responseData.data = data
+    }
+    res.status(status).json(responseData);
 };
 
 const makeBufferFromBase64 = (base64String) => {

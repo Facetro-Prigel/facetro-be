@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const {PrismaClient} =require('@prisma/client')
-const middleware = require('./middleware');
 const allRoutes = require("./routes");
 const { Server } = require('socket.io');
 const { execSync } = require('child_process')

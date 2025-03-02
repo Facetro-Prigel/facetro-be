@@ -22,6 +22,7 @@ RUN chmod -R 755 /usr/share/fonts/truetype
 # Generate font scale and directory files
 RUN mkfontscale
 RUN mkfontdir
+RUN npx prisma generate
 
 # Optionally, rebuild font cache (uncomment if needed)
 # RUN fc-cache -fv

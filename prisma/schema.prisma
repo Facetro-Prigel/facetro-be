@@ -15,16 +15,18 @@ model User {
   email            String      @unique
   avatar           String?
   bbox             Json?
-  signature        String?
+  signature        String?     @db.Text 
   telegram_id      BigInt?
   telegram_token   String?
-  nfc_data         String      @unique
+  nfc_data         String?     
   groups           Group[]
   user_group       UserGroup[]
   log              Log[]
   role_user        RoleUser[]
   permission_user  PermissionUser[]
   user_details     UserDetails?
+  created_at     DateTime @default(now())
+  modified_at    DateTime @updatedAt
 }
 
 model UserDetails {
@@ -34,8 +36,6 @@ model UserDetails {
   batch          Int?
   birthday       DateTime?
   program_study  String?
-  created_at     DateTime @default(now())
-  modified_at    DateTime @updatedAt
   user           User     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
 }
 
@@ -45,9 +45,7 @@ model Group {
   parent_group_uuid String?
   locations        String
   notify_to        String
-  devices          String
-  users            User[]
-  device           Device[]
+  users            User       @relation(fields: [notify_to], references: [uuid], onDelete: NoAction, onUpdate: Cascade)
   user_group       UserGroup[]
   door_group       DoorGroup[]
   presence_group   PresenceGroup[]
@@ -80,7 +78,6 @@ model Device {
   ip_address        String?
   token             String? @unique
   identity          String
-  groups            Group[]
   log               Log[]
   door_group        DoorGroup[]
   presence_group    PresenceGroup[]
@@ -112,8 +109,8 @@ model Log {
   user_uuid   String
   is_match    Boolean  @default(false)
   device_uuid String
-  user        User     @relation(fields: [user_uuid], references: [uuid], onDelete: Cascade)
-  device      Device   @relation(fields: [device_uuid], references: [uuid], onDelete: Cascade)
+  user        User     @relation(fields: [user_uuid], references: [uuid], onDelete: NoAction)
+  device      Device   @relation(fields: [device_uuid], references: [uuid], onDelete: NoAction)
   other_data  Json?
 }
 

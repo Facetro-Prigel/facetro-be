@@ -16,7 +16,7 @@ const main = async () => {
     await device_seed.run();
     await group_seed.run();
     await user_group_seed.run();
-    await signiture_seed.run();
+    // await signiture_seed.run();
 }
 main()
     .then(async () => {

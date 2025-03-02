@@ -13,7 +13,6 @@ module.exports = {
     if (!uuid || !old_password || !new_password) {
       return utils.createResponse(res, 400, "Bad Request", "Semua field (uuid, password lama, password baru) harus diisi!", "/user/change-password");
     }
-  
     try {
       const user = await prisma.user.findUnique({
         where: {uuid: uuid}
@@ -57,16 +56,16 @@ module.exports = {
         email: req.body.email,
       },
       include: {
-        roleuser: {
+        role_user: {
             select: {
                 role: {
                   select:{
-                    guardName: true,
-                    permisionrole:{
+                    guard_name: true,
+                    permission_role:{
                       select:{
                         permission:{
                           select:{
-                            guardName: true
+                            guard_name: true
                           }
                         }
                       }
@@ -76,51 +75,50 @@ module.exports = {
 
             }
         },
-        permissionUser: {
+        permission_user: {
           select: {
               permission: {
                 select:{
-                  guardName:true
+                  guard_name:true
                 }
               }
           }
       },
       }
     });
-    if (!results) {
-      return utils.createResponse(res, 404, "Not Found", "Silakan hubungi Admin untuk melakukan pendaftaran!", "/user/login"); 
+    let ResultPassword = false
+    if(results){
+      ResultPassword = await bcrypt.compare(
+        req.body.password,
+        results.password
+      );
     }
-    let ResultPassword = await bcrypt.compare(
-      req.body.password,
-      results.password
-    );
     if (!ResultPassword) {
-      return utils.createResponse(res, 401, "Unauthorized", "Ada yang salah dengan email atau password, silahkan coba lagi!", "/user/login"); 
+      return utils.createResponse(res, 401, "Unauthorized", "Ada yang salah dengan email dan/atau password, silahkan coba lagi!", "/user/login"); 
     }
     let user_roles = []
     let user_permission = []
-    for (const ite of results.roleuser) {
-      user_roles.push(ite.role.guardName)
-      let permisions = ite.role.permisionrole
-      if(ite.role.guardName == 'super_admin'){
-        permisions = await prisma.permission.findMany()
+    for (const ite of results.role_user) {
+      user_roles.push(ite.role.guard_name)
+      let permission = ite.role.permission_role
+      if(ite.role.guard_name == 'super_admin'){
+        permission = await prisma.permission.findMany()
       }
-      for (const iter of permisions) {
-        if(ite.role.guardName == 'super_admin'){
-          user_permission.push(iter.guardName)
+      for (const iter of permission) {
+        if(ite.role.guard_name == 'super_admin'){
+          user_permission.push(iter.guard_name)
         }else{
-          user_permission.push(iter.permission.guardName)
+          user_permission.push(iter.permission.guard_name)
         }
       }
     }
-    for (const itera of results.permissionUser) {
-      user_permission.push(itera.permission.guardName)
+    for (const itera of results.permission_user) {
+      user_permission.push(itera.permission.guard_name)
     }
     let token = generator.generateAccessToken(
       { uuid: results.uuid, email: results.email, name: results.name},
       process.env.SECRET_TOKEN
     );
-    console.log(JSON.stringify(results.uuid));
     return utils.createResponse(res, 200, "Success", "Login berhasil!", "/user/login", { token: token, name: results.name, uuid: results.uuid, avatar: results.avatar, bbox: results.bbox, user_roles:user_roles, user_permission: user_permission});
   }
 };
