@@ -5,92 +5,65 @@ const utils = require("../helper/utils");
 const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const prisma = new PrismaClient();
-const inputInsertUpdate = async (req, updateOrInsert) => {
+const inputInsertUpdate = async (req) => {
   const validationReason = {
     email: "Format email standar",
     name: "Huruf besar, kecil, dan simbol ('), (.), dan (,)",
     identity_number: "Hanya angka",
-    password: "Minimal 6 karakter kombinasi huruf besar, kecil, angka, dan simbol '&', '%', atau '$'",
     batch: "Angka dan boleh kosong",
     birthday: "Format ulang tahun yyyy-mm-dd",
     program_study: "Huruf besar, kecil, dan boleh kosong",
     phone_number: "Format nomor telepon dan boleh kosong",
-    telegram_id: "Angka dan boleh kosong",
-    nfc_data: "Kode heksadesimal dan boleh kosong"
   };
   const validationRules = {
-    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Format email standar
+    email: /^$|^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Format email standar
     name: /^[A-Za-z' .,]+$/, // Huruf besar, kecil, dan simbol '
     identity_number: /^\d+$/, // Hanya angka
-    password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/, // Kombinasi huruf besar, kecil, angka, dan simbol & % $
     batch: /^\d*$/, // Angka dan boleh kosong
     birthday: /^\d{4}-\d{2}-\d{2}$/, // Format ulang tahun yyyy-mm-dd
     program_study: /^[A-Za-z\s]*$/, // Huruf besar, kecil, dan boleh kosong
     phone_number: /^[\d{3}-\d{3}-\d{4}+]*$/, // Nomor telepon boleh kosong
-    telegram_id: /^[0-9]*$/, // Angka dan boleh kosong
-    nfc_data: /^[0-9a-fA-F]*$/ // Kode heksadesimal dan boleh kosong
   };
-
-  if (updateOrInsert == 'up') {
-    validationRules.password = /^$|^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[&%$])[A-Za-z\d&%$]{6,}$/
-  }
   const validateInput = (field, value) => {
     const regex = validationRules[field];
     return regex.test(value);
   };
   let errorVali = {}
   for (const field in validationRules) {
-    const isValid = validateInput(field, req.body[field] ?? '');
-    if (!isValid) {
-      errorVali[field] = `Harusnya berisi ${validationReason[field]}`
+    if(req.body[field] != undefined){
+      const isValid = validateInput(field, req.body[field] ?? '');
+      if (!isValid) {
+        errorVali[field] = `Harusnya berisi ${validationReason[field]}`
+      }
     }
   }
   if (Object.keys(errorVali).length) {
     console.log(errorVali)
     return { status: false, msg: 'Check kembali masukan data anda!', validateError: errorVali }
   }
-  let data = {
-    email: req.body.email,
-    name: req.body.name,
-    identity_number: parseInt(req.body.identity_number).toString(),
-    batch: parseInt(req.body.batch),
-    birtday: new Date(req.body.birthday),
-    program_study: req.body.program_study,
+
+  let s = {
     phone_number: req.body.phone_number,
-    telegram_id: parseInt(req.body.telegram_id),
-    telegram_token: genPass.generateString(10),
-    nfc_data: req.body.nfc_data
-  };
-  if (req.body.password) {
-    data.password = await genPass.generatePassword(req.body.password)
+    program_study: req.body.program_study
   }
-  if (req.asign_user_to_group && req.body.usergroup) {
-    data.user_group = {
-      create: req.body.usergroup.map((projectItems) => {
-        if (projectItems != "") {
-          return { group: { connect: { uuid: projectItems } } }
+  if(req.body.batch != undefined){
+    s.batch= parseInt(req.body.batch)
+  }
+  if(req.body.birthday){
+    s.birthday= new Date(req.body.birthday)
+  }
+
+  let data = {
+      email: req.body.email,
+      name: req.body.name,
+      identity_number: req.body.identity_number,
+      user_details: {
+        upsert: {
+          create:s,
+          update:s
         }
-      })
-    }
-  }
-  if (req.asign_user_to_permision && req.body.permission) {
-    data.permission_user = {
-      create: req.body.permission.map((permissionItems) => {
-        if (permissionItems != "") {
-          return { permission: { connect: { uuid: permissionItems } } }
-        }
-      })
-    }
-  }
-  if (req.asign_user_to_role && req.body.role) {
-    data.role_user = {
-      create: req.body.role.map((roleItems) => {
-        if (roleItems != "") {
-          return { role: { connect: { uuid: roleItems } } }
-        }
-      })
-    }
-  }
+      }
+    };
   if (req.body.file_uuid) {
     try {
       tempData = await prisma.tempData.findUnique({ where: { uuid: req.body.file_uuid } })
@@ -107,18 +80,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
 const checkDeleteUpdate = async (uuid, reqs) => {
   const user = await prisma.user.findUnique({
     where: {
-      uuid: uuid,
-      NOT: [{
-        role_user: {
-          some: {
-            role: {
-              is: {
-                guard_name: 'super_admin'
-              }
-            }
-          }
-        }
-      }]
+      uuid: uuid
     },
     select: {
       created_at: true,
@@ -165,7 +127,7 @@ module.exports = {
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
       datas = res.data
-    }).catch(( e) => {
+    }).catch((e) => {
       return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
     })
     try {
@@ -173,7 +135,7 @@ module.exports = {
       utils.saveImage(image, requestImagePath)
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/image`, {file_uuid: uuid.uuid, path: datas.image_path})
+      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/image`, { file_uuid: uuid.uuid, path: datas.image_path })
     } catch (e) {
       console.error("gagal menyimpan gambar")
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
@@ -183,60 +145,64 @@ module.exports = {
     let user_data;
     let uuid = req.user.uuid;
     try {
-      
-    user_data = await prisma.user.findUnique({
-      
-      where: { uuid: req.user.uuid },
-      select: {
-        uuid: true,
-        name: true,
-        identity_number: true,
-        email: true,
-        batch: true,
-        birtday: true,
-        program_study: true,
-        bbox: true,
-        avatar: true,
-        phone_number: true,
-        telegram_id: true,
-        nfc_data: true,
-        permission_user: {
-          select: {
-            uuid: true,
-            permission: {
-              select: {
-                uuid: true,
-                name: true,
-                guard_name: true
+
+      user_data = await prisma.user.findUnique({
+
+        where: { uuid: req.user.uuid },
+        select: {
+          uuid: true,
+          name: true,
+          identity_number: true,
+          email: true,
+          bbox: true,
+          avatar: true,
+          telegram_id: true,
+          nfc_data: true,
+          permission_user: {
+            select: {
+              uuid: true,
+              permission: {
+                select: {
+                  uuid: true,
+                  name: true,
+                  guard_name: true
+                }
+              },
+            },
+          },
+          role_user: {
+            select: {
+              uuid: true,
+              role: {
+                select: {
+                  uuid: true,
+                  name: true,
+                  guard_name: true
+                }
+              },
+            },
+          },
+          user_group: {
+            select: {
+              uuid: true,
+              group: {
+                select: {
+                  uuid: true,
+                  name: true
+                }
               }
             },
           },
-        },
-        role_user: {
-          select: {
-            uuid: true,
-            role: {
-              select: {
-                uuid: true,
-                name: true,
-                guard_name: true
-              }
-            },
-          },
-        },
-        user_group: {
-          select: {
-            uuid: true,
-            group: {
-              select: {
-                uuid: true,
-                name: true
-              }
+          user_details: {
+            select: {
+              phone_number: true,
+              batch: true,
+              birthday: true,
+              program_study: true
             }
-          },
-        },
-      },
-    });
+          }
+        }
+      });
     } catch (error) {
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/myprofile/${uuid}`);
     }
@@ -249,9 +215,9 @@ module.exports = {
       if (!user) {
         return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan", `/myprofile/${req.user.uuid}`);
       }
-      var data = await inputInsertUpdate(req, 'up')
+      var data = await inputInsertUpdate(req)
       if (data.status == false) {
-        return utils.createResponse(res, 400, "Bad Request", data.validateError, `/myprofile/${req.user.uuid}`, { validateError: data.validateError }); // may need to be changed if necessary
+        return utils.createResponse(res, 400, "Bad Request", data.validateError, `/myprofile/${req.user.uuid}`, data.validateError); 
       }
       data = data.data
       data.modified_at = new Date()
@@ -260,7 +226,8 @@ module.exports = {
         data: data
       });
     } catch (error) {
-      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/myprofile/${req.user.uuid}`);
+      console.error(error)
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/myprofile`);
     }
     utils.webSockerUpdate(req)
     return utils.createResponse(res, 200, "Success", "Pengguna berhasil diperbarui", `/myprofile/${uuid}`);

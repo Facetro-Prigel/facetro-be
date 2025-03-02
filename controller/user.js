@@ -41,9 +41,12 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   };
   let errorVali = {}
   for (const field in validationRules) {
-    const isValid = validateInput(field, req.body[field] ?? '');
-    if (!isValid) {
-      errorVali[field] = `Harusnya berisi ${validationReason[field]}`
+    if ((updateOrInsert === 'up' && req.body[field] !== undefined) ||
+      (updateOrInsert !== 'up')) {
+      const isValid = validateInput(field, req.body[field] ?? '');
+      if (!isValid) {
+        errorVali[field] = `Harusnya berisi ${validationReason[field]}`
+      }
     }
   }
   if (Object.keys(errorVali).length) {
@@ -53,45 +56,36 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   let data = {
     email: req.body.email,
     name: req.body.name,
-    identity_number: parseInt(req.body.identity_number).toString(),
+    identity_number: req.body.identity_number,
     telegram_id: parseInt(req.body.telegram_id),
     telegram_token: genPass.generateString(10),
-    nfc_data: req.body.nfc_data,
-    user_details: {
-      phone_number: req.body.phone_number,
-      batch: parseInt(req.body.batch),
-      birthday: new Date(req.body.birthday),
-      program_study: req.body.program_study
-    }
+    nfc_data: req.body.nfc_data
   };
   if (updateOrInsert == 'up') {
-    data.user_details= {
+    let s = {
+      phone_number: req.body.phone_number,
+      program_study: req.body.program_study
+    }
+    if (req.body.batch != undefined) {
+      s.batch = parseInt(req.body.batch)
+    }
+    if (req.body.birthday) {
+      s.birthday = new Date(req.body.birthday)
+    }
+    data.user_details = {
       upsert: {
-        create: {
-          // Jika UserDetails belum ada, buat baru
-          phone_number: "987-654-3210",
-          batch: 2024,
-          birthday: new Date("1995-08-15"),
-          program_study: "Information Technology",
-        },
-        update: {
-          // Jika UserDetails sudah ada, perbarui data
-          phone_number: "987-654-3210",
-          batch: 2024,
-          birthday: new Date("1995-08-15"),
-          program_study: "Information Technology",
-        },
+        create: s,
+        update: s
       },
     };
-  }else{
-    data.user_details= {
-        create: {
-          // Jika UserDetails belum ada, buat baru
-          phone_number: "987-654-3210",
-          batch: 2024,
-          birthday: new Date("1995-08-15"),
-          program_study: "Information Technology",
-        }
+  } else {
+    data.user_details = {
+      create: {
+        phone_number: req.body.phone_number,
+        batch: parseInt(req.body.batch),
+        birthday: new Date(req.body.birthday),
+        program_study: req.body.program_study
+      }
     };
   }
   if (req.body.password) {
