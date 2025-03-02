@@ -12,7 +12,7 @@ const compareFace = async (base64image, dbSignature) => {
     try {
         const { data } = await axios.post(`${process.env.ML_URL}match`, { image: base64image, signature: dbSignature }, { headers: { "Content-Type": "application/json" } });
         return {
-            isMatch: data.isMatch === "True",
+            is_match: data.is_match === "True",
             bbox: data.bbox,
             signature: data.signiture,
             similarityResult: data.similarityResult,
@@ -64,7 +64,7 @@ const makeTelegramNotification = async (image, ml_result, nameImage, teleParams)
             try {
             const { data } = await axios.post(`${process.env.TELE_URL}notify`, { 
                 'user_tele_id': teleParams[0].telegramId ?? false,
-                'ml_result': ml_result.isMatch,
+                'ml_result': ml_result.is_match,
                 'notify_to': teleParams[1],
                 'request_image_path': image2tele,
                 'caption_for_else': teleParams[2],
@@ -88,7 +88,7 @@ const checkPermission = async (user_uuid, permission) => {
                     some: {
                       role: {
                         is: {
-                          guardName: "super_admin",
+                          guard_name: "super_admin",
                         },
                       },
                     },
@@ -99,7 +99,7 @@ const checkPermission = async (user_uuid, permission) => {
                     some: {
                       permission: {
                         is: {
-                          guardName: "log_anywhere",
+                          guard_name: "log_anywhere",
                         },
                       },
                     },
@@ -114,7 +114,7 @@ const checkPermission = async (user_uuid, permission) => {
                             some: {
                               permission: {
                                 is: {
-                                  guardName: "log_anywhere",
+                                  guard_name: "log_anywhere",
                                 },
                               },
                             },
@@ -207,22 +207,22 @@ const saveLogData = async (startTotalTimeNeeded, endMLTime, four_last_signatures
     return
 }
 
-const processLogDataV1 = (type, device_uuid, now, requestImagePath, user, ml_result) => {
+const processLogDataV1 = (type, device_uuid, now, requestimage_path, user, ml_result) => {
     // process create log data
     let logData = {
         userUuid: user.uuid,
         bbox: ml_result.bbox,
-        imagePath: requestImagePath,
+        image_path: requestimage_path,
         deviceUuid: device_uuid,
         signature: ml_result.signature,
-        isMatch: ml_result.isMatch,
-        createdAt: now
+        is_match: ml_result.is_match,
+        created_at: now
     }
     logData.type = type
     return logData
 }
 
-const processResultV1 = (user, ml_result, device_name, requestImagePath, selected_server_image) => {
+const processResultV1 = (user, ml_result, device_name, requestimage_path, selected_server_image) => {
     let result = {
         name: user.name,
         role: user.roleuser.map((i) => {
@@ -233,9 +233,9 @@ const processResultV1 = (user, ml_result, device_name, requestImagePath, selecte
         }),
         identity: user.identityNumber,
         device: device_name,
-        isMatch: ml_result.isMatch,
+        is_match: ml_result.is_match,
         clientData: {
-            image: requestImagePath,
+            image: requestimage_path,
             bbox: ml_result.bbox
         },
         serverData: {
@@ -251,16 +251,16 @@ const getUserSignatures = async (user, where_clause) => {
         where: where_clause,
         take: 4,
         orderBy: {
-            createdAt: "desc",
+            created_at: "desc",
         },
         select: {
-            imagePath: true,
+            image_path: true,
             bbox: true,
             signature: true,
         },
     });
     four_last_signatures.push({
-        imagePath: user.avatar,
+        image_path: user.avatar,
         bbox: user.bbox,
         signature: user.signature,
     });
@@ -278,21 +278,21 @@ module.exports = {
             let result; // intentionally put here to handle both presence and doorlock
 
             const nameImage = `${generator.generateString(23)}.jpg`;
-            let requestImagePath = `photos/${nameImage}`;
-            await utils.saveImage(image, requestImagePath);
+            let requestimage_path = `photos/${nameImage}`;
+            await utils.saveImage(image, requestimage_path);
             identity = identity.replace(/[^A-F0-9]/g, "");
       
             let isExist = await prisma.user.findFirst({
               where: {
-                OR: [{ identityNumber: identity }, { nfc_data: identity }],
+                OR: [{ identity_number: identity }, { nfc_data: identity }],
               },
               include: {
-                roleuser: {
+                role_user: {
                   include: {
                     role: true,
                   },
                 },
-                usergroup: {
+                user_group: {
                   include: {
                     group: {
                       include: {
@@ -312,7 +312,7 @@ module.exports = {
       
             // combines data from User with the last 4 record logs
             whereCluse.userUuid = isExist.uuid;
-            whereCluse.isMatch = true;
+            whereCluse.is_match = true;
       
             if (Object.keys(body).length == 3 && body.identity != undefined) {
                 if (body.type == "log") {
@@ -329,22 +329,22 @@ module.exports = {
                     const now = new Date()
                     const gteValue = `${now.getFullYear()}-${generator.generateZero(now.getMonth() + 1)}-${generator.generateZero(now.getDate())}T00:00:00.000+07:00`
                     whereCluse.type = "Login"
-                    whereCluse.createdAt = { gte: new Date(gteValue).toISOString() }
+                    whereCluse.created_at = { gte: new Date(gteValue).toISOString() }
                     let todayLog = await prisma.log.findFirst({
                         where: whereCluse
                     })
-                    let logData = processLogDataV1(isExist, ml_result, req.device.uuid, now, requestImagePath, selected_server_image)
-                    result = processResultV1(isExist, req.device.name, now, requestImagePath, isExist, ml_result)
+                    let logData = processLogDataV1(isExist, ml_result, req.device.uuid, now, requestimage_path, selected_server_image)
+                    result = processResultV1(isExist, req.device.name, now, requestimage_path, isExist, ml_result)
                     let startTimeToHuman, endTimeToHuman, endCaptions, captionForElse
                     result.startTime = now.toISOString()
 
                     // mark as logout if the user has logged in today
                     if (todayLog) {
                         logData.type = "Logout"
-                        result.startTime = todayLog.createdAt.toISOString()
+                        result.startTime = todayLog.created_at.toISOString()
                         result.endTime = now.toISOString()
                         endTimeToHuman = utils.timeToHuman(result.endTime)
-                        let timeDiff = utils.countDiff(now.getTime() - todayLog.createdAt.getTime())
+                        let timeDiff = utils.countDiff(now.getTime() - todayLog.created_at.getTime())
                         endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`
                     }
                     startTimeToHuman = utils.timeToHuman(result.startTime)
@@ -362,12 +362,12 @@ module.exports = {
                     }
 
                     const io = req.app.get('socketio');
-                    if (ml_result.isMatch) {
+                    if (ml_result.is_match) {
                         io.emit('logger update', {
                             name: isExist.name,
                             project: result.group,
                             device: req.device.name,
-                            photo: requestImagePath,
+                            photo: requestimage_path,
                             bbox: ml_result.bbox,
                             time: result.startTime
                         })
@@ -380,8 +380,8 @@ module.exports = {
                     
                     const now = new Date();
                     
-                    let logData = processLogDataV1(isExist, ml_result, req.device.uuid, now, requestImagePath, selected_server_image)
-                    result = processResultV1(isExist, req.device.name, now, requestImagePath, isExist, ml_result)
+                    let logData = processLogDataV1(isExist, ml_result, req.device.uuid, now, requestimage_path, selected_server_image)
+                    result = processResultV1(isExist, req.device.name, now, requestimage_path, isExist, ml_result)
                     // Other data
                     try {
                         await saveLogData(startTotalTimeNeeded, endMLTime, four_last_signatures, four_last_signatures_process, logData)
@@ -420,7 +420,7 @@ module.exports = {
             // grab users from device
             const allowed_users = await prisma.user.findMany({
                 where: {
-                    usergroup: {
+                    user_group: {
                         some: {
                             group: {
                                 device: { uuid: device_uuid }
@@ -440,11 +440,11 @@ module.exports = {
                 },
                 orderBy: [
                     { userUuid: 'asc' }, // Untuk mempermudah grouping nantinya
-                    { createdAt: 'desc' } // Order berdasarkan waktu terbaru
+                    { created_at: 'desc' } // Order berdasarkan waktu terbaru
                 ],
                 select: {
                     userUuid: true,
-                    imagePath: true,
+                    image_path: true,
                     signature: true,
                     bbox: true
                 },
@@ -514,8 +514,8 @@ module.exports = {
                     // grab today's log if there is any
                     let today_log_query = {
                         type: type,
-                        createdAt: {gte: new Date(gte_value).toISOString()},
-                        isMatch: "true",
+                        created_at: {gte: new Date(gte_value).toISOString()},
+                        is_match: "true",
                         userUuid: user_uuid
                     }
                     let today_log = await prisma.log.findFirst({where: today_log_query})
@@ -542,10 +542,10 @@ module.exports = {
                     
                     if (today_log) {
                         log_data.type = "Logout"
-                        log_result.startTime = today_log.createdAt.toISOString()
+                        log_result.startTime = today_log.created_at.toISOString()
                         log_result.endTime = now.toISOString()
                         end_time_to_human = utils.timeToHuman(log_result.endTime)
-                        let time_diff = utils.countDiff(now.getTime() - today_log.createdAt.getTime())
+                        let time_diff = utils.countDiff(now.getTime() - today_log.created_at.getTime())
                         end_captions = `\npulang pada \n > ${end_time_to_human} \nWaktu yang dihabiskan \n > ${time_diff} di ${req.device.name}`
                     }
     
@@ -562,7 +562,7 @@ module.exports = {
                     let caption_that_user = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${start_time_to_human}`
                     caption_that_user += end_captions ?? ''
                     caption_for_else = `Nama: \n > ${user.name} \nNomor Identitas:\n > ${user.identityNumber} \nProdi: \n > ${user.program_study} \nAngkatan: \n > ${user.batch}   \nProyek: \n > `
-                    caption_for_else += utils.arrayToHuman(user.usergroup.map((t) => {
+                    caption_for_else += utils.arrayToHuman(user.user_group.map((t) => {
                         return t.group.name
                     })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${start_time_to_human}`
                     caption_for_else += end_captions ?? ''
@@ -572,7 +572,7 @@ module.exports = {
                     // Send to Telegram!
                     let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegramId')
                     let admin_users = await role_utils.getUserWithRole('admin', 'telegramId')
-                    let notify_to_group_users = user.usergroup.map((t) => {
+                    let notify_to_group_users = user.user_group.map((t) => {
                         return t.group.telegramId
                     })
     
@@ -600,17 +600,17 @@ module.exports = {
                         let log_data = {
                             userUuid: user_uuid,
                             bbox: ml_res.data.compared_bbox,
-                            imagePath: image_path,
+                            image_path: image_path,
                             deviceUuid: device_uuid,
                             signature: ml_res.data.signature, // may not have been implemented yet
-                            isMatch: ml_res.data.isMatch,
-                            createdAt: now
+                            is_match: ml_res.data.is_match,
+                            created_at: now
                         }
                         let log_result = {
                             data: {
                                 name: user.name,
-                                role: user.roleuser.map(roleUser => roleUser.role.name),
-                                group: user.usergroup.map(userGroup => userGroup.group.name),
+                                role: user.roleuser.map(roleUser => role_user.role.name),
+                                group: user.usergroup.map(userGroup => user_group.group.name),
                                 identity: user.identityNumber,
                                 device: req.device.name,
                                 serverData: {
@@ -626,18 +626,18 @@ module.exports = {
                         // grab today's log if there is any
                         let today_log_query = {
                             type: type,
-                            createdAt: {gte: gte_value.toISOString()},
-                            isMatch: "true",
+                            created_at: {gte: gte_value.toISOString()},
+                            is_match: "true",
                             userUuid: user_uuid
                         }
                         let today_log = await prisma.log.findFirst({where: today_log_query})
                         
                         if (today_log) {
                             log_data.type = "Logout"
-                            log_result.startTime = today_log.createdAt.toISOString()
+                            log_result.startTime = today_log.created_at.toISOString()
                             log_result.endTime = now.toISOString()
                             end_time_to_human = utils.timeToHuman(log_result.endTime)
-                            let time_diff = utils.countDiff(now.getTime() - today_log.createdAt.getTime())
+                            let time_diff = utils.countDiff(now.getTime() - today_log.created_at.getTime())
                             end_captions = `\npulang pada \n > ${end_time_to_human} \nWaktu yang dihabiskan \n > ${time_diff} di ${req.device.name}`
                         }
     
@@ -677,17 +677,17 @@ module.exports = {
       
             let logDatas = await prisma.log.findMany({
               where: whereCondition,
-              orderBy: { createdAt: "desc" },
+              orderBy: { created_at: "desc" },
               select: {
                 type: true,
-                isMatch: true,
-                imagePath: true,
+                is_match: true,
+                image_path: true,
                 bbox: true,
-                createdAt: true,
+                created_at: true,
                 user: {
                   select: {
                     name: true,
-                    identityNumber: true,
+                    identity_number: true,
                     usergroup: {
                       select: { group: { select: { name: true } } },
                     },
@@ -701,11 +701,11 @@ module.exports = {
               name: log.user?.name || null,
               nim: log.user?.identityNumber || null,
               device: log.device?.name || null,
-              image: log.imagePath,
+              image: log.image_path,
               bbox: log.bbox,
               type: log.type,
-              isMatch: log.isMatch,
-              inTime: log.createdAt,
+              is_match: log.is_match,
+              inTime: log.created_at,
               group: log.user?.usergroup?.map((ug) => ug.group.name) || [],
             }));
       
