@@ -102,7 +102,8 @@ exports.authorization = (text = '', child_permission = []) => {
   }
 }
 
-exports.deviceAuth = (req, res, next) => {
+exports.deviceAuth = () => {
+  return (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const protoIdentifier = req.headers['x-device-identifier'];
   const token = authHeader && authHeader.split(' ')[1]
@@ -111,6 +112,7 @@ exports.deviceAuth = (req, res, next) => {
     if (err) return createResponse(res, 403, "Dilarang", "Perangkat ini memberikan token Autentikasi yang salah", req.route)
     identity = device.identityKey
     uuid = device.uuid
+    req.device = device
     result = await prisma.device.findUnique({
       where: {
         uuid: uuid
@@ -121,5 +123,5 @@ exports.deviceAuth = (req, res, next) => {
     if (!vacryResult) return createResponse(res, 403, "Izin Dicabut!", "Izin untuk perangkat ini telah dicabut", req.route)
     req.device = result
     next()
-  })
+  })}
 }

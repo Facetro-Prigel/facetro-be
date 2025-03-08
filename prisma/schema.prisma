@@ -104,7 +104,7 @@ model Log {
   type        absen
   image_path  String
   bbox        Json
-  signature   String
+  signature   String   @db.Text 
   created_at  DateTime @default(now())
   user_uuid   String
   is_match    Boolean  @default(false)
