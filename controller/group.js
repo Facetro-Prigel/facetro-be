@@ -2,7 +2,8 @@
 const { PrismaClient } = require('@prisma/client')
 const generator = require('../helper/generator');
 const prisma = new PrismaClient()
-const utils = require('../helper/utils')
+const utils = require('../helper/utils');
+const device = require('./device');
 const checkDeleteUpdate = async (uuid, reqs) => {
     const user = await prisma.group.findUnique({
       where: {
@@ -23,11 +24,23 @@ module.exports = {
                     uuid: true,
                     name: true,
                     locations: true,
-                    device: {
-                        select: {
-                            name: true,
-                            locations: true
-                        },
+                    door_group:{
+                        select:{
+                            device:{
+                                select:{
+                                    name:true
+                                }
+                            }
+                        }
+                    },
+                    presence_group:{
+                        select:{
+                            device:{
+                                select:{
+                                    name:true
+                                }
+                            }
+                        }
                     },
                     users: {
                         select: {
@@ -53,11 +66,24 @@ module.exports = {
                 select: {
                     name: true,
                     locations: true,
-                    device: {
+                    presence_group: {
                         select: {
-                            uuid: true,
-                            name: true,
-                            locations: true
+                            device: {
+                                select:{
+                                    name:true,
+                                    uuid:true
+                                }
+                            },
+                        },
+                    },
+                    door_group: {
+                        select: {
+                            device: {
+                                select:{
+                                    name:true,
+                                    uuid:true
+                                }
+                            },
                         },
                     },
                     users: {
@@ -80,7 +106,7 @@ module.exports = {
                 },
             });
         } catch (error) {
-            console.error("Error while inserting group:", error);
+            console.error("Error while getting group:", error);
             return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/group/${uuid}`);
         }
         return utils.createResponse(res, 200, "Success", "Grup berhasil ditemukan", `/group/${uuid}`, group);
@@ -97,11 +123,20 @@ module.exports = {
                             uuid: req.body.notify_to
                         }
                     },
-                    device: {
-                        connect: {
-                            uuid: req.body.device
-                        }
-                    }
+                    presence_group:{
+                        create: req.body.presence_device.map((projectItems) => {
+                            if (projectItems != "") {
+                              return { device: { connect: { uuid: projectItems } } }
+                            }
+                          })
+                    },
+                    door_group:{
+                        create: req.body.door_device.map((projectItems) => {
+                            if (projectItems != "") {
+                              return { device: { connect: { uuid: projectItems } } }
+                            }
+                          })
+                    },
                 }
             })
         } catch (error) {

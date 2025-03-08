@@ -21,16 +21,16 @@ module.exports = {
       return utils.createResponse(res, 400, "Bad Request", "Mohon masukkan token!", "/device/register");
     }
     try {
-       results = await prisma.device.findUnique({
+      results = await prisma.device.findUnique({
         where: {
           token: req.body.token,
         }
       })
-      if (!results) { 
-        return utils.createResponse(res, 404, "Not Found", "Token tidak ditemukan!", "/device/register") 
+      if (!results) {
+        return utils.createResponse(res, 404, "Not Found", "Token tidak ditemukan!", "/device/register")
       }
       let identityKey = generator.generateString(10)
-       token = generator.generateAccessToken({ uuid: results.uuid, identityKey: identityKey }, process.env.SECRET_DEVICE_TOKEN)
+      token = generator.generateAccessToken({ uuid: results.uuid, identityKey: identityKey }, process.env.SECRET_DEVICE_TOKEN)
       await prisma.device.update({
         where: {
           token: req.body.token,
@@ -43,7 +43,7 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device/register"); 
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device/register");
     }
     return utils.createResponse(res, 200, "Success", "Token berhasil diaktifkan!", "/device/register", { 'token': token, 'name': results.name, 'uuid': results.uuid });
     // return utils.createResponse(res, 200, "Success", "Token berhasil diaktifkan!", "/device/register", { 'access_token': token, 'refresh_token': token, 'name': results.name, 'uuid': results.uuid, 'nfc_list': [ntar dulu]}); 
@@ -64,7 +64,7 @@ module.exports = {
       console.error("Error while inserting device:", error);
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device");
     }
-    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", "/device", {data: isExist});
+    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", "/device", { data: isExist });
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
@@ -76,12 +76,20 @@ module.exports = {
           name: true,
           locations: true,
           token: true,
-          groups: {
-            select:{
-              uuid: true,
-              name: true
+          presence_group: {
+            select: {
+              group: {
+                select: { name: true }
+              }
             }
-          }
+          },
+          door_group: {
+            select: {
+              group: {
+                select: { name: true }
+              }
+            }
+          },
         },
       });
     } catch (error) {
@@ -89,7 +97,7 @@ module.exports = {
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
     }
 
-    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", `/device/${uuid}`, {data: isExist});
+    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", `/device/${uuid}`, { data: isExist });
   },
 
   insert: async (req, res) => {
@@ -131,9 +139,9 @@ module.exports = {
   update: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
-    
+
     if (!check) {
-      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`); 
+      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`);
     }
     try {
       let data = {
@@ -151,70 +159,141 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device`);
     }
     utils.webSockerUpdate(req)
-    return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`);
+    return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device`);
   },
   nfc_get: async (req, res) => {
     let uuid = req.device.uuid;
-    let nfcs = await prisma.device.findUnique({
-          where: { uuid: deviceUuid },
-          include: {
-              group: {
-                  include: {
-                      usergroup: {
-                          include: {
-                              user: {
-                                  include: {
-                                      nfc_data: true
-                                  }
-                              }
-                          }
+    let nfcs = []
+    let nfcsUserUuid =[] 
+    let nfcsFromDevice = await prisma.device.findUnique({
+      where: { uuid: uuid},
+      select: {
+        door_group: {
+          select: {
+            group: {
+              select: {
+                user_group: {
+                  select: {
+                    user: {
+                      select: {
+                        uuid:true,
+                        nfc_data: true,
                       }
+                    }
                   }
+                }
               }
+            }
           }
+        }
+      }
+    });
+    nfcsFromDevice.door_group.forEach(el => {
+      el.group.user_group.forEach(ele => {
+        let userData = ele.user
+        if(userData.nfc_data){
+          nfcs.push(userData.nfc_data)
+          nfcsUserUuid.push(ele.user.uuid)
+        }
       });
-      console.log(JSON.stringify(nfcs));
-      utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`, nfcs);
-      //aku mau implement get nfc dari semua user yang terkait pada device tertentu
-      // jika di sql aku mengakses user ke device adalah sebagai berikut
-      // select u.uuid, ug.uuid, g.uuid, d.uuid from User u join UserGroup ug on u.uuid = ug.uuid join Group g on g.uuid = ug.uuid join Device d on d.uuid = g.devices
-    
-    if (!check) {
-      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`); 
-    }
-    return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`);
+    });
+    let nfcsFromRolePermission = await prisma.user.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              {
+                permission_user: {
+                  some: {
+                    permission: {
+                      is: {
+                        guard_name: "open_door_anywhere",
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                role_user: {
+                  some: {
+                    role: {
+                      is: {
+                        permission_role: {
+                          some: {
+                            permission: {
+                              is: {
+                                guard_name: "open_door_anywhere",
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                role_user: {
+                  some: {
+                    role: {
+                      is: {
+                        guard_name: "super_admin",
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          {
+            uuid: {
+              notIn: nfcsUserUuid,
+            },
+          },
+        ],
+      },
+      select: {
+        nfc_data: true,
+      },
+    })
+    nfcsFromRolePermission.forEach(el => {
+      if(el.nfc_data){
+        nfcs.push(el.nfc_data)
+      }
+    });
+    return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device`, nfcs);
   },
   nfc_status: async (req, res) => {
-      let uuid = req.params.uuid
-      let nfc_data = await prisma.device.findUnique({
-        where: { uuid: deviceUuid },
-        include: {
-            group: {
-                include: {
-                    usergroup: {
-                        include: {
-                            user: true
-                        },
-                        orderBy: {
-                            user: {
-                                modified_at: 'desc'
-                            }
-                        },
-                        take: 1
-                    }
+    let uuid = req.dev.uuid
+    let nfc_data = await prisma.device.findUnique({
+      where: { uuid: uuid },
+      include: {
+        group: {
+          include: {
+            usergroup: {
+              include: {
+                user: true
+              },
+              orderBy: {
+                user: {
+                  modified_at: 'desc'
                 }
+              },
+              take: 1
             }
+          }
         }
+      }
     });
-    
+
     let latestModifiedAt = nfc_data?.group?.usergroup[0]?.user?.modified_at || null;
     console.log(latestModifiedAt);
-    
+
     if (!nfc_data) {
-      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`); 
+      return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`);
     }
     return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`, nfc_data);
   },

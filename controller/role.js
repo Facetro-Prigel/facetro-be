@@ -23,7 +23,6 @@ const inputInsertUpdate = async (req) => {
   }
   if (req.asign_role_to_permision && req.body.permisions) {
     data.permission_role = {
-      deleteMany: {},
       create: req.body.permisions
         .filter(permission_uuid => permission_uuid !== "")
         .map(permission_uuid => ({ permission: { connect: { uuid: permission_uuid } } }))

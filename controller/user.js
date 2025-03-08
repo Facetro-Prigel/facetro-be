@@ -94,9 +94,9 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   if (req.body.password) {
     data.password = await genPass.generatePassword(req.body.password)
   }
-  if (req.asign_user_to_group && req.body.usergroup) {
+  if (req.asign_user_to_group && req.body.user_group) {
     data.user_group = {
-      create: req.body.usergroup.map((projectItems) => {
+      create: req.body.user_group.map((projectItems) => {
         if (projectItems != "") {
           return { group: { connect: { uuid: projectItems } } }
         }
