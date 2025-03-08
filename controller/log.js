@@ -11,11 +11,11 @@ require('dotenv').config();
 const compareFace = async (base64image, dbSignature) => {
   try {
     const { data } = await axios.post(`${process.env.ML_URL}match`, { image: base64image, signature: dbSignature }, { headers: { "Content-Type": "application/json" } });
-    const sData = data.data
+    const sData = data.data[0]
     return {
       isMatch: sData.isMatch === "True",
       bbox: sData.bbox,
-      signature: sData.signiture,
+      signature: sData.signature,
       similarityResult: sData.similarityResult,
       lengthOfTimeRequired: sData.lengthOfTimeRequired
     };
@@ -84,27 +84,30 @@ module.exports = {
         identity = identity.replace(/[^A-F0-9]/g, '')
         isExist = await prisma.user.findFirst({
           where: {
-            "OR": [{ "identityNumber": identity }, { "nfc_data": identity }],
+            "OR": [{ "identity_number": identity }, { "nfc_data": identity }],
           },
           include: {
-            roleuser: {
+            user_details:true,
+            role_user: {
               include: {
                 role: true
               }
             },
-            usergroup: {
+            user_group: {
               include: {
                 group: {
                   include: {
-                    users: true
+                    users: true,
+                    presence_group: true
                   }
                 }
               }
             }
           }
         })
+        // return utils.createResponse(res, 200, 'Test!', "Identitas tersebut tidak terdaftar", '/log', isExist)
         if (!isExist) {
-          return res.status(404).json({ msg: "Identitas tersebut tidak terdaftar", code: 404 })
+          return utils.createResponse(res, 404, 'Not Found!', "Identitas tersebut tidak terdaftar", '/log')
         }
 
         isCanPresenceAnyware = await prisma.user.findFirst({
@@ -112,36 +115,36 @@ module.exports = {
             uuid: isExist["uuid"],
             OR: [
               {
-                roleuser: {
+                role_user: {
                   some: {
                     role: {
                       is: {
-                        guardName: 'super_admin'
+                        guard_name: 'super_admin'
                       }
                     }
                   }
                 }
               }, {
-                permissionUser: {
+                permission_user: {
                   some: {
                     permission: {
                       is: {
-                        guardName: "log_anywhere"
+                        guard_name: "presence_anywhere"
                       }
                     }
                   }
                 }
               },
               {
-                roleuser: {
+                role_user: {
                   some: {
                     role: {
                       is: {
-                        permisionrole: {
+                        permission_role: {
                           some: {
                             permission: {
                               is: {
-                                guardName: "log_anywhere"
+                                guard_name: "presence_anywhere"
                               }
                             }
                           }
@@ -154,16 +157,16 @@ module.exports = {
             ]
           },
           include: {
-            permissionUser: {
+            permission_user: {
               include: {
                 permission: true
               }
             },
-            roleuser: {
+            role_user: {
               include: {
                 role: {
                   include: {
-                    permisionrole: {
+                    permission_role: {
                       include: {
                         permission: true
                       }
@@ -177,34 +180,36 @@ module.exports = {
         let isDeviceOk = false
         let whereCluse = {}
         if (!isCanPresenceAnyware) {
-          for (let i = 0; i < isExist.usergroup.length; i++) {
-            if (isExist.usergroup[i].group.devices == req.device.uuid) {
-              isDeviceOk = true
-              break
+          for (let i = 0; i < isExist.user_group.length; i++) {
+            for (let ind= 0; ind < isExist.user_group[i].group.presence_group.length; ind++) {
+              if (isExist.user_group[i].group.presence_group[ind].device_uuid== req.device.uuid) {
+                isDeviceOk = true
+                break
+              }
             }
           }
           if (!isDeviceOk) {
-            return res.status(403).json({ msg: "Anda Tidak Dapat Presensi di sini", code: 403 })
+            return utils.createResponse(res, 403, 'Forbidden!', "Anda Tidak Dapat Presensi di sini", '/log')
           }
-          whereCluse.deviceUuid = req.device.uuid
+          whereCluse.device_uuid = req.device.uuid
         }
         // combines data from User with the last 4 record logs 
-        whereCluse.userUuid = isExist.uuid
-        whereCluse.isMatch = true
+        whereCluse.user_uuid = isExist.uuid
+        whereCluse.is_match = true
         const four_last_signatures = await prisma.log.findMany({
           where: whereCluse,
           take: 4,
           orderBy: {
-            createdAt: 'desc',
+            created_at: 'desc',
           },
           select: {
-            imagePath: true,
+            image_path: true,
             bbox: true,
             signature: true
           }
         })
         four_last_signatures.push({
-          imagePath: isExist.avatar,
+          image_path: isExist.avatar,
           bbox: isExist.bbox,
           signature: isExist.signature
         })
@@ -216,11 +221,11 @@ module.exports = {
         for (let signature of four_last_signatures) {
           ml_result = await compareFace(image, signature.signature);
           if (ml_result.error) {
-            return res.status(ml_result.code).json({ msg: ml_result.error, code: ml_result.code });
+            return utils.createResponse(res, ml_result.code, 'Bad Request!', ml_result.error, '/log');
           }
           selected_server_image = {
             candidateNumber,
-            image: signature.imagePath,
+            image: signature.image_path,
             bbox: signature.bbox,
             signature: signature.signature,
             similarityResult: ml_result.similarityResult,
@@ -231,42 +236,44 @@ module.exports = {
           candidateNumber++;
         }
         // Check is thare have log data
-        const now = new Date()
-        const gteValue = new Date(
-          new Intl.DateTimeFormat("en-US", {
-            timeZone: "Asia/Jakarta",
-            hourCycle: "h23",
-          }).format(new Date())
-        );
+        let now = new Date()
+        let localTime = now.toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          year: "numeric",
+          day: '2-digit',
+          month: '2-digit'
+        })
+        localTime = localTime.split('/')
+        let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
         whereCluse.type = "Login"
-        whereCluse.createdAt = { gte: gteValue.toISOString() }
+        whereCluse.created_at = { gte: new Date(`${nowDate}T00:00:00.000+07:00`) }
         let todayLog = await prisma.log.findFirst({
           where: whereCluse
         })
         // process create log data
         let logData = {
-          userUuid: isExist.uuid,
+          user_uuid: isExist.uuid,
           bbox: ml_result.bbox,
-          imagePath: requestImagePath,
-          deviceUuid: req.device.uuid,
+          image_path: nameImage,
+          device_uuid: req.device.uuid,
           signature: ml_result.signature,
-          isMatch: ml_result.isMatch,
-          createdAt: now
+          is_match: ml_result.isMatch,
+          created_at: now
         }
         logData.type = "Login"
         let result = {
           name: isExist.name,
-          role: isExist.roleuser.map((i) => {
+          role: isExist.role_user.map((i) => {
             return i.role.name
           }),
-          group: isExist.usergroup.map((i) => {
+          group: isExist.user_group.map((i) => {
             return i.group.name
           }),
-          identity: isExist.identityNumber,
+          identity: isExist.identity_number,
           device: req.device.name,
           isMatch: ml_result.isMatch,
           clientData: {
-            image: requestImagePath,
+            image: nameImage,
             bbox: ml_result.bbox
           },
           serverData: {
@@ -279,17 +286,17 @@ module.exports = {
 
         if (todayLog) {
           logData.type = "Logout"
-          result.startTime = todayLog.createdAt.toISOString()
+          result.startTime = todayLog.created_at.toISOString()
           result.endTime = now.toISOString()
           endTimeToHuman = utils.timeToHuman(result.endTime)
-          let timeDiff = utils.countDiff(now.getTime() - todayLog.createdAt.getTime())
+          let timeDiff = utils.countDiff(now.getTime() - todayLog.created_at.getTime())
           endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`
         }
         startTimeToHuman = utils.timeToHuman(result.startTime)
         // Other data
         const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded)
         const totalTimeNeeded = (endTotalTimeNeeded[0] * 1000) + (endTotalTimeNeeded[1] / 1e6);
-        logData.otherData = {
+        logData.other_data = {
           'totalTimeNeeded': totalTimeNeeded,
           'dataComparisonCandidate': four_last_signatures,
           'dataComparisonCandidateAfterProcess': four_last_signatures_process,
@@ -297,15 +304,24 @@ module.exports = {
         await prisma.log.create({ data: logData })
         let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
         captionThatUser += endCaptions ?? ''
-        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identityNumber} \nProdi: \n > ${isExist.program_study} \nAngkatan: \n > ${isExist.batch}   \nProyek: \n > `
-        captionForElse += utils.arrayToHuman(isExist.usergroup.map((t) => {
+        let user_details = {
+          program_study: "-",
+          batch:'-'
+        }
+        if(isExist.user_details){
+          user_details.program_study=isExist.user_details.program_study
+          user_details.batch=isExist.user_details.batch
+        }
+        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n > `
+        captionForElse += utils.arrayToHuman(isExist.user_group.map((t) => {
           return t.group.name
         })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
         captionForElse += endCaptions ?? ''
+        console.info(captionForElse)
         // Send to Telegram!
         let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegramId')
         let admin_users = await role_utils.getUserWithRole('admin', 'telegramId')
-        let notify_to_users = isExist.usergroup.map((t) => {
+        let notify_to_users = isExist.user_group.map((t) => {
           return t.group.users.telegramId
         })
         let notify_to = []
@@ -319,35 +335,36 @@ module.exports = {
             name: isExist.name,
             project: result.group,
             device: req.device.name,
-            photo: requestImagePath,
+            photo: nameImage,
             bbox: ml_result.bbox,
             time: result.startTime
           })
         }
-        return res.status(202).json({ result })
+        return utils.createResponse(res, 200, 'Success!', `Berhasil Melakukan Presensi!`, '/log', result)
       }
-      res.status(400).json({ msg: "Request yang diminta salah", code: 400 })
+      utils.createResponse(res, 400, 'Bad Request!', "Request yang diminta salah", '/log')
     } catch (e) {
       console.error(e, "\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala")
-      return res.status(500).json({ msg: "Terjadi kesalahan pada server", code: 500 })
+      
+      return utils.createResponse(res, 500, 'Internal Server Error!', "Terjadi kesalahan pada server", '/log')
     }
   },
   getLog: async (req, res) => {
     let logDatas = await prisma.log.findMany({
       orderBy: [
         {
-          createdAt: 'desc'
+          created_at: 'desc'
         }
       ],
       select: {
-        isMatch: true,
-        imagePath: true,
+        is_match: true,
+        image_path: true,
         bbox: true,
         user: {
           select: {
             name: true,
-            identityNumber: true,
-            usergroup: {
+            identity_number: true,
+            user_group: {
               select: {
                 group: {
                   select: {
@@ -358,7 +375,7 @@ module.exports = {
             }
           }
         },
-        createdAt: true,
+        created_at: true,
         device: {
           select: {
             name: true,
@@ -370,19 +387,19 @@ module.exports = {
     for (const log of logDatas) {
       showLogs.push({
         name: log.user.name,
-        nim: log.user.identityNumber,
+        nim: log.user.identity_number,
         device: log.device.name,
-        image: log.imagePath,
+        image: log.image_path,
         bbox: log.bbox,
         type: log.type,
-        isMatch: log.isMatch,
-        inTime: log.createdAt,
-        group: log.user.usergroup.map((uy) => {
+        isMatch: log.is_match,
+        inTime: log.created_at,
+        group: log.user.user_group.map((uy) => {
           return uy.group.name
         })
       })
     }
-    return res.json(showLogs)
+    return utils.createResponse(res, 200, 'Success!', `Berhasil Mengambil Logs!`, '/log', showLogs)
   },
   recognation: async (req, res) => {
     try {
@@ -629,8 +646,6 @@ module.exports = {
           other_data: {}
         }
       })
-      console.info(dbType)
-
       const responseData = {
         name: foundUser.name,
         role: foundUser.role_user.map((i) => {
@@ -664,7 +679,7 @@ module.exports = {
       utils.saveImage(image, nameImage, 'log')
       let responseData;
       try {
-        const { data } = await axios.patch(`${process.env.ML_URL}build`, { image: image}, { headers: { "Content-Type": "application/json" } });
+        const { data } = await axios.patch(`${process.env.ML_URL}build`, { image: image }, { headers: { "Content-Type": "application/json" } });
         responseData = data.data[0]
       } catch (e) {
         console.error(e)
@@ -682,7 +697,7 @@ module.exports = {
       });
       return utils.createResponse(res, 200, 'Succes!', `Data log telah diperbarui!`, '/log/afterRecog');
     } catch (error) {
-        return utils.createResponse(res, 400, 'Bad Request!', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/afterRecog');
+      return utils.createResponse(res, 400, 'Bad Request!', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/afterRecog');
     }
   }
 }
