@@ -192,7 +192,7 @@ module.exports = {
     try {
 
       // Source Image
-      requestImagePath = `photos/${genPass.generateString(23)}.jpg`
+      requestImagePath = `${genPass.generateString(23)}.jpg`
       utils.saveImage(image, requestImagePath)
 
       // Avatar Generator

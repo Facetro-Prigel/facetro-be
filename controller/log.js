@@ -39,7 +39,7 @@ const makeTelegramNotification = async (image, ml_result, nameImage, teleParams)
     setTimeout(async () => {
       try {
         const { data } = await axios.post(`${process.env.TELE_URL}notify`, {
-          'user_tele_id': teleParams[0].telegramId ?? false,
+          'user_tele_id': teleParams[0].telegram_id ?? false,
           'ml_result': ml_result.isMatch,
           'notify_to': teleParams[1],
           'request_image_path': image2tele,
@@ -87,7 +87,7 @@ module.exports = {
             "OR": [{ "identity_number": identity }, { "nfc_data": identity }],
           },
           include: {
-            user_details:true,
+            user_details: true,
             role_user: {
               include: {
                 role: true
@@ -181,8 +181,8 @@ module.exports = {
         let whereCluse = {}
         if (!isCanPresenceAnyware) {
           for (let i = 0; i < isExist.user_group.length; i++) {
-            for (let ind= 0; ind < isExist.user_group[i].group.presence_group.length; ind++) {
-              if (isExist.user_group[i].group.presence_group[ind].device_uuid== req.device.uuid) {
+            for (let ind = 0; ind < isExist.user_group[i].group.presence_group.length; ind++) {
+              if (isExist.user_group[i].group.presence_group[ind].device_uuid == req.device.uuid) {
                 isDeviceOk = true
                 break
               }
@@ -306,23 +306,22 @@ module.exports = {
         captionThatUser += endCaptions ?? ''
         let user_details = {
           program_study: "-",
-          batch:'-'
+          batch: '-'
         }
-        if(isExist.user_details){
-          user_details.program_study=isExist.user_details.program_study
-          user_details.batch=isExist.user_details.batch
+        if (isExist.user_details) {
+          user_details.program_study = isExist.user_details.program_study
+          user_details.batch = isExist.user_details.batch
         }
         captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n > `
         captionForElse += utils.arrayToHuman(isExist.user_group.map((t) => {
           return t.group.name
         })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
         captionForElse += endCaptions ?? ''
-        console.info(captionForElse)
         // Send to Telegram!
-        let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegramId')
-        let admin_users = await role_utils.getUserWithRole('admin', 'telegramId')
+        let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegram_id')
+        let admin_users = await role_utils.getUserWithRole('admin', 'telegram_id')
         let notify_to_users = isExist.user_group.map((t) => {
-          return t.group.users.telegramId
+          return t.group.users.telegram_id
         })
         let notify_to = []
         notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
@@ -345,7 +344,7 @@ module.exports = {
       utils.createResponse(res, 400, 'Bad Request!', "Request yang diminta salah", '/log')
     } catch (e) {
       console.error(e, "\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala")
-      
+
       return utils.createResponse(res, 500, 'Internal Server Error!', "Terjadi kesalahan pada server", '/log')
     }
   },
@@ -428,7 +427,6 @@ module.exports = {
       const deviceToUser = await prisma.device.findUnique({
         where: { uuid: deviceUuid },
         select: {
-          name: true,
           [privotTable]: {
             select: {
               group: {
@@ -604,6 +602,24 @@ module.exports = {
         }
       })
 
+
+      const responseData = {
+        name: foundUser.name,
+        role: foundUser.role_user.map((i) => {
+          return i.role.name;
+        }),
+        group: foundUser.user_group.map((i) => {
+          return i.group.name;
+        }),
+        identity: foundUser.identity_number,
+        device: req.device.name,
+        serverData: {
+          image: recogResult.compared_image,
+          bbox: recogResult.compared_bbox,
+        }
+
+      }
+
       if (type != 'doorlock') {
         let localTime = new Date().toLocaleString('id-ID', {
           timeZone: 'Asia/Jakarta',
@@ -625,15 +641,17 @@ module.exports = {
             },
           },
           orderBy: {
-            created_at: 'desc', // Urutkan berdasarkan waktu terbaru
+            created_at: 'asc', // Urutkan berdasarkan waktu terbaru
           },
           take: 1, // Ambil hanya satu entri (log terakhir)
         });
+        responseData['start_time'] = new Date()
         if (logs.length > 0) {
           dbType = "Logout"
+          responseData['start_time'] = logs[0].created_at
+          responseData['end_time'] = new Date()
         }
       }
-
       const createLog = await prisma.log.create({
         data: {
           type: dbType,
@@ -646,22 +664,7 @@ module.exports = {
           other_data: {}
         }
       })
-      const responseData = {
-        name: foundUser.name,
-        role: foundUser.role_user.map((i) => {
-          return i.role.name;
-        }),
-        group: foundUser.user_group.map((i) => {
-          return i.group.name;
-        }),
-        identity: foundUser.identity_number,
-        device: deviceToUser.name,
-        serverData: {
-          image: recogResult.compared_image,
-          bbox: recogResult.compared_bbox,
-        },
-        log_uuid: createLog.uuid
-      }
+      responseData.log_uuid = createLog.uuid
       return utils.createResponse(res, 200, 'Succes', `Akses ${type} diizinkan!`, '/log/recog', responseData);
     } catch (error) {
       console.error(error);
@@ -688,15 +691,127 @@ module.exports = {
         bbox: responseData.bbox,
         image_path: nameImage
       }
-      await prisma.log.update({
+      const updatedLog = await prisma.log.update({
         where: {
           uuid: log_uuid,
           device_uuid: deviceUuid,
         },
         data: updatedData,
       });
+      let isExist = await prisma.user.findUnique({
+        where: {
+          uuid: updatedLog.user_uuid
+        }, select:{
+          name:true,
+          identity_number: true,
+          role_user: {
+            select: {
+              role: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          user_group: {
+            select: {
+              group: {
+                select: {
+                  name: true,
+                  users:{
+                    select:{
+                      telegram_id:true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          user_details:{
+            select:{
+              program_study:true,
+              batch: true
+            }
+          },
+        }
+      })
+      if (updatedLog.type != 'Door') {
+
+        let localTime = new Date().toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          year: "numeric",
+          day: '2-digit',
+          month: '2-digit'
+        })
+        localTime = localTime.split('/')
+        let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
+        let startOfDayUTC = new Date(`${nowDate}T00:00:00.000+07:00`);
+        let endOfDayUTC = new Date(`${nowDate}T23:59:59.500+07:00`);
+        const logs = await prisma.log.findMany({
+          where: {
+            user_uuid: updatedLog.user_uuid,
+            type: { not: 'Door' },
+            created_at: {
+              gte: startOfDayUTC,
+              lte: endOfDayUTC,
+            },
+          }, orderBy: {
+            created_at: 'asc', // Urutkan berdasarkan waktu terbaru
+          },
+        });
+        let endCaptions, endTimeToHuman
+        let startTimeToHuman =  utils.timeToHuman(logs[0].created_at);
+        if (logs.length > 1) {
+          endTimeToHuman = utils.timeToHuman(logs[logs.length-1].created_at)
+          let timeDiff = utils.countDiff(logs[logs.length-1].created_at - logs[0].created_at)
+          endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`
+        }
+        let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionThatUser += endCaptions ?? ''
+        let user_details = {
+          program_study: "-",
+          batch: '-'
+        }
+
+
+        // return utils.createResponse(res, 200, 'Succes!', `Data log telah dipesrbarui!`, '/log/afterRecog', isExist);
+        if (isExist.user_details) {
+          user_details.program_study = isExist.user_details.program_study
+          user_details.batch = isExist.user_details.batch
+        }
+        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n > `
+        captionForElse += utils.arrayToHuman(isExist.user_group.map((t) => {
+          return t.group.name
+        })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionForElse += endCaptions ?? ''
+        // Send to Telegram!
+        let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegram_id')
+        let admin_users = await role_utils.getUserWithRole('admin', 'telegram_id')
+        let notify_to_users = isExist.user_group.map((t) => {
+          return t.group.users.telegram_id
+        })
+        let notify_to = []
+        notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
+        notify_to = new Set(notify_to)
+        const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
+        makeTelegramNotification(image, {isMatch:true, bbox: responseData.bbox}, nameImage, telegramParams)
+      }
+
+      const io = req.app.get('socketio');
+      io.emit('logger update', {
+        name: isExist.name,
+        project: utils.arrayToHuman(isExist.user_group.map((t) => {
+          return t.group.name
+        })),
+        device: req.device.name,
+        photo: nameImage,
+        bbox: responseData.bbox,
+        time: new Date()
+      })
+
       return utils.createResponse(res, 200, 'Succes!', `Data log telah diperbarui!`, '/log/afterRecog');
     } catch (error) {
+      console.error(error)
       return utils.createResponse(res, 400, 'Bad Request!', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/afterRecog');
     }
   }

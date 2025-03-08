@@ -31,7 +31,7 @@ const makeBufferFromBase64 = (base64String) => {
 }
 
 const makeBondingBox = async (base64String, bbox, filename) => {
-    let savedFilename = 'photos/temp/tele-img-' + filename
+    let savedFilename = 'tele-img-' + filename
     const redBox = Buffer.from(
         `<svg width="${bbox[2]}" height="${bbox[2]}">
         <rect x="0" y="0" width="${bbox[2]}" height="${bbox[2]}" rx="${bbox[2] * 0.1}" ry="${bbox[2] * 0.1}" 
@@ -58,7 +58,7 @@ const makeBondingBox = async (base64String, bbox, filename) => {
         //	return result;
 
         await minio_client.putObject(
-            process.env.MINIO_BUCKET_NAME,
+            'log',
             savedFilename,
             imageBuffer,
             imageBuffer.length,
