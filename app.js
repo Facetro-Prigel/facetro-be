@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const {PrismaClient} =require('@prisma/client')
+const { PrismaClient } = require('@prisma/client')
 const allRoutes = require("./routes");
 const { Server } = require('socket.io');
 const { execSync } = require('child_process')
@@ -8,31 +8,57 @@ const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
 const minioClient = require('./minioClient')
-const prisma= new PrismaClient(); 
+const prisma = new PrismaClient();
 
-app.get('/photos/:filename', async (req, res) => {
-    const filename = 'photos/' + req.params.filename;
+app.get('/avatar/:filename', async (req, res) => {
+  const filename = req.params.filename;
 
-    const link_404 = process.env.FRONTEND_URL + "/404"
+  const link_404 = process.env.FRONTEND_URL + "/404"
 
-    const referer = req.get('Referer');
-    const origin = req.get('Origin');
-
-    // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
-    if (!referer && !origin) {
-        return res.redirect(link_404);
-    }
-
-    try {
-        const responseStream = await minioClient.getObject(process.env.MINIO_BUCKET_NAME, filename);
-        res.set('Content-Type', 'image/jpeg');
-        responseStream.pipe(res);
-    } catch (e) {
-        console.error('Error fetching image from minio: ', e);
-        res.redirect(link_404);  // Redirect jika gambar tidak ditemukan
-    }
+  const referer = req.get('Referer');
+  const origin = req.get('Origin');
+  
+  // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
+  if (!referer && !origin) {
+    return res.redirect(link_404);
+  }
+  try {
+    const responseStream = await minioClient.getObject('avatar', filename);
+    res.set('Content-Type', 'image/jpeg');
+    responseStream.pipe(res);
+  } catch (e) {
+    console.error('Error fetching image from minio: ', e);
+    res.redirect(link_404);  // Redirect jika gambar tidak ditemukan
+  }
 });
 
+app.get('/photos/:filename', async (req, res) => {
+  const filename = req.params.filename;
+
+  const link_404 = process.env.FRONTEND_URL + "/404"
+
+  const referer = req.get('Referer');
+  const origin = req.get('Origin');
+
+  // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
+  if (!referer && !origin) {
+    return res.redirect(link_404);
+  }
+  try {
+    let responseStream = await minioClient.getObject('photos', filename);
+    res.set('Content-Type', 'image/jpeg');
+    responseStream.pipe(res);
+  } catch (e) {
+    try {
+      let responseStream = await minioClient.getObject('log', filename);
+      res.set('Content-Type', 'image/jpeg');
+      responseStream.pipe(res);
+    } catch (e) {
+      console.error('Error fetching image from minio: ', e);
+      res.redirect(link_404);  // Redirect jika gambar tidak ditemukan
+    }
+  }
+});
 
 // get config vars
 app.use(cors())
@@ -134,29 +160,29 @@ console.info("=======Bejalan Menggunakan Versi=======")
 let data_commit = execSync("git show --summary").toString().split(/\r?\n/)
 let penulis = data_commit[1]
 let waktu = data_commit[2]
-let pesan =  data_commit[4]
+let pesan = data_commit[4]
 console.log(data_commit[1].indexOf("Merge:"))
-if(data_commit[1].indexOf("Merge:") != -1){
+if (data_commit[1].indexOf("Merge:") != -1) {
   penulis = data_commit[2]
   waktu = data_commit[3]
-  pesan =  data_commit[5]
+  pesan = data_commit[5]
 }
 console.table({
   hash: data_commit[0].replace("commit ", ""),
-  penulis: penulis.replace("Author: ", ""), 
+  penulis: penulis.replace("Author: ", ""),
   waktu: new Date(waktu.replace("Date:", "").trim()).toLocaleString('id-ID', {
     timeZone: 'Asia/Jakarta',
     timeStyle: "long",
-    dateStyle:"full"
-  }), 
+    dateStyle: "full"
+  }),
   pesan: pesan.trim(),
 })
 // console.table(process.env)
-app.get('/',(req, res) => {
-  res.json({msg:'Hello!'});
+app.get('/', (req, res) => {
+  res.json({ msg: 'Hello!' });
 });
 
-server.listen(process.env.PORT,'0.0.0.0', () => {
-  console.log(`Aplikasi berjalan di port ${ process.env.PORT }`);
+server.listen(process.env.PORT, '0.0.0.0', () => {
+  console.log(`Aplikasi berjalan di port ${process.env.PORT}`);
 });
 
