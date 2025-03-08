@@ -116,7 +116,7 @@ module.exports = {
       user_permission.push(itera.permission.guard_name)
     }
     let token = generator.generateAccessToken(
-      { uuid: results.uuid, email: results.email, name: results.name},
+      { uuid: results.uuid, identity_number: results.identity_number, email: results.email, name: results.name},
       process.env.SECRET_TOKEN
     );
     return utils.createResponse(res, 200, "Success", "Login berhasil!", "/user/login", { token: token, name: results.name, uuid: results.uuid, avatar: results.avatar, bbox: results.bbox, user_roles:user_roles, user_permission: user_permission});

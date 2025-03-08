@@ -5,29 +5,21 @@ const minio_client = require('../minioClient');
 
 require('dotenv').config();
 
-const timeToHuman = (time) => {
-    let s = new Date(time).toLocaleString('id-ID', {
-        timeZone: 'Asia/Jakarta',
-        timeStyle: "long",
-        dateStyle: "full"
-    })
-    return s
-}
 const replaceText = (text, replacements) => {
     Object.keys(replacements).forEach((key) => {
         text = text.replace(new RegExp(`\\$${key}`, 'g'), replacements[key]);
     });
     return text;
 };
-const createResponse = (res, status, title, detail, instance, data=undefined) => {
-    responseData = {} 
+const createResponse = (res, status, title, detail, instance, data = undefined) => {
+    let responseData = {}; 
     responseData.title = title;
     responseData.detail = detail;
     responseData.instance = instance;
     responseData.container_id = process.env.CONTAINER_ID;
     responseData.timestamp = new Date().toISOString();
-    if(data){
-        responseData.data = data
+    if (data) {
+        responseData.data = Array.isArray(data) ? data : [data];
     }
     res.status(status).json(responseData);
 };
@@ -99,7 +91,7 @@ const makeDesign = (designName, fgImg, fgBBOX, overlayData = {}) => {
     return new Promise(async (resolve, reject) => {
         const fsp = fs.promises;
         try {
-            const directoryPath = path.join(__dirname, 'design_template', designName);
+            const directoryPath = path.join(__dirname, '../design_template', designName);
             const configPath = path.join(directoryPath, 'config.json');
             const bgPath = path.join(directoryPath, 'bg.jpg');
             const maskPath = path.join(directoryPath, 'mask.png');
@@ -171,12 +163,29 @@ const makeDesign = (designName, fgImg, fgBBOX, overlayData = {}) => {
                 .jpeg()
                 .toBuffer();
 
-            resolve(finalImageBuffer); // Kembalikan buffer gambar
+            resolve(finalImageBuffer);
         } catch (err) {
-            reject(err); // Tangkap error dan lemparkan kembali
+            reject(err);
         }
     });
 };
+
+const calculateAge = (birthday) => {
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+  
+    // Jika belum ulang tahun tahun ini, kurangi umur dengan 1
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+  
+    return age;
+  }
 
 module.exports = {
     verifyImage: async (base64String) => {
@@ -210,11 +219,16 @@ module.exports = {
         return buffer
     },
 
-    saveImage: async (base64String, filePath, bucketName = process.env.MINIO_BUCKET_NAME) => {
-        const buffer = makeBufferFromBase64(base64String);
+    saveImage: async (file, filePath, bucketName = process.env.MINIO_BUCKET_NAME) => {
+        let buffer;
+        if(Buffer.isBuffer(file)){
+            buffer = file
+        }else{
+            buffer = makeBufferFromBase64(file);
+        }
         try {
             await minio_client.putObject(bucketName, filePath, buffer, buffer.length);
-            console.log(`Gambar berhasil disimpan di minio dengan path: ${filePath}`);
+            console.log(`Gambar berhasil disimpan di minio (${bucketName}) dengan path: ${filePath}`);
         } catch (e) {
             console.error(`Gagal menyimpan gambar ke minio: ${e} (${bucketName})`)
             console.table(minio_client)
@@ -295,5 +309,5 @@ module.exports = {
             token: generat.generateString(8)
         })
     },
-    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, timeToHuman
+    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge
 }

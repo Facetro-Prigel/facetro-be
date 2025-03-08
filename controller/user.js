@@ -6,6 +6,9 @@ const axios = require("axios");
 const role_utils = require("../helper/role_utils");
 const minioClient = require('../minioClient')
 const prisma = new PrismaClient();
+
+
+
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
@@ -164,83 +167,61 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 }
 module.exports = {
   birthday_image: async (req, res) => {
-    var uuid = req.params.uuid;
-    isExist = await prisma.user.findUnique({
-      where: {
-        uuid: uuid,
-        AND: [
-          {
-            birthday_photo: {
-              not: null,
-            },
-          },
-          {
-            birthday_photo: {
-              not: "",
-            },
-          },
-          {
-            birthday_bbox: {
-              not: null,
-            },
-          },
-          {
-            birthday_bbox: {
-              not: "",
-            },
-          },
-        ],
-      },
-      select: {
-        name: true,
-        birthday: true,
-        birthday_photo: true,
-        birthday_bbox: true,
-      }
-    });
-    if (!isExist) {
-      return res.sendFile('/home/app/no_images.png')
-    }
+    const path = require('path');
+    const defaultImagePath =  path.join(__dirname, '../no_images.png'); 
     try {
-      const stream = await minioClient.getObject('birthday', isExist.birthday_photo);
-      const chunks = [];
-      for await (const chunk of stream) {
-        chunks.push(chunk);
-      }
-      buffer = Buffer.concat(chunks);
-      let BirthdayCard = await utils.MakeBirthdayCard(buffer, isExist.birthday, isExist.name, isExist.birthday_bbox)
-      res.set("Content-Type", "image/jpeg");
-      return res.send(BirthdayCard);
-    } catch (error) {
-      console.log(error)
-      return res.sendFile('/home/app/no_images.png')
-    }
-  },
-  updload_birthday: async (req, res) => {
-    let image = req.body.image
-    let uuid = req.body.uuid
-    let datas = {}
-    let config_u = { headers: { "Content-Type": "application/json", } }
-    await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
-      datas = res.data
-    }).catch((e) => {
-      return utils.createResponse(res, 401, "Unauthorized", "Tidak ada atau terdapat banyak wajah!", `/birthday`);
-    })
-    try {
-      requestImagePath = `${genPass.generateString(15)}.png`
-      utils.saveImage(image, requestImagePath, 'birthday')
-      datas.image_path = requestImagePath
-      await prisma.user.update({
+      const uuid = req.params.uuid;  
+      const birthdayData = await prisma.user.findUnique({
         where: { uuid: uuid },
-        data: {
-          birthday_photo: requestImagePath,
-          birthday_bbox: datas.bbox
+        select: {
+          name: true,
+          avatar: true,
+          bbox: true,
+          user_details: {
+            select: {
+              birthday: true,
+            },
+          },
+        },
+      }); 
+      if (!birthdayData || !birthdayData.user_details?.birthday) {
+        return res.sendFile(defaultImagePath);
+      }
+      try {
+        const stream = await minioClient.getObject('design', 'birthday_'+birthdayData.avatar);
+        const chunks = [];
+        for await (const chunk of stream) {
+          chunks.push(chunk);
         }
-      })
-      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/birthday`);
-    } catch (e) {
-      console.error("gagal menyimpan gambar")
-      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/birthday`);
+        let img = Buffer.concat(chunks);
+        res.set("Content-Type", "image/jpeg");
+        return res.send(img);
+      } catch (error) {
+        try {
+          const birthday = birthdayData.user_details.birthday;
+          const age = utils.calculateAge(birthday);
+          const stream = await minioClient.getObject('transparent', birthdayData.avatar.replace('.jpg', '.png'));
+          const chunks = [];
+          for await (const chunk of stream) {
+            chunks.push(chunk);
+          }
+          let transparent = Buffer.concat(chunks);
+          let BirthdayCard = await utils.makeDesign('birthday', transparent, birthdayData.bbox, {
+            'date': new Date(birthday).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: "long" }),
+            'name': birthdayData.name, 
+            'age': age
+          })
+          utils.saveImage(BirthdayCard,  'birthday_'+birthdayData.avatar, 'design')
+          res.set("Content-Type", "image/jpeg");
+          return res.send(BirthdayCard);
+        } catch (error) {
+          console.log('fatal transparnt not aviable', error);
+          return res.sendFile(defaultImagePath); 
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error.message);
+      return res.sendFile(defaultImagePath);
     }
   },
   unnes_image: async (req, res) => {
@@ -272,13 +253,30 @@ module.exports = {
     let datas = {}
     let config_u = { headers: { "Content-Type": "application/json", } }
     await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
-      datas = res.data
+      datas = res.data.data[0]
     }).catch((e) => {
       return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
     })
     try {
-      requestImagePath = `photos/${genPass.generateString(23)}.jpg`
-      utils.saveImage(image, requestImagePath)
+      requestImagePath = `${genPass.generateString(23)}.jpg`
+      utils.saveImage(image, requestImagePath, 'photos')
+      
+      // Avatar Generator
+      axios.patch(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
+        let avatar = res.data.data[0].croppedImage
+        utils.saveImage(avatar, requestImagePath, 'avatar')
+      }).catch((e) => {
+        console.error(e);
+      })
+      
+      // transparent Generator
+      axios.post(`${process.env.ML_URL}remove_bg`, { image: image }, config_u).then((res) => {
+        let transparent = res.data.data[0]
+        utils.saveImage(transparent, requestImagePath.replace('.jpg', '.png'), 'transparent')
+      }).catch((e) => {
+        console.error(e);
+      })
+
       datas.image_path = requestImagePath
       let uuid = await prisma.tempData.create({ data: { data: datas } })
       return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/image`, { file_uuid: uuid.uuid, path: datas.image_path })

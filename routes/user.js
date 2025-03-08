@@ -1,12 +1,11 @@
 const express = require("express");
 const route = express.Router();
-const { getter_all, getter, deleteUser, insert, update, updload_image, unnes_image, birthday_image, updload_birthday } = require('../controller/user')
+const { getter_all, getter, deleteUser, insert, update, updload_image, unnes_image, birthday_image } = require('../controller/user')
 const { login, change_password } = require('../controller/authuser')
 const { authorization } = require('../middleware')
 route.delete("/:uuid",authorization('user_delete'), deleteUser)
 route.get("/", authorization('user_get_multi'),getter_all)
 route.get('/birthday/:uuid', authorization('user_get'), birthday_image)
-route.post('/birthday', authorization(), updload_birthday)
 route.post("/image", authorization(),updload_image)
 route.post("/unnes", authorization(),unnes_image)
 route.get("/:uuid", authorization('user_get'), getter)
