@@ -76,6 +76,7 @@ const checkPermission = async (user, text) => {
 }
 exports.authorization = (text = '', child_permission = []) => {
   return (req, res, next) => {
+    console.info('terhit')
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]
     if ((token == null) || (authHeader.split(' ')[0] != 'Bearer')) return createResponse(res, 401, "Unauthorized", "Akses Tidak Sah!", req.route)

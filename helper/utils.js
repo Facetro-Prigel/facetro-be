@@ -231,7 +231,6 @@ module.exports = {
             console.log(`Gambar berhasil disimpan di minio (${bucketName}) dengan path: ${filePath}`);
         } catch (e) {
             console.error(`Gagal menyimpan gambar ke minio: ${e} (${bucketName})`)
-            console.table(minio_client)
         }
     },
     fileToBase64: (filePath) => {
@@ -309,5 +308,5 @@ module.exports = {
             token: generat.generateString(8)
         })
     },
-    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge
+    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence
 }

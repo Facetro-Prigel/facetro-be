@@ -59,7 +59,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
   let data = {
     email: req.body.email,
     name: req.body.name,
-    identity_number: req.body.identity_number,
+    identity_number: req.body.identity_number.toString(),
     telegram_id: parseInt(req.body.telegram_id),
     telegram_token: genPass.generateString(10),
     nfc_data: req.body.nfc_data
@@ -103,18 +103,18 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
       })
     }
   }
-  if (req.asign_user_to_permision && req.body.permission) {
+  if (req.asign_user_to_permision && req.body.permission_user) {
     data.permission_user = {
-      create: req.body.permission.map((permissionItems) => {
+      create: req.body.permission_user.map((permissionItems) => {
         if (permissionItems != "") {
           return { permission: { connect: { uuid: permissionItems } } }
         }
       })
     }
   }
-  if (req.asign_user_to_role && req.body.role) {
+  if (req.asign_user_to_role && req.body.role_user) {
     data.role_user = {
-      create: req.body.role.map((roleItems) => {
+      create: req.body.role_user.map((roleItems) => {
         if (roleItems != "") {
           return { role: { connect: { uuid: roleItems } } }
         }
@@ -185,7 +185,7 @@ module.exports = {
         },
       }); 
       if (!birthdayData || !birthdayData.user_details?.birthday) {
-        return res.sendFile(defaultImagePath);
+        return utils.createResponse(res, 400, "Bad Request", "Pengguna belum mengisikan tanggal lahir!", `/birthday/${uuid}`);
       }
       try {
         const stream = await minioClient.getObject('design', 'birthday_'+birthdayData.avatar);
@@ -194,8 +194,9 @@ module.exports = {
           chunks.push(chunk);
         }
         let img = Buffer.concat(chunks);
-        res.set("Content-Type", "image/jpeg");
-        return res.send(img);
+        const base64Image = Buffer.from(img, 'binary').toString('base64');
+        const base64Data = `data:image/jpeg;base64,${base64Image}`;
+        return utils.createResponse(res, 200, "Success", "Gambar birthday berhasil diambil", `/birthday/${uuid}`, base64Data);
       } catch (error) {
         try {
           const birthday = birthdayData.user_details.birthday;
@@ -208,26 +209,27 @@ module.exports = {
           let transparent = Buffer.concat(chunks);
           let BirthdayCard = await utils.makeDesign('birthday', transparent, birthdayData.bbox, {
             'date': new Date(birthday).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: "long" }),
-            'name': birthdayData.name, 
+            'name': utils.transformSentence(birthdayData.name), 
             'age': age
           })
           utils.saveImage(BirthdayCard,  'birthday_'+birthdayData.avatar, 'design')
-          res.set("Content-Type", "image/jpeg");
-          return res.send(BirthdayCard);
+          const base64Image = Buffer.from(BirthdayCard, 'binary').toString('base64');
+          const base64Data = `data:image/jpeg;base64,${base64Image}`;
+          return utils.createResponse(res, 200, "Success", "Gambar birthday berhasil diambil", `/birthday/${uuid}`, base64Data);
         } catch (error) {
           console.log('fatal transparnt not aviable', error);
-          return res.sendFile(defaultImagePath); 
+          return utils.createResponse(res, 500, "Internal Server Error", "Gambar frontground tidak ada!", `/birthday/${uuid}`);
         }
       }
     } catch (error) {
       console.error("Error:", error.message);
-      return res.sendFile(defaultImagePath);
+      return utils.createResponse(res, 500, "Internal Server Error", "Fatal Error!", `/birthday/${uuid}`);
     }
   },
   unnes_image: async (req, res) => {
+    const identity_number = req.body.identity_number
     try {
       console.log(JSON.stringify(req.body));
-      const identity_number = req.body.identity_number
       let url = `${process.env.UNNES_API}/primer/user_ava/${identity_number}/541.aspx`
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
@@ -241,48 +243,121 @@ module.exports = {
       if (mimeType == 'image-png') {
         return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
       }
-
       return utils.createResponse(res, 200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
     } catch (error) {
       return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
     }
 
   },
-  updload_image: async (req, res) => {
-    let image = req.body.image
-    let datas = {}
-    let config_u = { headers: { "Content-Type": "application/json", } }
-    await axios.post(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
-      datas = res.data.data[0]
-    }).catch((e) => {
-      return utils.createResponse(res, 400, "Bad Request", "Tidak ada atau terdapat banyak wajah!", `/image`);
-    })
+  upload_image: async (req, res) => {
     try {
-      requestImagePath = `${genPass.generateString(23)}.jpg`
-      utils.saveImage(image, requestImagePath, 'photos')
-      
-      // Avatar Generator
-      axios.patch(`${process.env.ML_URL}build`, { image: image }, config_u).then((res) => {
-        let avatar = res.data.data[0].croppedImage
-        utils.saveImage(avatar, requestImagePath, 'avatar')
-      }).catch((e) => {
-        console.error(e);
-      })
-      
-      // transparent Generator
-      axios.post(`${process.env.ML_URL}remove_bg`, { image: image }, config_u).then((res) => {
-        let transparent = res.data.data[0]
-        utils.saveImage(transparent, requestImagePath.replace('.jpg', '.png'), 'transparent')
-      }).catch((e) => {
-        console.error(e);
-      })
-
-      datas.image_path = requestImagePath
-      let uuid = await prisma.tempData.create({ data: { data: datas } })
-      return utils.createResponse(res, 201, "Created", "gambar berhasil disimpan", `/image`, { file_uuid: uuid.uuid, path: datas.image_path })
-    } catch (e) {
-      console.error("gagal menyimpan gambar")
-      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/image`);
+      // Validasi input
+      const { image } = req.body;
+      if (!image) {
+        return utils.createResponse(res, 400, "Bad Request", "Gambar tidak ditemukan!", "/user/image");
+      }
+  
+      // Konfigurasi Axios
+      const config_u = { headers: { "Content-Type": "application/json" } };
+  
+      // Step 1: Kirim gambar ke endpoint ML untuk diproses
+      let mlResponse;
+      try {
+        mlResponse = await axios.post(`${process.env.ML_URL}build`, { image }, config_u);
+      } catch (mlError) {
+        console.error("ML Build Error:", mlError.message || mlError);
+        return utils.createResponse(
+          res,
+          400,
+          "Bad Request",
+          "Tidak ada atau terdapat banyak wajah!",
+          "/user/image"
+        );
+      }
+  
+      // Ambil data hasil pemrosesan ML
+      const { data: mlData } = mlResponse;
+      if (!mlData || !mlData.data || mlData.data.length === 0) {
+        return utils.createResponse(
+          res,
+          400,
+          "Bad Request",
+          "Data wajah tidak valid!",
+          "/user/image"
+        );
+      }
+  
+      const processedData = mlData.data[0];
+  
+      // Step 2: Simpan gambar asli
+      const requestImagePath = `${genPass.generateString(23)}.jpg`;
+      utils.saveImage(image, requestImagePath, "photos");
+  
+      // Step 3: Generate avatar dengan menambahkan query string `type=profile`
+      try {
+        const avatarResponse = await axios.patch(
+          `${process.env.ML_URL}build?type=profile`,
+          { image },
+          config_u
+        );
+        const avatar = avatarResponse.data.data[0].croppedImage;
+        utils.saveImage(avatar, requestImagePath, "avatar");
+      } catch (avatarError) {
+        console.error("Avatar Generation Error:", avatarError.message || avatarError);
+      }
+  
+      // Step 4: Generate gambar transparan (remove background)
+      try {
+        const transparentResponse = await axios.post(
+          `${process.env.ML_URL}remove_bg`,
+          { image },
+          config_u
+        );
+        const transparent = transparentResponse.data.data[0];
+        utils.saveImage(
+          transparent,
+          requestImagePath.replace(".jpg", ".png"),
+          "transparent"
+        );
+      } catch (transparentError) {
+        console.error("Transparent Background Error:", transparentError.message || transparentError);
+      }
+  
+      // Step 5: Simpan data ke database
+      try {
+        processedData.image_path = requestImagePath;
+        const uuid = await prisma.tempData.create({
+          data: { data: processedData },
+        });
+  
+        // Return success response
+        return utils.createResponse(
+          res,
+          201,
+          "Created",
+          "Gambar berhasil disimpan!",
+          "/user/image",
+          { file_uuid: uuid.uuid, path: processedData.image_path }
+        );
+      } catch (dbError) {
+        console.error("Database Error:", dbError.message || dbError);
+        return utils.createResponse(
+          res,
+          500,
+          "Internal Server Error",
+          "Terjadi kesalahan saat menyimpan data ke database",
+          "/user/image"
+        );
+      }
+    } catch (error) {
+      console.error("General Error:", error.message || error);
+      return utils.createResponse(
+        res,
+        500,
+        "Internal Server Error",
+        "Terjadi kesalahan saat memproses permintaan",
+        "/user/image"
+      );
     }
   },
   getter_all: async (req, res) => {

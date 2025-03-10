@@ -8,7 +8,7 @@ const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
 const minioClient = require('./minioClient')
-const prisma = new PrismaClient();
+const utils = require('./helper/utils');
 
 app.get('/avatar/:filename', async (req, res) => {
   const filename = req.params.filename;
@@ -19,9 +19,9 @@ app.get('/avatar/:filename', async (req, res) => {
   const origin = req.get('Origin');
   
   // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
-  if (!referer && !origin) {
-    return res.redirect(link_404);
-  }
+  // if (!referer && !origin) {
+  //   return res.redirect(link_404);
+  // }
   try {
     const responseStream = await minioClient.getObject('avatar', filename);
     res.set('Content-Type', 'image/jpeg');
@@ -89,73 +89,6 @@ BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();
 };
-
-// const hapus = async (req, res, model) =>{
-//   const id = req.params.uuid
-//   const call = eval('prisma.'+model)
-//   const results = await call.delete({
-//       where:{
-//         uuid:id
-//     }
-//   });
-//   res.send(results);
-// }
-
-// const tambah = async (req, res, model) =>{
-//   const id = req.body
-//   const call = eval('prisma.'+model)
-//   const results = await call.create({
-//     data:id
-//   })
-//   res.send(results);
-// }
-
-// const perbarui = async (req, res, model) => {
-//   const id = req.params.uuid;
-//   const post = req.body;
-//   const call = eval('prisma.' + model);
-//   const results = await call.update({
-//     where: { uuid: id },
-//     data: post
-//   });
-//   res.send(results);
-// };
-
-// const tampilkan = async (req, res, model) => {
-//   const id = req.params.uuid;
-//   const call = eval('prisma.' + model);
-//   const results = await call.findUnique({
-//     where: { uuid: id }
-//   });
-//   res.send(results);
-// };
-
-// const tampilkansemua = async (req, res, model) => {
-//   const call = eval('prisma.' + model);
-//   const results = await call.findMany();
-//   res.send(results);
-// };
-
-// const method = ['user', 'role', 'permission', 'group', 'device'];
-// method.forEach(element => {
-//   app.delete(`/${element}/:uuid`, async (req, res) => {
-//     hapus(req, res, element);
-//   });
-//   app.post(`/${element}`, async (req, res) => {
-//     tambah(req, res, element);
-//   });
-//   app.put(`/${element}/:uuid`, async (req, res) => {
-//     perbarui(req, res, element);
-//   });
-//   app.get(`/${element}/:uuid?`, async (req, res) => {
-//     const id = req.params.uuid;
-//     if (id) {
-//       tampilkan(req, res, element);
-//     } else {
-//       tampilkansemua(req, res, element);
-//     }
-//   });
-// });
 console.info("=======Bejalan Menggunakan Versi=======")
 let data_commit = execSync("git show --summary").toString().split(/\r?\n/)
 let penulis = data_commit[1]
@@ -179,7 +112,7 @@ console.table({
 })
 // console.table(process.env)
 app.get('/', (req, res) => {
-  res.json({ msg: 'Hello!' });
+  utils.createResponse(res, 200, 'success', 'Hello!')
 });
 
 server.listen(process.env.PORT, '0.0.0.0', () => {
