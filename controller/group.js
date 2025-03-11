@@ -114,31 +114,34 @@ module.exports = {
     
     insert: async (req, res) => {
         try {
-            await prisma.group.create({
+
+            let data
+            data = {
                 data: {
                     name: req.body.name,
-                    locations: req.body.location,
+                    locations: req.body.locations,
                     users: {
                         connect: {
-                            uuid: req.body.notify_to
+                            uuid: req.body.users
                         }
-                    },
-                    presence_group:{
-                        create: req.body.presence_device.map((projectItems) => {
-                            if (projectItems != "") {
-                              return { device: { connect: { uuid: projectItems } } }
-                            }
-                          })
-                    },
-                    door_group:{
-                        create: req.body.door_device.map((projectItems) => {
-                            if (projectItems != "") {
-                              return { device: { connect: { uuid: projectItems } } }
-                            }
-                          })
-                    },
+                    }
                 }
-            })
+            }
+            if(req.body.door_device){
+                data.data.door_group= {create:req.body.door_device.map((projectItems) => {
+                    if (projectItems != "") {
+                      return { device: { connect: { uuid: projectItems } } }
+                    }
+                  })}
+            }
+            if(req.body.presence_device){
+                data.data.presence_group = {create:req.body.presence_device.map((projectItems) => {
+                    if (projectItems != "") {
+                      return { device: { connect: { uuid: projectItems } } }
+                    }
+                  })}
+            }
+            await prisma.group.create(data)
         } catch (error) {
             console.error("Error while inserting group:", error);
             return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/group");
@@ -170,21 +173,34 @@ module.exports = {
             }
             let data ={
                 name: req.body.name,
-                locations: req.body.location,
+                locations: req.body.locations,
             } 
-            if(req.body.device){
-                data.device =  {
+            if(req.body.users){
+                data.users = {
                     connect: {
-                        uuid: req.body.device
+                        uuid: req.body.users
                     }
                 }
             }
-            if(req.body.notify_to){
-                data.users = {
-                    connect: {
-                        uuid: req.body.notify_to
+            if(req.body.door_device){
+                await prisma.doorGroup.deleteMany({
+                    where: { group_uuid: uuid }
+                  })
+                data.door_group= {create:req.body.door_device.map((projectItems) => {
+                    if (projectItems != "") {
+                      return { device: { connect: { uuid: projectItems } } }
                     }
-                }
+                  })}
+            }
+            if(req.body.presence_device){
+                await prisma.presenceGroup.deleteMany({
+                    where: { group_uuid: uuid }
+                  })
+                data.presence_group = {create:req.body.presence_device.map((projectItems) => {
+                    if (projectItems != "") {
+                      return { device: { connect: { uuid: projectItems } } }
+                    }
+                  })}
             }
             await prisma.group.update({
                 where:{
