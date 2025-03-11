@@ -64,7 +64,7 @@ module.exports = {
       console.error("Error while inserting device:", error);
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device");
     }
-    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", "/device", { data: isExist });
+    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", "/device", isExist);
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
@@ -97,7 +97,7 @@ module.exports = {
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}`);
     }
 
-    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", `/device/${uuid}`, { data: isExist });
+    return utils.createResponse(res, 200, "Success", "Device berhasil ditemukan", `/device/${uuid}`, isExist );
   },
 
   insert: async (req, res) => {
@@ -105,7 +105,7 @@ module.exports = {
       let token = req.body.token ?? generator.generateString(6)
       let data = {
         name: req.body.name,
-        locations: req.body.location,
+        locations: req.body.locations,
         token: token
       }
       let identityKey = generator.generateString(10)

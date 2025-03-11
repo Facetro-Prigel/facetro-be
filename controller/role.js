@@ -21,9 +21,9 @@ const inputInsertUpdate = async (req) => {
     name: req.body.name,
     description: req.body.description
   }
-  if (req.asign_role_to_permision && req.body.permisions) {
+  if (req.asign_role_to_permision && req.body.permission_role) {
     data.permission_role = {
-      create: req.body.permisions
+      create: req.body.permission_role
         .filter(permission_uuid => permission_uuid !== "")
         .map(permission_uuid => ({ permission: { connect: { uuid: permission_uuid } } }))
     }
