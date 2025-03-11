@@ -5,6 +5,7 @@ const utils = require('../helper/utils')
 const { bot } = require('../helper/telegram')
 const axios = require('axios')
 const role_utils = require('../helper/role_utils');
+const { quote } = require('telegraf/format')
 const prisma = new PrismaClient()
 require('dotenv').config();
 
@@ -349,7 +350,22 @@ module.exports = {
     }
   },
   getLog: async (req, res) => {
-    let logDatas = await prisma.log.findMany({
+    const pageNumber = parseInt(req.query.page);
+    const limitNumber = parseInt(req.query.limit);
+    if (isNaN(pageNumber) || isNaN(limitNumber) || pageNumber < 1 || limitNumber < 1) {
+      return utils.createResponse(res, 400, 'Bad Request!', `Anda harus menyertakan halaman dan berapa banyak yang ditampilakan!`, '/log');
+    }
+    const countQuery = {
+      where: {
+        user_uuid: req.user.uuid
+      }
+    }
+    const defaultQuery = {
+      where: {
+        user_uuid: req.user.uuid
+      },
+      take: limitNumber,
+      skip: ((pageNumber-1)*limitNumber), 
       orderBy: [
         {
           created_at: 'desc'
@@ -359,6 +375,7 @@ module.exports = {
         is_match: true,
         image_path: true,
         bbox: true,
+        type: true,
         user: {
           select: {
             name: true,
@@ -381,24 +398,32 @@ module.exports = {
           }
         }
       }
-    })
+    }
+    if (req.show_other_log) {
+      delete defaultQuery.where
+      delete countQuery.where
+      console.info('showOther')
+    }
+    let total_records = await prisma.log.count(countQuery)
+    let logDatas = await prisma.log.findMany(defaultQuery)
     let showLogs = [];
+
     for (const log of logDatas) {
       showLogs.push({
         name: log.user.name,
-        nim: log.user.identity_number,
+        identity_number: log.user.identity_number,
         device: log.device.name,
         image: log.image_path,
         bbox: log.bbox,
-        type: log.type,
-        isMatch: log.is_match,
-        inTime: log.created_at,
+        type: log.type == 'Door' ? 'Door' : `Presence (${log.type})`,
+        is_match: log.is_match,
+        in_time: log.created_at,
         group: log.user.user_group.map((uy) => {
           return uy.group.name
         })
       })
     }
-    return utils.createResponse(res, 200, 'Success!', `Berhasil Mengambil Logs!`, '/log', showLogs)
+    return utils.createResponse(res, 200, 'Success!', `Berhasil Mengambil Logs!`, '/log', { data: showLogs, total_records })
   },
   recognation: async (req, res) => {
     try {
@@ -701,8 +726,8 @@ module.exports = {
       let isExist = await prisma.user.findUnique({
         where: {
           uuid: updatedLog.user_uuid
-        }, select:{
-          name:true,
+        }, select: {
+          name: true,
           identity_number: true,
           role_user: {
             select: {
@@ -718,18 +743,18 @@ module.exports = {
               group: {
                 select: {
                   name: true,
-                  users:{
-                    select:{
-                      telegram_id:true
+                  users: {
+                    select: {
+                      telegram_id: true
                     }
                   }
                 }
               }
             }
           },
-          user_details:{
-            select:{
-              program_study:true,
+          user_details: {
+            select: {
+              program_study: true,
               batch: true
             }
           },
@@ -760,10 +785,10 @@ module.exports = {
           },
         });
         let endCaptions, endTimeToHuman
-        let startTimeToHuman =  utils.timeToHuman(logs[0].created_at);
+        let startTimeToHuman = utils.timeToHuman(logs[0].created_at);
         if (logs.length > 1) {
-          endTimeToHuman = utils.timeToHuman(logs[logs.length-1].created_at)
-          let timeDiff = utils.countDiff(logs[logs.length-1].created_at - logs[0].created_at)
+          endTimeToHuman = utils.timeToHuman(logs[logs.length - 1].created_at)
+          let timeDiff = utils.countDiff(logs[logs.length - 1].created_at - logs[0].created_at)
           endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`
         }
         let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
@@ -794,7 +819,7 @@ module.exports = {
         notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
         notify_to = new Set(notify_to)
         const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
-        makeTelegramNotification(image, {isMatch:true, bbox: responseData.bbox}, nameImage, telegramParams)
+        makeTelegramNotification(image, { isMatch: true, bbox: responseData.bbox }, nameImage, telegramParams)
       }
 
       const io = req.app.get('socketio');

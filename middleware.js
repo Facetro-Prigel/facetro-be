@@ -89,12 +89,12 @@ exports.authorization = (text = '', child_permission = []) => {
           permission_name = await prisma.permission.findUnique({ where: { guard_name: text }, select: { name: true } })
           return createResponse(res, 403, "Forbidden", `Anda tidak memiliki izin untuk melakukan'${permission_name.name ?? text}'`, req.route)
         }
-        if (child_permission.length) {
-          for (const permission_i of child_permission) {
-            let thare_child_premission = await checkPermission(user, permission_i)
-            if (thare_child_premission) {
-              req[permission_i] = true
-            }
+      }
+      if (child_permission.length) {
+        for (const permission_i of child_permission) {
+          let thare_child_premission = await checkPermission(user, permission_i)
+          if (thare_child_premission) {
+            req[permission_i] = true
           }
         }
       }

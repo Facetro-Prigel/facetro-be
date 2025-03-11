@@ -290,7 +290,6 @@ module.exports = {
     });
 
     let latestModifiedAt = nfc_data?.group?.usergroup[0]?.user?.modified_at || null;
-    console.log(latestModifiedAt);
 
     if (!nfc_data) {
       return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`);

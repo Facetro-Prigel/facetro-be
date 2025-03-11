@@ -228,7 +228,7 @@ module.exports = {
         }
         try {
             await minio_client.putObject(bucketName, filePath, buffer, buffer.length);
-            console.log(`Gambar berhasil disimpan di minio (${bucketName}) dengan path: ${filePath}`);
+            console.info(`Gambar berhasil disimpan di minio (${bucketName}) dengan path: ${filePath}`);
         } catch (e) {
             console.error(`Gagal menyimpan gambar ke minio: ${e} (${bucketName})`)
         }
@@ -260,7 +260,7 @@ module.exports = {
                     console.error('Gagal menyalin dan mengubah nama gambar:', err);
                     return;
                 }
-                console.log('File berhasil disalin dan nama diubah.');
+                console.info('File berhasil disalin dan nama diubah.');
             });
         });
     },

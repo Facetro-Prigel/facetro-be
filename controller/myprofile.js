@@ -39,7 +39,7 @@ const inputInsertUpdate = async (req) => {
     }
   }
   if (Object.keys(errorVali).length) {
-    console.log(errorVali)
+    console.error(errorVali)
     return { status: false, msg: 'Check kembali masukan data anda!', validateError: errorVali }
   }
 
@@ -149,7 +149,7 @@ module.exports = {
           const base64Data = `data:image/jpeg;base64,${base64Image}`;
           return utils.createResponse(res, 200, "Success", "Gambar birthday berhasil diambil", `/birthday/${uuid}`, base64Data);
         } catch (error) {
-          console.log('fatal transparnt not aviable', error);
+          console.error('Fatal error transparnt not aviable', error);
           return utils.createResponse(res, 500, "Internal Server Error", "Gambar frontground tidak ada!", `/birthday/${uuid}`);
         }
       }

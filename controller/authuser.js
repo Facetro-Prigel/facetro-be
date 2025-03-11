@@ -60,6 +60,7 @@ module.exports = {
             select: {
                 role: {
                   select:{
+                    name: true,
                     guard_name: true,
                     permission_role:{
                       select:{
@@ -99,7 +100,7 @@ module.exports = {
     let user_roles = []
     let user_permission = []
     for (const ite of results.role_user) {
-      user_roles.push(ite.role.guard_name)
+      user_roles.push(ite.role.name)
       let permission = ite.role.permission_role
       if(ite.role.guard_name == 'super_admin'){
         permission = await prisma.permission.findMany()

@@ -20,14 +20,14 @@ const getFaceSignature = async (file) =>{
         data= {image:y}
         base64=y
     }).catch((error)=>{
-        console.log(`Convert Error in ${file}`)
+        console.error(`Convert Error in ${file}`)
     })
     await axios.post(`${ml_url}build`,data, config_u).then((res)=>{
         let datas = res.data
         bbox= datas.bbox
         signiture = datas.signatureData
     }).catch((e)=>{
-        console.log(`Request Error in ${file}`)
+        console.error(`Request Error in ${file}`)
     })
     return [bbox, signiture, base64]
 }

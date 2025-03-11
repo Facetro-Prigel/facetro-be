@@ -53,7 +53,6 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     }
   }
   if (Object.keys(errorVali).length) {
-    console.log(errorVali)
     return { status: false, msg: 'Check kembali masukan data anda!', validateError: errorVali }
   }
   let data = {
@@ -217,7 +216,7 @@ module.exports = {
           const base64Data = `data:image/jpeg;base64,${base64Image}`;
           return utils.createResponse(res, 200, "Success", "Gambar birthday berhasil diambil", `/birthday/${uuid}`, base64Data);
         } catch (error) {
-          console.log('fatal transparnt not aviable', error);
+          console.error('Fatal Error transparnt not aviable', error);
           return utils.createResponse(res, 500, "Internal Server Error", "Gambar frontground tidak ada!", `/birthday/${uuid}`);
         }
       }
@@ -229,7 +228,6 @@ module.exports = {
   unnes_image: async (req, res) => {
     const identity_number = req.body.identity_number
     try {
-      console.log(JSON.stringify(req.body));
       let url = `${process.env.UNNES_API}/primer/user_ava/${identity_number}/541.aspx`
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
@@ -491,7 +489,7 @@ module.exports = {
             nfc_data: null,
           },
         });
-        console.log('Update berhasil:', updatedPerson);
+        console.info('Update berhasil:', updatedPerson);
       } catch (error) {
         console.error('Error saat mengubah nfc_data:', error);
       }
@@ -538,7 +536,7 @@ module.exports = {
         data: data
       });
     } catch (error) {
-      console.log(error)
+      console.error(error)
       utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permisntaan", `/user/${uuid}`);
     }
     utils.webSockerUpdate(req)

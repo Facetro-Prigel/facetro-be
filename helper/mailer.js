@@ -26,7 +26,7 @@ module.exports = {
 sendMail:(data)=>{
     readHTMLFile('./index.html', async function(err, html) {
       if (err) {
-         console.log('error reading file', err);
+         console.error('error reading file', err);
          return;
       }
       //Name
@@ -43,7 +43,7 @@ sendMail:(data)=>{
         html: html, // html body
       });
     
-      console.log("Message sent: %s", info.messageId);
+      console.info("Message sent: %s", info.messageId);
     });
 }
 }

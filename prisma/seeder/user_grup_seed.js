@@ -39,7 +39,6 @@ exports.run = async () => {
             data: {
                 user_group: {
                     create: items.project.map((projectItems) => {
-                        console.log(projectItems)
                         return { group: { connect: { name: projectItems } } }
                     })
                 },

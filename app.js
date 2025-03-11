@@ -74,16 +74,16 @@ const io = new Server(server, {
 });
 app.set('socketio', io);
 io.on('connection', (socket) => {
-  console.log(`Pengguna (${socket.id}) terhubung ke websocket`);
+  console.info(`Pengguna (${socket.id}) terhubung ke websocket`);
   socket.on('disconnect', () => {
-    console.log(`Pengguna (${socket.id}), terputus ke websocket`);
+    console.info(`Pengguna (${socket.id}), terputus ke websocket`);
   });
 });
 io.on("connection_error", (err) => {
-  console.log(err.req);      // the request object
-  console.log(err.code);     // the error code, for example 1
-  console.log(err.message);  // the error message, for example "Session ID unknown"
-  console.log(err.context);  // some additional error context
+  console.error(err.req);      // the request object
+  console.error(err.code);     // the error code, for example 1
+  console.error(err.message);  // the error message, for example "Session ID unknown"
+  console.error(err.context);  // some additional error context
 });
 BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
@@ -94,7 +94,7 @@ let data_commit = execSync("git show --summary").toString().split(/\r?\n/)
 let penulis = data_commit[1]
 let waktu = data_commit[2]
 let pesan = data_commit[4]
-console.log(data_commit[1].indexOf("Merge:"))
+
 if (data_commit[1].indexOf("Merge:") != -1) {
   penulis = data_commit[2]
   waktu = data_commit[3]
@@ -116,6 +116,6 @@ app.get('/', (req, res) => {
 });
 
 server.listen(process.env.PORT, '0.0.0.0', () => {
-  console.log(`Aplikasi berjalan di port ${process.env.PORT}`);
+  console.info(`Aplikasi berjalan di 0.0.0.0 di port ${process.env.PORT}`);
 });
 
