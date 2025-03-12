@@ -8,7 +8,8 @@ require('dotenv').config();
 
 module.exports = {
   change_password: async (req, res) => {
-    const { uuid, old_password, new_password } = req.body;
+    const uuid = req.user.uuid
+    const { old_password, new_password } = req.body;
 
     if (!uuid || !old_password || !new_password) {
       return utils.createResponse(res, 400, "Bad Request", "Semua field (uuid, password lama, password baru) harus diisi!", "/user/change-password");
