@@ -63,17 +63,17 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     telegram_token: genPass.generateString(10),
     nfc_data: req.body.nfc_data
   };
+  let s = {
+    phone_number: req.body.phone_number,
+    program_study: req.body.program_study
+  }
+  if (req.body.batch != undefined) {
+    s.batch = parseInt(req.body.batch)
+  }
+  if (req.body.birthday) {
+    s.birthday = new Date(req.body.birthday)
+  }
   if (updateOrInsert == 'up') {
-    let s = {
-      phone_number: req.body.phone_number,
-      program_study: req.body.program_study
-    }
-    if (req.body.batch != undefined) {
-      s.batch = parseInt(req.body.batch)
-    }
-    if (req.body.birthday) {
-      s.birthday = new Date(req.body.birthday)
-    }
     data.user_details = {
       upsert: {
         create: s,
@@ -82,12 +82,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     };
   } else {
     data.user_details = {
-      create: {
-        phone_number: req.body.phone_number,
-        batch: parseInt(req.body.batch),
-        birthday: new Date(req.body.birthday),
-        program_study: req.body.program_study
-      }
+      create:s
     };
   }
   if (req.body.password) {
