@@ -7,28 +7,45 @@ const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
+const mime = require('mime-types');
 const minioClient = require('./minioClient')
 const utils = require('./helper/utils');
+
+app.use(cors());
 
 app.get('/avatar/:filename', async (req, res) => {
   const filename = req.params.filename;
 
-  const link_404 = process.env.FRONTEND_URL + "/404"
+  // Debugging: Log detail permintaan
+  console.log('Request for avatar:', filename);
+  console.log('Referer:', req.get('Referer'));
+  console.log('Origin:', req.get('Origin'));
 
+  // Cek referer atau origin untuk mencegah permintaan langsung
   const referer = req.get('Referer');
   const origin = req.get('Origin');
-  
-  // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
-  // if (!referer && !origin) {
-  //   return res.redirect(link_404);
-  // }
+  if (!referer && !origin) {
+      return res.status(403).send('Direct access forbidden'); // 403 Forbidden jika tidak ada referer/origin
+  }
+
   try {
-    const responseStream = await minioClient.getObject('avatar', filename);
-    res.set('Content-Type', 'image/jpeg');
-    responseStream.pipe(res);
+      // Ambil objek dari MinIO
+      const responseStream = await minioClient.getObject('avatar', filename);
+
+      // Deteksi tipe konten berdasarkan nama file
+      const contentType = mime.contentType(filename) || 'application/octet-stream';
+      res.set('Content-Type', contentType);
+
+      // Kirim stream gambar sebagai respons
+      responseStream.pipe(res);
   } catch (e) {
-    console.error('Error fetching image from minio: ', e);
-    res.redirect(link_404);  // Redirect jika gambar tidak ditemukan
+      // Tangani error berdasarkan jenis kesalahan
+      console.error('Error fetching image from MinIO:', e);
+      if (e.code === 'NoSuchKey') {
+          return res.status(404).send('Image not found'); // 404 jika file tidak ditemukan
+      } else {
+          return res.status(500).send('Internal Server Error'); // 500 untuk kesalahan server lainnya
+      }
   }
 });
 
@@ -60,9 +77,8 @@ app.get('/photos/:filename', async (req, res) => {
   }
 });
 
+
 // get config vars
-app.use(cors())
-//app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
@@ -85,6 +101,7 @@ io.on("connection_error", (err) => {
   console.error(err.message);  // the error message, for example "Session ID unknown"
   console.error(err.context);  // some additional error context
 });
+
 BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();
