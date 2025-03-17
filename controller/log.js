@@ -690,7 +690,7 @@ module.exports = {
         }
       })
       responseData.log_uuid = createLog.uuid
-      return utils.createResponse(res, 200, 'Succes', `Akses ${type} diizinkan!`, '/log/recog', responseData);
+      return utils.createResponse(res, 200, 'Succes', `Penggu Berhasil Ditemukan`, '/log/recog', responseData);
     } catch (error) {
       console.error(error);
       return utils.createResponse(res, 500, 'Internal Server Error', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/recog');
@@ -729,6 +729,7 @@ module.exports = {
         }, select: {
           name: true,
           identity_number: true,
+          telegram_id:true,
           role_user: {
             select: {
               role: {
@@ -797,8 +798,6 @@ module.exports = {
           program_study: "-",
           batch: '-'
         }
-
-
         // return utils.createResponse(res, 200, 'Succes!', `Data log telah dipesrbarui!`, '/log/afterRecog', isExist);
         if (isExist.user_details) {
           user_details.program_study = isExist.user_details.program_study
