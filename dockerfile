@@ -32,11 +32,11 @@ RUN mkfontscale && mkfontdir && \
 # Optionally, rebuild font cache
 RUN fc-cache -fv
 
-# Generate Prisma client
-RUN npx prisma generate
-
 # Install npm packages
 RUN npm install
+
+# Generate Prisma client
+RUN npx prisma generate
 
 # Set environment variables
 ENV PORT=3000

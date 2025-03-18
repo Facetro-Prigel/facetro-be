@@ -313,10 +313,11 @@ module.exports = {
           user_details.program_study = isExist.user_details.program_study
           user_details.batch = isExist.user_details.batch
         }
-        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n > `
-        captionForElse += utils.arrayToHuman(isExist.user_group.map((t) => {
-          return t.group.name
-        })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek:`
+        captionForElse += isExist.user_group.map((t) => {
+          return '\n> '+t.group.name;
+        }) 
+        captionForElse += `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
         captionForElse += endCaptions ?? ''
         // Send to Telegram!
         let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegram_id')
@@ -803,10 +804,11 @@ module.exports = {
           user_details.program_study = isExist.user_details.program_study
           user_details.batch = isExist.user_details.batch
         }
-        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n > `
-        captionForElse += utils.arrayToHuman(isExist.user_group.map((t) => {
-          return t.group.name
-        })) + `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n`
+        captionForElse += isExist.user_group.map((t) => {
+          return '\n>'+t.group.name;
+        }) 
+        captionForElse += `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
         captionForElse += endCaptions ?? ''
         // Send to Telegram!
         let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegram_id')
@@ -820,7 +822,6 @@ module.exports = {
         const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
         makeTelegramNotification(image, { isMatch: true, bbox: responseData.bbox }, nameImage, telegramParams)
       }
-
       const io = req.app.get('socketio');
       io.emit('logger update', {
         name: isExist.name,

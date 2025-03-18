@@ -1,8 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { PrismaClient } = require('@prisma/client')
 const allRoutes = require("./routes");
-const { Server } = require('socket.io');
+const { io: clientIO } = require("socket.io-client");
 const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
@@ -10,6 +9,16 @@ var cors = require('cors');
 const mime = require('mime-types');
 const minioClient = require('./minioClient')
 const utils = require('./helper/utils');
+
+const socket = clientIO((process.env.WEBSOCKET_URL || "http://localhost:3001"));
+
+socket.on("connect", () => {
+  console.info("Terhubung ke server WebSocket eksternal");
+});
+
+socket.on("connect_error", (error) => {
+  console.error("Gagal terhubung ke server WebSocket:", error);
+});
 
 app.use(cors());
 
@@ -82,26 +91,7 @@ app.get('/photos/:filename', async (req, res) => {
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ["GET", "POST", "OPTIONS"]
-  }
-});
-app.set('socketio', io);
-io.on('connection', (socket) => {
-  console.info(`Pengguna (${socket.id}) terhubung ke websocket`);
-  socket.on('disconnect', () => {
-    console.info(`Pengguna (${socket.id}), terputus ke websocket`);
-  });
-});
-io.on("connection_error", (err) => {
-  console.error(err.req);      // the request object
-  console.error(err.code);     // the error code, for example 1
-  console.error(err.message);  // the error message, for example "Session ID unknown"
-  console.error(err.context);  // some additional error context
-});
-
+app.set('socketio', socket);
 BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();
