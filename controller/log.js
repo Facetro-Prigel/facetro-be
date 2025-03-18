@@ -561,7 +561,7 @@ module.exports = {
           {
             "user_uuid": el.uuid,
             "signature": el.signature,
-            "file_path": el.avatar,
+            "image_path": el.avatar,
             "bbox": el.bbox
           }
         )
@@ -712,6 +712,7 @@ module.exports = {
         responseData = data.data[0]
       } catch (e) {
         console.error(e)
+        return utils.createResponse(res, 400, "Bad Request", data.detail, "/log/afterRecog");
       }
       const updatedData = {
         bbox: responseData.bbox,
