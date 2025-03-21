@@ -483,7 +483,7 @@ module.exports = {
             {
               "user_uuid": userData.uuid,
               "signature": userData.signature,
-              "file_path": userData.avatar,
+              "image_path": userData.avatar,
               "bbox": userData.bbox
             }
           )
@@ -712,10 +712,9 @@ module.exports = {
         responseData = data.data[0]
       } catch (e) {
         console.error(e)
-        return utils.createResponse(res, 400, "Bad Request", data.detail, "/log/afterRecog");
       }
       const updatedData = {
-        bbox: responseData.bbox,
+        bbox: responseData.bbox ?? [0, 0, 1],
         image_path: nameImage
       }
       const updatedLog = await prisma.log.update({
@@ -821,7 +820,7 @@ module.exports = {
         notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
         notify_to = new Set(notify_to)
         const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
-        makeTelegramNotification(image, { isMatch: true, bbox: responseData.bbox }, nameImage, telegramParams)
+        makeTelegramNotification(image, { isMatch: true, bbox: responseData.bbox ?? [0,0,1]}, nameImage, telegramParams)
       }
       const io = req.app.get('socketio');
       io.emit('logger update', {
@@ -831,7 +830,7 @@ module.exports = {
         })),
         device: req.device.name,
         photo: nameImage,
-        bbox: responseData.bbox,
+        bbox: responseData.bbox ?? [0,0,1],
         time: new Date()
       })
 
