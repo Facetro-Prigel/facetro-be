@@ -188,15 +188,16 @@ const calculateAge = (birthday) => {
   }
 
 module.exports = {
-    verifyImage: async (base64String) => {
+    verifyImage: async (base64String, size = true) => {
         if (!base64String.startsWith('data:image/jpeg;base64,')) {
             return false
         }
         const imageBuffer = Buffer.from(base64String.split(',')[1], 'base64');
         const metadata = await sharp(imageBuffer).metadata();
-        
-        if (metadata.width !== 160 || metadata.height !== 160) {
-            return false
+        if(size){
+            if (metadata.width !== 160 || metadata.height !== 160) {
+                return false
+            }
         }
         return true
     },
@@ -308,5 +309,9 @@ module.exports = {
             token: generat.generateString(8)
         })
     },
+    isValidUUID: (uuid) =>{
+        const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+        return uuidRegex.test(uuid);
+    }, 
     makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence
 }

@@ -2,10 +2,8 @@ const { PrismaClient } = require('@prisma/client')
 
 const generator = require('../helper/generator')
 const utils = require('../helper/utils')
-const { bot } = require('../helper/telegram')
 const axios = require('axios')
 const role_utils = require('../helper/role_utils');
-const { quote } = require('telegraf/format')
 const prisma = new PrismaClient()
 require('dotenv').config();
 
@@ -315,8 +313,8 @@ module.exports = {
         }
         captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek:`
         captionForElse += isExist.user_group.map((t) => {
-          return '\n> '+t.group.name;
-        }) 
+          return '\n> ' + t.group.name;
+        })
         captionForElse += `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
         captionForElse += endCaptions ?? ''
         // Send to Telegram!
@@ -366,7 +364,7 @@ module.exports = {
         user_uuid: req.user.uuid
       },
       take: limitNumber,
-      skip: ((pageNumber-1)*limitNumber), 
+      skip: ((pageNumber - 1) * limitNumber),
       orderBy: [
         {
           created_at: 'desc'
@@ -691,7 +689,7 @@ module.exports = {
         }
       })
       responseData.log_uuid = createLog.uuid
-      return utils.createResponse(res, 200, 'Succes', `Penggu Berhasil Ditemukan`, '/log/recog', responseData);
+      return utils.createResponse(res, 200, 'Succes', `Pengguna Berhasil Ditemukan`, '/log/recog', responseData);
     } catch (error) {
       console.error(error);
       return utils.createResponse(res, 500, 'Internal Server Error', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/recog');
@@ -700,21 +698,28 @@ module.exports = {
   afterRecog: async (req, res) => {
     try {
       const deviceUuid = req.device.uuid;
-      if (Object.keys(req.body).length !== 2) {
+      if (Object.keys(req.body).length !== 3) {
         return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log/afterRecog");
       }
-      let { image, log_uuid } = req.body;
+      let { image, log_uuid, bbox } = req.body;
+      // Validasi log_uuid harus UUID
+      if (!utils.isValidUUID(log_uuid)) {
+        return utils.createResponse(res, 400, "Bad Request", "log_uuid harus berupa UUID yang valid", "/log/afterRecog");
+      }
+
+      // Validasi image harus berupa Base64
+      if (!utils.verifyImage(image, false)) {
+        return utils.createResponse(res, 400, "Bad Request", "image harus berupa string Base64 yang valid", "/log/afterRecog");
+      }
+
+      // Validasi bbox harus array dengan panjang 3
+      if (!Array.isArray(bbox) || bbox.length !== 3) {
+        return utils.createResponse(res, 400, "Bad Request", "bbox harus berupa array dengan panjang 3", "/log/afterRecog");
+      }
       const nameImage = `${generator.generateString(23)}.jpg`
       utils.saveImage(image, nameImage, 'log')
-      let responseData;
-      try {
-        const { data } = await axios.patch(`${process.env.ML_URL}build`, { image: image }, { headers: { "Content-Type": "application/json" } });
-        responseData = data.data[0]
-      } catch (e) {
-        console.error(e)
-      }
       const updatedData = {
-        bbox: responseData.bbox ?? [0, 0, 1],
+        bbox: bbox ?? [0, 0, 1],
         image_path: nameImage
       }
       const updatedLog = await prisma.log.update({
@@ -730,7 +735,7 @@ module.exports = {
         }, select: {
           name: true,
           identity_number: true,
-          telegram_id:true,
+          telegram_id: true,
           role_user: {
             select: {
               role: {
@@ -806,8 +811,8 @@ module.exports = {
         }
         captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n`
         captionForElse += isExist.user_group.map((t) => {
-          return '\n>'+t.group.name;
-        }) 
+          return '\n>' + t.group.name;
+        })
         captionForElse += `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
         captionForElse += endCaptions ?? ''
         // Send to Telegram!
@@ -820,7 +825,7 @@ module.exports = {
         notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
         notify_to = new Set(notify_to)
         const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
-        makeTelegramNotification(image, { isMatch: true, bbox: responseData.bbox ?? [0,0,1]}, nameImage, telegramParams)
+        makeTelegramNotification(image, { isMatch: true, bbox: updatedData.bbox }, nameImage, telegramParams)
       }
       const io = req.app.get('socketio');
       io.emit('logger update', {
@@ -830,7 +835,7 @@ module.exports = {
         })),
         device: req.device.name,
         photo: nameImage,
-        bbox: responseData.bbox ?? [0,0,1],
+        bbox: updatedData.bbox,
         time: new Date()
       })
 
