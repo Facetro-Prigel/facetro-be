@@ -1,183 +1,525 @@
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient } = require('@prisma/client')
 
-const generator = require("../helper/generator");
-const utils = require("../helper/utils");
-const { bot } = require("../helper/telegram");
-const axios = require("axios");
-const role_utils = require("../helper/role_utils");
-const prisma = new PrismaClient();
+const generator = require('../helper/generator')
+const utils = require('../helper/utils')
+const axios = require('axios')
+const role_utils = require('../helper/role_utils');
+const prisma = new PrismaClient()
+require('dotenv').config();
 
 const compareFace = async (base64image, dbSignature) => {
   try {
-    const { data } = await axios.post(
-      `${process.env.ML_URL}match`,
-      { image: base64image, signature: dbSignature },
-      { headers: { "Content-Type": "application/json" } }
-    );
+    const { data } = await axios.post(`${process.env.ML_URL}match`, { image: base64image, signature: dbSignature }, { headers: { "Content-Type": "application/json" } });
+    const sData = data.data[0]
     return {
-      isMatch: data.isMatch === "True",
-      bbox: data.bbox,
-      signature: data.signiture,
-      similarityResult: data.similarityResult,
-      lengthOfTimeRequired: data.lengthOfTimeRequired,
+      isMatch: sData.isMatch === "True",
+      bbox: sData.bbox,
+      signature: sData.signature,
+      similarityResult: sData.similarityResult,
+      lengthOfTimeRequired: sData.lengthOfTimeRequired
     };
   } catch (e) {
     if (e.response) {
-      console.error(
-        `Error form recognation service (${e.response.status}): ${e.response.data.message}`
-      );
-      return { error: e.response.data.message, code: e.response.status };
+      console.error(`Error form recognation service (${e.response.status}): ${e.response.data.detail}`);
+      return { error: e.response.data.detail, code: e.response.status };
     } else {
       console.error(`Face recognation service dont response!`);
-      console.error("details");
-      console.error(e);
-      return {
-        error: `Terjadi kesalahan pada sistem pengenalan wajah`,
-        code: 500,
-      };
+      console.error('details');
+      console.error(e)
+      return { error: `Terjadi kesalahan pada sistem pengenalan wajah`, code: 500 };
     }
   }
 };
 
-const checkMachineLearning = async (image, four_last_signatures) => {
-  // Check to ML (Face Recognations)
-  let ml_result = {};
-  let candidateNumber = 0;
-  const four_last_signatures_process = [];
-  let selected_server_image = {};
-  for (let signature of four_last_signatures) {
-    ml_result = await compareFace(image, signature.signature);
-    if (ml_result.error) {
-      throw new Error("ComparationError");
-    }
-    selected_server_image = {
-      candidateNumber,
-      image: signature.imagePath,
-      bbox: signature.bbox,
-      signature: signature.signature,
-      similarityResult: ml_result.similarityResult,
-      lengthOfTimeRequired: ml_result.lengthOfTimeRequired,
-    };
-    four_last_signatures_process.push(selected_server_image);
-    if (ml_result.isMatch) break;
-    candidateNumber++;
-  }
-  return [selected_server_image, ml_result, four_last_signatures_process];
-};
 
-const makeTelegramNotification = async (
-  image,
-  ml_result,
-  nameImage,
-  teleParams
-) => {
-  const image2tele = await utils.makeBondingBox(
-    image,
-    ml_result.bbox,
-    nameImage
-  );
+const makeTelegramNotification = async (image, ml_result, nameImage, teleParams) => {
+  const image2tele = await utils.makeBondingBox(image, ml_result.bbox, nameImage)
   if (image2tele) {
     setTimeout(async () => {
       try {
-        const { data } = await axios.post(
-          `${process.env.TELE_URL}notify`,
-          {
-            user_tele_id: teleParams[0].telegramId ?? false,
-            ml_result: ml_result.isMatch,
-            notify_to: teleParams[1],
-            request_image_path: image2tele,
-            caption_for_else: teleParams[2],
-            caption_that_user: teleParams[3],
-          },
-          { headers: { "Content-Type": "application/json" } }
-        );
+        const { data } = await axios.post(`${process.env.TELE_URL}notify`, {
+          'user_tele_id': teleParams[0].telegram_id ?? false,
+          'ml_result': ml_result.isMatch,
+          'notify_to': teleParams[1],
+          'request_image_path': image2tele,
+          'caption_for_else': teleParams[2],
+          'caption_that_user': teleParams[3]
+        }, { headers: { "Content-Type": "application/json" } });
       } catch (error) {
-        console.error(
-          "Terjadi error ketika mencoba mengirim ke telegram handler!",
-          error
-        );
+        console.error('Terjadi error ketika mencoba mengirim ke telegram handler!', error)
       }
     }, 1000);
+  }
+}
+
+const sandRecog = async (base64image, dbSignature) => {
+  try {
+    const { data } = await axios.post(`${process.env.ML_URL}recognation`, { image: base64image, data: dbSignature }, { headers: { "Content-Type": "application/json" } });
+    const responseData = data.data[0]
+    return responseData;
+  } catch (e) {
+    if (e.response) {
+      console.error(`Error form recognation service (${e.response.status}): ${e.response.data.detail}`);
+      return { error: e.response.data.detail, code: e.response.status };
+    } else {
+      console.error(`Face recognation service dont response!`);
+      console.error('details');
+      console.error(e)
+      return { error: `Terjadi kesalahan pada sistem pengenalan wajah`, code: 500 };
+    }
   }
 };
 module.exports = {
   log: async (req, res) => {
     try {
       const startTotalTimeNeeded = process.hrtime();
-      let body = req.body;
-      let identity = String(body.identity);
-      let image = body.image;
+      let body = req.body
+      let identity = String(body.identity)
+      let image = body.image
 
-      let isExist = await prisma.user.findFirst({
-        where: {
-          OR: [{ identityNumber: identity }, { nfc_data: identity }],
-        },
-        include: {
-          roleuser: {
-            include: {
-              role: true,
-            },
+      if ((Object.keys(body).length == 2) && (body.identity != undefined)) {
+        const nameImage = `${generator.generateString(23)}.jpg`
+        utils.saveImage(image, nameImage, 'log')
+        identity = identity.replace(/[^A-F0-9]/g, '')
+        isExist = await prisma.user.findFirst({
+          where: {
+            "OR": [{ "identity_number": identity }, { "nfc_data": identity }],
           },
-          usergroup: {
-            include: {
-              group: {
-                include: {
-                  users: true,
+          include: {
+            user_details: true,
+            role_user: {
+              include: {
+                role: true
+              }
+            },
+            user_group: {
+              include: {
+                group: {
+                  include: {
+                    users: true,
+                    presence_group: true
+                  }
+                }
+              }
+            }
+          }
+        })
+        // return utils.createResponse(res, 200, 'Test!', "Identitas tersebut tidak terdaftar", '/log', isExist)
+        if (!isExist) {
+          return utils.createResponse(res, 404, 'Not Found!', "Identitas tersebut tidak terdaftar", '/log')
+        }
+
+        isCanPresenceAnyware = await prisma.user.findFirst({
+          where: {
+            uuid: isExist["uuid"],
+            OR: [
+              {
+                role_user: {
+                  some: {
+                    role: {
+                      is: {
+                        guard_name: 'super_admin'
+                      }
+                    }
+                  }
+                }
+              }, {
+                permission_user: {
+                  some: {
+                    permission: {
+                      is: {
+                        guard_name: "presence_anywhere"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                role_user: {
+                  some: {
+                    role: {
+                      is: {
+                        permission_role: {
+                          some: {
+                            permission: {
+                              is: {
+                                guard_name: "presence_anywhere"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          include: {
+            permission_user: {
+              include: {
+                permission: true
+              }
+            },
+            role_user: {
+              include: {
+                role: {
+                  include: {
+                    permission_role: {
+                      include: {
+                        permission: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        })
+        let isDeviceOk = false
+        let whereCluse = {}
+        if (!isCanPresenceAnyware) {
+          for (let i = 0; i < isExist.user_group.length; i++) {
+            for (let ind = 0; ind < isExist.user_group[i].group.presence_group.length; ind++) {
+              if (isExist.user_group[i].group.presence_group[ind].device_uuid == req.device.uuid) {
+                isDeviceOk = true
+                break
+              }
+            }
+          }
+          if (!isDeviceOk) {
+            return utils.createResponse(res, 403, 'Forbidden!', "Anda Tidak Dapat Presensi di sini", '/log')
+          }
+          whereCluse.device_uuid = req.device.uuid
+        }
+        // combines data from User with the last 4 record logs 
+        whereCluse.user_uuid = isExist.uuid
+        whereCluse.is_match = true
+        const four_last_signatures = await prisma.log.findMany({
+          where: whereCluse,
+          take: 4,
+          orderBy: {
+            created_at: 'desc',
+          },
+          select: {
+            image_path: true,
+            bbox: true,
+            signature: true
+          }
+        })
+        four_last_signatures.push({
+          image_path: isExist.avatar,
+          bbox: isExist.bbox,
+          signature: isExist.signature
+        })
+        // Check to ML (Face Recognations)
+        let ml_result = {};
+        let candidateNumber = 0;
+        const four_last_signatures_process = [];
+        let selected_server_image = {};
+        for (let signature of four_last_signatures) {
+          ml_result = await compareFace(image, signature.signature);
+          if (ml_result.error) {
+            return utils.createResponse(res, ml_result.code, 'Bad Request!', ml_result.error, '/log');
+          }
+          selected_server_image = {
+            candidateNumber,
+            image: signature.image_path,
+            bbox: signature.bbox,
+            signature: signature.signature,
+            similarityResult: ml_result.similarityResult,
+            lengthOfTimeRequired: ml_result.lengthOfTimeRequired
+          };
+          four_last_signatures_process.push(selected_server_image);
+          if (ml_result.isMatch) break;
+          candidateNumber++;
+        }
+        // Check is thare have log data
+        let now = new Date()
+        let localTime = now.toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          year: "numeric",
+          day: '2-digit',
+          month: '2-digit'
+        })
+        localTime = localTime.split('/')
+        let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
+        whereCluse.type = "Login"
+        whereCluse.created_at = { gte: new Date(`${nowDate}T00:00:00.000+07:00`) }
+        let todayLog = await prisma.log.findFirst({
+          where: whereCluse
+        })
+        // process create log data
+        let logData = {
+          user_uuid: isExist.uuid,
+          bbox: ml_result.bbox,
+          image_path: nameImage,
+          device_uuid: req.device.uuid,
+          signature: ml_result.signature,
+          is_match: ml_result.isMatch,
+          created_at: now
+        }
+        logData.type = "Login"
+        let result = {
+          name: isExist.name,
+          role: isExist.role_user.map((i) => {
+            return i.role.name
+          }),
+          group: isExist.user_group.map((i) => {
+            return i.group.name
+          }),
+          identity: isExist.identity_number,
+          device: req.device.name,
+          isMatch: ml_result.isMatch,
+          clientData: {
+            image: nameImage,
+            bbox: ml_result.bbox
+          },
+          serverData: {
+            image: selected_server_image.image,
+            bbox: selected_server_image.bbox
+          }
+        }
+        let startTimeToHuman, endTimeToHuman, endCaptions, captionForElse
+        result.startTime = now.toISOString()
+
+        if (todayLog) {
+          logData.type = "Logout"
+          result.startTime = todayLog.created_at.toISOString()
+          result.endTime = now.toISOString()
+          endTimeToHuman = utils.timeToHuman(result.endTime)
+          let timeDiff = utils.countDiff(now.getTime() - todayLog.created_at.getTime())
+          endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`
+        }
+        startTimeToHuman = utils.timeToHuman(result.startTime)
+        // Other data
+        const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded)
+        const totalTimeNeeded = (endTotalTimeNeeded[0] * 1000) + (endTotalTimeNeeded[1] / 1e6);
+        logData.other_data = {
+          'totalTimeNeeded': totalTimeNeeded,
+          'dataComparisonCandidate': four_last_signatures,
+          'dataComparisonCandidateAfterProcess': four_last_signatures_process,
+        }
+        await prisma.log.create({ data: logData })
+        let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionThatUser += endCaptions ?? ''
+        let user_details = {
+          program_study: "-",
+          batch: '-'
+        }
+        if (isExist.user_details) {
+          user_details.program_study = isExist.user_details.program_study
+          user_details.batch = isExist.user_details.batch
+        }
+        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek:`
+        captionForElse += isExist.user_group.map((t) => {
+          return '\n> ' + t.group.name;
+        })
+        captionForElse += `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionForElse += endCaptions ?? ''
+        // Send to Telegram!
+        let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegram_id')
+        let admin_users = await role_utils.getUserWithRole('admin', 'telegram_id')
+        let notify_to_users = isExist.user_group.map((t) => {
+          return t.group.users.telegram_id
+        })
+        let notify_to = []
+        notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
+        notify_to = new Set(notify_to)
+        const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
+        makeTelegramNotification(image, ml_result, nameImage, telegramParams)
+        const io = req.app.get('socketio');
+        if (ml_result.isMatch) {
+          io.emit('logger update', {
+            name: isExist.name,
+            project: result.group,
+            device: req.device.name,
+            photo: nameImage,
+            bbox: ml_result.bbox,
+            time: result.startTime
+          })
+        }
+        return utils.createResponse(res, 200, 'Success!', `Berhasil Melakukan Presensi!`, '/log', result)
+      }
+      utils.createResponse(res, 400, 'Bad Request!', "Request yang diminta salah", '/log')
+    } catch (e) {
+      console.error(e, "\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala")
+
+      return utils.createResponse(res, 500, 'Internal Server Error!', "Terjadi kesalahan pada server", '/log')
+    }
+  },
+  getLog: async (req, res) => {
+    const pageNumber = parseInt(req.query.page);
+    const limitNumber = parseInt(req.query.limit);
+    if (isNaN(pageNumber) || isNaN(limitNumber) || pageNumber < 1 || limitNumber < 1) {
+      return utils.createResponse(res, 400, 'Bad Request!', `Anda harus menyertakan halaman dan berapa banyak yang ditampilakan!`, '/log');
+    }
+    const countQuery = {
+      where: {
+        user_uuid: req.user.uuid
+      }
+    }
+    const defaultQuery = {
+      where: {
+        user_uuid: req.user.uuid
+      },
+      take: limitNumber,
+      skip: ((pageNumber - 1) * limitNumber),
+      orderBy: [
+        {
+          created_at: 'desc'
+        }
+      ],
+      select: {
+        is_match: true,
+        image_path: true,
+        bbox: true,
+        type: true,
+        user: {
+          select: {
+            name: true,
+            identity_number: true,
+            user_group: {
+              select: {
+                group: {
+                  select: {
+                    name: true
+                  }
                 },
               },
-            },
-          },
+            }
+          }
         },
-      });
+        created_at: true,
+        device: {
+          select: {
+            name: true,
+          }
+        }
+      }
+    }
+    if (req.show_other_log) {
+      delete defaultQuery.where
+      delete countQuery.where
+      console.info('showOther')
+    }
+    let total_records = await prisma.log.count(countQuery)
+    let logDatas = await prisma.log.findMany(defaultQuery)
+    let showLogs = [];
 
-      if (!isExist) {
-        return res
-          .status(404)
-          .json({ msg: "Identitas tersebut tidak terdaftar", code: 404 });
+    for (const log of logDatas) {
+      showLogs.push({
+        name: log.user.name,
+        identity_number: log.user.identity_number,
+        device: log.device.name,
+        image: log.image_path,
+        bbox: log.bbox,
+        type: log.type == 'Door' ? 'Door' : `Presence (${log.type})`,
+        is_match: log.is_match,
+        in_time: log.created_at,
+        group: log.user.user_group.map((uy) => {
+          return uy.group.name
+        })
+      })
+    }
+    return utils.createResponse(res, 200, 'Success!', `Berhasil Mengambil Logs!`, '/log', { data: showLogs, total_records })
+  },
+  recognation: async (req, res) => {
+    try {
+      const deviceUuid = req.device.uuid;
+      if (Object.keys(req.body).length !== 2) {
+        return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log/recog");
       }
 
-      let whereCluse = {};
+      let { image, type } = req.body;
 
-      // combines data from User with the last 4 record logs
-      whereCluse.userUuid = isExist.uuid;
-      whereCluse.isMatch = true;
+      if (!utils.verifyImage(image)) {
+        return utils.createResponse(res, 400, "Bad Request", "Gambar tidak valid!", "/log/recog");
+      }
+      let userListToFindInLog = []
+      let dataContainer = []
+      let permissionName = 'presence_anywhere'
+      let privotTable = 'presence_group'
+      let dbType = 'Login'
+      if (type == 'doorlock') {
+        permissionName = 'open_door_anywhere'
+        privotTable = 'door_group'
+        dbType = 'Door'
+      }
 
-      let isCanPresenceAnyware = await prisma.user.findFirst({
+      // Get deviceToUser (['door_group', 'precense'] -> group -> user_group -> user)
+      const deviceToUser = await prisma.device.findUnique({
+        where: { uuid: deviceUuid },
+        select: {
+          [privotTable]: {
+            select: {
+              group: {
+                select: {
+                  user_group: {
+                    select: {
+                      user: {
+                        select: {
+                          uuid: true,
+                          signature: true,
+                          avatar: true,
+                          bbox: true,
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      })
+      // Prosess user from deviceToUser 
+      deviceToUser[privotTable].forEach(el => {
+        el.group.user_group.forEach(ele => {
+          let userData = ele.user
+          dataContainer.push(
+            {
+              "user_uuid": userData.uuid,
+              "signature": userData.signature,
+              "image_path": userData.avatar,
+              "bbox": userData.bbox
+            }
+          )
+          userListToFindInLog.push(ele.user.uuid)
+        });
+      });
+
+      // Get 1. user -> permission_user -> permission (guard_name: [type])
+      //     2. user -> role_user -> role -> permssion_role -> permission (guard_name: [type])
+      //     3. user -> role_user -> role (guard_name: 'super_admin')
+      let userToPermissionRole = await prisma.user.findMany({
         where: {
-          uuid: isExist["uuid"],
-          OR: [
+          AND: [
             {
-              roleuser: {
-                some: {
-                  role: {
-                    is: {
-                      guardName: "super_admin",
+              OR: [
+                {
+                  permission_user: {
+                    some: {
+                      permission: {
+                        is: {
+                          guard_name: permissionName,
+                        },
+                      },
                     },
                   },
                 },
-              },
-            },
-            {
-              permissionUser: {
-                some: {
-                  permission: {
-                    is: {
-                      guardName: "log_anywhere",
-                    },
-                  },
-                },
-              },
-            },
-            {
-              roleuser: {
-                some: {
-                  role: {
-                    is: {
-                      permisionrole: {
-                        some: {
-                          permission: {
-                            is: {
-                              guardName: "log_anywhere",
+                {
+                  role_user: {
+                    some: {
+                      role: {
+                        is: {
+                          permission_role: {
+                            some: {
+                              permission: {
+                                is: {
+                                  guard_name: permissionName,
+                                },
+                              },
                             },
                           },
                         },
@@ -185,431 +527,322 @@ module.exports = {
                     },
                   },
                 },
+                {
+                  role_user: {
+                    some: {
+                      role: {
+                        is: {
+                          guard_name: "super_admin",
+                        },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+            {
+              uuid: {
+                notIn: userListToFindInLog,
               },
             },
           ],
         },
-        include: {
-          permissionUser: {
-            include: {
-              permission: true,
-            },
-          },
-          roleuser: {
-            include: {
-              role: {
-                include: {
-                  permisionrole: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
+        select: {
+          uuid: true,
+          signature: true,
+          avatar: true,
+          bbox: true,
         },
+      })
+      userToPermissionRole.forEach(el => {
+        dataContainer.push(
+          {
+            "user_uuid": el.uuid,
+            "signature": el.signature,
+            "image_path": el.avatar,
+            "bbox": el.bbox
+          }
+        )
+        userListToFindInLog.push(el.uuid)
       });
 
-      let isDeviceOk = false;
+      // From Log
+      const userUuidsString = userListToFindInLog.map(uuid => `'${uuid}'`).join(", ");
+      try {
+        const logs = await prisma.$queryRawUnsafe(`
+        SELECT *
+        FROM (
+          SELECT 
+            user_uuid, 
+            signature,
+            bbox,
+            image_path,
+            RANK() OVER (PARTITION BY user_uuid ORDER BY created_at DESC) AS \`rank\`
+          FROM Log
+          WHERE is_match = 1 
+        ) AS ranked_logs
+        WHERE \`rank\` <= 4 AND user_uuid IN (${userUuidsString})
+      `);
 
-      if (!isCanPresenceAnyware) {
-        for (let i = 0; i < isExist.usergroup.length; i++) {
-          if (isExist.usergroup[i].group.devices == req.device.uuid) {
-            isDeviceOk = true;
-            break;
-          }
-        }
-        if (!isDeviceOk) {
-          return res.status(403).json({
-            msg: "Anda Tidak Dapat Presensi / Masuk di sini",
-            code: 403,
-          });
-        }
-        whereCluse.deviceUuid = req.device.uuid;
+        const logs_data = await logs.map(log => {
+          const { rank, ...rest } = log;
+          return rest;
+        });
+        dataContainer = dataContainer.concat(logs_data)
+      } catch (error) {
+        console.error(error)
       }
-
-      if (Object.keys(body).length == 3 && body.identity != undefined) {
-        if (body.type == "log") {
-          const nameImage = `${generator.generateString(23)}.jpg`;
-          let requestImagePath = `photos/${nameImage}`;
-          await utils.saveImage(image, requestImagePath);
-          identity = identity.replace(/[^A-F0-9]/g, "");
-
-          const four_last_signatures = await prisma.log.findMany({
-            where: whereCluse,
-            take: 4,
-            orderBy: {
-              createdAt: "desc",
-            },
-            select: {
-              imagePath: true,
-              bbox: true,
-              signature: true,
-            },
-          });
-          four_last_signatures.push({
-            imagePath: isExist.avatar,
-            bbox: isExist.bbox,
-            signature: isExist.signature,
-          });
-
-          const startMLTime = process.hrtime();
-
-          // Check to ML (Face Recognations)
-          let [selected_server_image, ml_result, four_last_signatures_process] =
-            await checkMachineLearning(image, four_last_signatures);
-
-          const endMLTime = process.hrtime(startMLTime);
-
-          // Check is thare have log data
-          const now = new Date();
-          const gteValue = `${now.getFullYear()}-${generator.generateZero(
-            now.getMonth() + 1
-          )}-${generator.generateZero(now.getDate())}T00:00:00.000+07:00`;
-          whereCluse.type = "Login";
-          whereCluse.createdAt = { gte: new Date(gteValue).toISOString() };
-          let todayLog = await prisma.log.findFirst({
-            where: whereCluse,
-          });
-
-          // process create log data
-          let logData = {
-            userUuid: isExist.uuid,
-            bbox: ml_result.bbox,
-            imagePath: requestImagePath,
-            deviceUuid: req.device.uuid,
-            signature: ml_result.signature,
-            isMatch: ml_result.isMatch,
-            createdAt: now,
-          };
-          logData.type = "Login";
-          let result = {
-            name: isExist.name,
-            role: isExist.roleuser.map((i) => {
-              return i.role.name;
-            }),
-            group: isExist.usergroup.map((i) => {
-              return i.group.name;
-            }),
-            identity: isExist.identityNumber,
-            device: req.device.name,
-            isMatch: ml_result.isMatch,
-            clientData: {
-              image: requestImagePath,
-              bbox: ml_result.bbox,
-            },
-            serverData: {
-              image: selected_server_image.image,
-              bbox: selected_server_image.bbox,
-            },
-          };
-          let startTimeToHuman, endTimeToHuman, endCaptions, captionForElse;
-          result.startTime = now.toISOString();
-
-          if (todayLog) {
-            logData.type = "Logout";
-            result.startTime = todayLog.createdAt.toISOString();
-            result.endTime = now.toISOString();
-            endTimeToHuman = utils.timeToHuman(result.endTime);
-            let timeDiff = utils.countDiff(
-              now.getTime() - todayLog.createdAt.getTime()
-            );
-            endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`;
-          }
-          startTimeToHuman = utils.timeToHuman(result.startTime);
-          // Other data
-          const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded);
-          const totalTimeNeeded =
-            endTotalTimeNeeded[0] * 1000 + endTotalTimeNeeded[1] / 1e6;
-          const mlTimeNeeded = endMLTime[0] * 1000 + endMLTime[1]/1e6;
-          logData.otherData = {
-            mlTimeNeeded: mlTimeNeeded,
-            totalTimeNeeded: totalTimeNeeded,
-            dataComparisonCandidate: four_last_signatures,
-            dataComparisonCandidateAfterProcess: four_last_signatures_process,
-          };
-          await prisma.log.create({ data: logData });
-          let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`;
-          captionThatUser += endCaptions ?? "";
-          captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identityNumber} \nProdi: \n > ${isExist.program_study} \nAngkatan: \n > ${isExist.batch}   \nProyek: \n > `;
-          captionForElse +=
-            utils.arrayToHuman(
-              isExist.usergroup.map((t) => {
-                return t.group.name;
-              })
-            ) +
-            `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`;
-          captionForElse += endCaptions ?? "";
-          // Send to Telegram!
-          let super_admin_users = await role_utils.getUserWithRole(
-            "super_admin",
-            "telegramId"
-          );
-          let admin_users = await role_utils.getUserWithRole(
-            "admin",
-            "telegramId"
-          );
-          let notify_to_users = isExist.usergroup.map((t) => {
-            return t.group.users.telegramId;
-          });
-          let notify_to = [];
-          notify_to = notify_to.concat(
-            super_admin_users,
-            admin_users,
-            notify_to_users
-          );
-          notify_to = new Set(notify_to);
-          const telegramParams = [
-            isExist,
-            [...notify_to],
-            captionForElse,
-            captionThatUser,
-          ];
-          try {
-            await makeTelegramNotification(image, ml_result, nameImage, telegramParams)
-          } catch (error) {}
-          const io = req.app.get("socketio");
-          if (ml_result.isMatch) {
-            io.emit("logger update", {
-              name: isExist.name,
-              project: result.group,
-              device: req.device.name,
-              photo: requestImagePath,
-              bbox: ml_result.bbox,
-              time: result.startTime,
-            });
-          }
-          console.log(JSON.stringify(result));
-          return res.status(202).json({ result });
-        } else if (body.type == "door") {
-          const nameImage = `${generator.generateString(23)}.jpg`;
-          let requestImagePath = `photos/${nameImage}`;
-          await utils.saveImage(image, requestImagePath);
-          identity = identity.replace(/[^A-F0-9]/g, "");
-
-          const four_last_signatures = await prisma.log.findMany({
-            where: whereCluse,
-            take: 4,
-            orderBy: {
-              createdAt: "desc",
-            },
-            select: {
-              imagePath: true,
-              bbox: true,
-              signature: true,
-            },
-          });
-          four_last_signatures.push({
-            imagePath: isExist.avatar,
-            bbox: isExist.bbox,
-            signature: isExist.signature,
-          });
-
-          const startMLTime = process.hrtime();
-
-          // Check to ML (Face Recognations)
-          let [selected_server_image, ml_result, four_last_signatures_process] =
-            await checkMachineLearning(image, four_last_signatures);
-          const endMLTime = process.hrtime(startMLTime);
-
-          const now = new Date();
-
-          // process create log data
-          let logData = {
-            userUuid: isExist.uuid,
-            bbox: ml_result.bbox,
-            imagePath: requestImagePath,
-            deviceUuid: req.device.uuid,
-            signature: ml_result.signature,
-            isMatch: ml_result.isMatch,
-            createdAt: now,
-            type: "Door",
-          };
-
-          let result = {
-            name: isExist.name,
-            role: isExist.roleuser.map((i) => {
-              return i.role.name;
-            }),
-            group: isExist.usergroup.map((i) => {
-              return i.group.name;
-            }),
-            identity: isExist.identityNumber,
-            device: req.device.name,
-            isMatch: ml_result.isMatch,
-            clientData: {
-              image: requestImagePath,
-              bbox: ml_result.bbox,
-            },
-            serverData: {
-              image: selected_server_image.image,
-              bbox: selected_server_image.bbox,
-            },
-          };
-
-          // Other data
-          const endTotalTimeNeeded = process.hrtime(startTotalTimeNeeded);
-          const totalTimeNeeded =
-            endTotalTimeNeeded[0] * 1000 + endTotalTimeNeeded[1] / 1e6;
-          const mlTimeNeeded = endMLTime[0] * 1000 + endMLTime[1]/1e6;
-          logData.otherData = {
-            mlTimeNeeded: mlTimeNeeded,
-            totalTimeNeeded: totalTimeNeeded,
-            dataComparisonCandidate: four_last_signatures,
-            dataComparisonCandidateAfterProcess: four_last_signatures_process,
-          };
-          await prisma.log.create({ data: logData });
-          return res.status(202).json({ result: result });
-        }
+      let recogResult = await sandRecog(image, dataContainer);
+      if (recogResult.error) {
+        return utils.createResponse(res, 404, 'Not Found!', `Maaf anda tidak terdaftar untuk ${type} di perangkat ini!`, '/log/recog');
       }
-      res.status(400).json({ msg: "Request yang diminta salah", code: 400 });
-    } catch (e) {
-      console.error(
-        e,
-        "\n Masalah ini kemungkinan besar diakibatkan karena sistem pengenalan wajah tidak menyala"
-      );
-      if (e.message == "ComparationError") {
-        return res
-          .status(400)
-          .json({ msg: "tidak atau terdapat banyak wajah!", code: 400 });
-      }
-      return res
-        .status(500)
-        .json({ msg: "Terjadi kesalahan pada server", code: 500 });
-    }
-  },
-  //PENDING !!!
-  getLog: (type, filter) => {
-    return async (req, res) => {
-      let query = {
-        orderBy: [
-          {
-            createdAt: "desc",
-          },
-        ],
-        select: {
-          type: true,
-          isMatch: true,
-          imagePath: true,
-          bbox: true,
-          user: {
-            select: {
-              name: true,
-              identityNumber: true,
-              usergroup: {
-                select: {
-                  group: {
-                    select: {
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          createdAt: true,
-          device: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      };
-      if (type == "log") {
-        query.where = {
-          OR: [{ type: "Login" }, { type: "Logout" }],
-          AND: filter ? [{[filter]: {uuid: req.params.uuid}}] : undefined
-        };
-        let logDatas = await prisma.log.findMany(query);
-        let showLogs = [];
-        for (const log of logDatas) {
-          showLogs.push({
-            name: log.user.name,
-            nim: log.user.identityNumber,
-            device: log.device.name,
-            image: log.imagePath,
-            bbox: log.bbox,
-            type: log.type,
-            isMatch: log.isMatch,
-            inTime: log.createdAt,
-            group: log.user.usergroup.map((uy) => {
-              return uy.group.name;
-            }),
-          });
-        }
-        return res.json(showLogs);
-      } else if (type == "door") {
-        query.where = { type: "Door" };
-        let logDatas = await prisma.log.findMany(query);
-        let showLogs = [];
-        for (const log of logDatas) {
-          showLogs.push({
-            name: log.user.name,
-            nim: log.user.identityNumber,
-            device: log.device.name,
-            image: log.imagePath,
-            bbox: log.bbox,
-            type: log.type,
-            isMatch: log.isMatch,
-            inTime: log.createdAt,
-            group: log.user.usergroup.map((uy) => {
-              return uy.group.name;
-            }),
-          });
-        }
-        return res.status(202).json(showLogs);
-      }
-      return res.status(404);
-    };
-  },
-  cardlessRequest: async (req, res) => {
-    const n = 3191103090;
-    const numericUUID = utils.uuidToDecimal(req.user.uuid).slice(0, 20);
-    const secret_key = BigInt(numericUUID) % BigInt(n);
-    const public_key = secret_key ** BigInt(2) % BigInt(n);
-    return res.json({
-      public_key: public_key.toString(),
-      email: req.user.email,
-    });
-  },
-  cardlessVerify: async (req, res) => {
-    const n = 3191103090;
-    const body = req.body;
-    const publicKey = body.public_key;
-    let secretKey = 2;
-    let numericUUID = 0;
-    // Generate random bits and calculate commitment
-    const r = BigInt(Math.floor(Math.random() * 99e20) + 10e20) % BigInt(n);
-    const x = r ** BigInt(2) % BigInt(n);
-    try {
-      const user = await prisma.user.findUnique({
+      const nameImage = `${generator.generateString(23)}.jpg`
+      utils.saveImage(image, nameImage, 'log')
+      const foundUser = await prisma.user.findUnique({
         where: {
-          email: body.email,
+          uuid: recogResult.user_uuid
         },
         select: {
           name: true,
-          uuid: true,
-        },
-      });
-      numericUUID = utils.uuidToDecimal(user.uuid).slice(0, 20);
+          identity_number: true,
+          role_user: {
+            select: {
+              role: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          user_group: {
+            select: {
+              group: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      })
+
+
+      const responseData = {
+        name: foundUser.name,
+        role: foundUser.role_user.map((i) => {
+          return i.role.name;
+        }),
+        group: foundUser.user_group.map((i) => {
+          return i.group.name;
+        }),
+        identity: foundUser.identity_number,
+        device: req.device.name,
+        serverData: {
+          image: recogResult.compared_image,
+          bbox: recogResult.compared_bbox,
+        }
+
+      }
+
+      if (type != 'doorlock') {
+        let localTime = new Date().toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          year: "numeric",
+          day: '2-digit',
+          month: '2-digit'
+        })
+        localTime = localTime.split('/')
+        let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
+        let startOfDayUTC = new Date(`${nowDate}T00:00:00.000+07:00`);
+        let endOfDayUTC = new Date(`${nowDate}T23:59:59.500+07:00`);
+        const logs = await prisma.log.findMany({
+          where: {
+            user_uuid: recogResult.user_uuid,
+            type: 'Login',
+            created_at: {
+              gte: startOfDayUTC, // Greater than or equal to start of day in UTC
+              lte: endOfDayUTC,   // Less than or equal to end of day in UTC
+            },
+          },
+          orderBy: {
+            created_at: 'asc', // Urutkan berdasarkan waktu terbaru
+          },
+          take: 1, // Ambil hanya satu entri (log terakhir)
+        });
+        responseData['start_time'] = new Date()
+        if (logs.length > 0) {
+          dbType = "Logout"
+          responseData['start_time'] = logs[0].created_at
+          responseData['end_time'] = new Date()
+        }
+      }
+      const createLog = await prisma.log.create({
+        data: {
+          type: dbType,
+          image_path: recogResult.compared_image,
+          bbox: [0, 0, 160],
+          signature: recogResult.input_signature,
+          is_match: true,
+          device_uuid: req.device.uuid,
+          user_uuid: recogResult.user_uuid,
+          other_data: {}
+        }
+      })
+      responseData.log_uuid = createLog.uuid
+      return utils.createResponse(res, 200, 'Succes', `Pengguna Berhasil Ditemukan`, '/log/recog', responseData);
     } catch (error) {
-      return res.status(403).json({ msg: "Kradensisal tidak cocok!" });
+      console.error(error);
+      return utils.createResponse(res, 500, 'Internal Server Error', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/recog');
     }
-    secretKey = BigInt(numericUUID) % BigInt(n);
-
-    // Send challenge
-    const challenge = Math.floor(Math.random() * 2);
-
-    // Respond with the private key
-    const y = (r * (secretKey ** BigInt(challenge) % BigInt(n))) % BigInt(n);
-
-    // Verify
-    const expectedResponse =
-      (x * (BigInt(publicKey) ** BigInt(challenge) % BigInt(n))) % BigInt(n);
-    if (y ** BigInt(2) % BigInt(n) === expectedResponse) {
-      return res.status(202).json({ msg: "Akses diizinkan!" });
-    }
-    return res.status(403).json({ msg: "Kradensisal tidak cocok!" });
   },
-};
+  afterRecog: async (req, res) => {
+    try {
+      const deviceUuid = req.device.uuid;
+      if (Object.keys(req.body).length !== 3) {
+        return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log/afterRecog");
+      }
+      let { image, log_uuid, bbox } = req.body;
+      // Validasi log_uuid harus UUID
+      if (!utils.isValidUUID(log_uuid)) {
+        return utils.createResponse(res, 400, "Bad Request", "log_uuid harus berupa UUID yang valid", "/log/afterRecog");
+      }
+
+      // Validasi image harus berupa Base64
+      if (!utils.verifyImage(image, false)) {
+        return utils.createResponse(res, 400, "Bad Request", "image harus berupa string Base64 yang valid", "/log/afterRecog");
+      }
+
+      // Validasi bbox harus array dengan panjang 3
+      if (!Array.isArray(bbox) || bbox.length !== 3) {
+        return utils.createResponse(res, 400, "Bad Request", "bbox harus berupa array dengan panjang 3", "/log/afterRecog");
+      }
+      const nameImage = `${generator.generateString(23)}.jpg`
+      utils.saveImage(image, nameImage, 'log')
+      const updatedData = {
+        bbox: bbox ?? [0, 0, 1],
+        image_path: nameImage
+      }
+      const updatedLog = await prisma.log.update({
+        where: {
+          uuid: log_uuid,
+          device_uuid: deviceUuid,
+        },
+        data: updatedData,
+      });
+      let isExist = await prisma.user.findUnique({
+        where: {
+          uuid: updatedLog.user_uuid
+        }, select: {
+          name: true,
+          identity_number: true,
+          telegram_id: true,
+          role_user: {
+            select: {
+              role: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          user_group: {
+            select: {
+              group: {
+                select: {
+                  name: true,
+                  users: {
+                    select: {
+                      telegram_id: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          user_details: {
+            select: {
+              program_study: true,
+              batch: true
+            }
+          },
+        }
+      })
+      if (updatedLog.type != 'Door') {
+
+        let localTime = new Date().toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          year: "numeric",
+          day: '2-digit',
+          month: '2-digit'
+        })
+        localTime = localTime.split('/')
+        let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
+        let startOfDayUTC = new Date(`${nowDate}T00:00:00.000+07:00`);
+        let endOfDayUTC = new Date(`${nowDate}T23:59:59.500+07:00`);
+        const logs = await prisma.log.findMany({
+          where: {
+            user_uuid: updatedLog.user_uuid,
+            type: { not: 'Door' },
+            created_at: {
+              gte: startOfDayUTC,
+              lte: endOfDayUTC,
+            },
+          }, orderBy: {
+            created_at: 'asc', // Urutkan berdasarkan waktu terbaru
+          },
+        });
+        let endCaptions, endTimeToHuman
+        let startTimeToHuman = utils.timeToHuman(logs[0].created_at);
+        if (logs.length > 1) {
+          endTimeToHuman = utils.timeToHuman(logs[logs.length - 1].created_at)
+          let timeDiff = utils.countDiff(logs[logs.length - 1].created_at - logs[0].created_at)
+          endCaptions = `\npulang pada \n > ${endTimeToHuman} \nWaktu yang dihabiskan \n > ${timeDiff} di ${req.device.name}`
+        }
+        let captionThatUser = `Kamu Bertugas di \n > ${req.device.name} \npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionThatUser += endCaptions ?? ''
+        let user_details = {
+          program_study: "-",
+          batch: '-'
+        }
+        // return utils.createResponse(res, 200, 'Succes!', `Data log telah dipesrbarui!`, '/log/afterRecog', isExist);
+        if (isExist.user_details) {
+          user_details.program_study = isExist.user_details.program_study
+          user_details.batch = isExist.user_details.batch
+        }
+        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n`
+        captionForElse += isExist.user_group.map((t) => {
+          return '\n>' + t.group.name;
+        })
+        captionForElse += `\npresensi di \n > ${req.device.name} \nberangkat pada \n > ${startTimeToHuman}`
+        captionForElse += endCaptions ?? ''
+        // Send to Telegram!
+        let super_admin_users = await role_utils.getUserWithRole('super_admin', 'telegram_id')
+        let admin_users = await role_utils.getUserWithRole('admin', 'telegram_id')
+        let notify_to_users = isExist.user_group.map((t) => {
+          return t.group.users.telegram_id
+        })
+        let notify_to = []
+        notify_to = notify_to.concat(super_admin_users, admin_users, notify_to_users)
+        notify_to = new Set(notify_to)
+        const telegramParams = [isExist, [...notify_to], captionForElse, captionThatUser]
+        makeTelegramNotification(image, { isMatch: true, bbox: updatedData.bbox }, nameImage, telegramParams)
+      }
+      const io = req.app.get('socketio');
+      io.emit('logger update', {
+        name: isExist.name,
+        project: utils.arrayToHuman(isExist.user_group.map((t) => {
+          return t.group.name
+        })),
+        device: req.device.name,
+        photo: nameImage,
+        bbox: updatedData.bbox,
+        time: new Date()
+      })
+
+      return utils.createResponse(res, 200, 'Succes!', `Data log telah diperbarui!`, '/log/afterRecog');
+    } catch (error) {
+      console.error(error)
+      return utils.createResponse(res, 400, 'Bad Request!', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/afterRecog');
+    }
+  }
+}

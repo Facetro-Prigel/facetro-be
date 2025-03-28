@@ -2,8 +2,27 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const minio_client = require('../minioClient');
+
 require('dotenv').config();
 
+const replaceText = (text, replacements) => {
+    Object.keys(replacements).forEach((key) => {
+        text = text.replace(new RegExp(`\\$${key}`, 'g'), replacements[key]);
+    });
+    return text;
+};
+const createResponse = (res, status, title, detail, instance, data = undefined) => {
+    let responseData = {}; 
+    responseData.title = title;
+    responseData.detail = detail;
+    responseData.instance = instance;
+    responseData.container_id = process.env.CONTAINER_ID;
+    responseData.timestamp = new Date().toISOString();
+    if (data) {
+        responseData.data = Array.isArray(data) ? data : [data];
+    }
+    res.status(status).json(responseData);
+};
 
 const makeBufferFromBase64 = (base64String) => {
     const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
@@ -12,7 +31,7 @@ const makeBufferFromBase64 = (base64String) => {
 }
 
 const makeBondingBox = async (base64String, bbox, filename) => {
-    let savedFilename = 'photos/temp/tele-img-' + filename
+    let savedFilename = 'tele-img-' + filename
     const redBox = Buffer.from(
         `<svg width="${bbox[2]}" height="${bbox[2]}">
         <rect x="0" y="0" width="${bbox[2]}" height="${bbox[2]}" rx="${bbox[2] * 0.1}" ry="${bbox[2] * 0.1}" 
@@ -39,7 +58,7 @@ const makeBondingBox = async (base64String, bbox, filename) => {
         //	return result;
 
         await minio_client.putObject(
-            process.env.MINIO_BUCKET_NAME,
+            'log',
             savedFilename,
             imageBuffer,
             imageBuffer.length,
@@ -68,80 +87,120 @@ const transformSentence = (sentence) => {
     return transformedSentence;
 }
 
-const MakeBirthdayCard = async (imagePath, date, name, bbox) => {
-    if (name.length > 14) {
-        name = transformSentence(name)
-    }
-    
-    const thisYear= new Date().getFullYear();
-    const dateObj = new Date(date)
-    
-    const age = thisYear - dateObj.getFullYear()
-    
-    const dateValue = dateObj.toLocaleString('id-ID', {
-        timeZone: 'Asia/Jakarta',
-        dateStyle: "long"
-      })
+const makeDesign = (designName, fgImg, fgBBOX, overlayData = {}) => {
+    return new Promise(async (resolve, reject) => {
+        const fsp = fs.promises;
+        try {
+            const directoryPath = path.join(__dirname, '../design_template', designName);
+            const configPath = path.join(directoryPath, 'config.json');
+            const bgPath = path.join(directoryPath, 'bg.jpg');
+            const maskPath = path.join(directoryPath, 'mask.png');
+            // Periksa keberadaan file
+            await fsp.access(configPath, fsp.constants.F_OK).catch(() => {
+                throw new Error(`Config file not found: ${configPath}`);
+            });
+            await fsp.access(bgPath, fsp.constants.F_OK).catch(() => {
+                throw new Error(`Background image not found: ${bgPath}`);
+            });
+            // Baca config dan metadata gambar
+            let configData = await fsp.readFile(configPath, 'utf8');
+            configData = JSON.parse(configData);
+            const facePlacement = configData.facePlacement;
+            const overlay = configData.overlay || [];
+            const factor = facePlacement.length / fgBBOX[2];
 
-    const datePlaceholder = Buffer.from(`<svg width="277" height="1739" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 275px; fill: black; } </style> <text x="280" y="190" text-anchor="end" dominant-baseline="middle" transform="rotate(-90, 150, 150)"> ${dateValue} </text> </svg> `);
-    const namePlaceHolder = Buffer.from(`<svg width="2156" height="386" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 275px; fill: white; } </style> <text x="1078" y="275" text-anchor="middle" dominant-baseline="middle"> ${name} </text> </svg> `);
-    const agePlaceHolder = Buffer.from(`<svg width="2156" height="300" xmlns="http://www.w3.org/2000/svg"> <style> text { font-family: 'Bebas Neue'; font-size: 250px; fill: orange; } </style> <text x="1078" y="175" text-anchor="middle" dominant-baseline="middle">ke-${age}</text> </svg> `);
-    let result = false
-    const factor = 835 / bbox[2]
-    try {
-        // Get Image Meta
-        const image_meta = await sharp(imagePath)
-            .metadata()
-            .then((metadata) => {
-                return metadata
-            })
-            .catch((err) => {
-                console.error('Error reading image:', err);
-            });
-        const bboxNew = [parseInt(bbox[0] * factor), parseInt(bbox[1] * factor)]
-        // Image Resize
-        const imageResize = await sharp(imagePath)
-            .resize(parseInt(image_meta.width * factor), parseInt(image_meta.height * factor))
-            .toBuffer()
-            .then((data) => {
-                return data
-            })
-            .catch((err) => {
-                console.error('Error during image processing:', err);
-                res.status(500).send('Error processing image');
-            });
-        // Image Masking
-        const imageCroped = await sharp({
-            create: {
-                width: 3001,
-                height: 4001,
-                channels: 4,
-                background: { r: 0, g: 0, b: 0, alpha: 0 }
+            const fgMetadata = await sharp(fgImg).metadata();
+            const bgMeta = await sharp(bgPath).metadata();
+
+            // Resize foreground image
+            const imageResize = await sharp(fgImg)
+                .resize(parseInt(fgMetadata.width * factor), parseInt(fgMetadata.height * factor))
+                .toBuffer();
+
+            const newBBOX = [parseInt(fgBBOX[0] * factor), parseInt(fgBBOX[1] * factor)];
+            let imageComposite = [
+                { input: imageResize, top: facePlacement.top - newBBOX[1], left: facePlacement.left - newBBOX[0] },
+            ];
+
+            // Tambahkan mask jika ada
+            try {
+                await fsp.access(maskPath, fsp.constants.F_OK);
+                imageComposite.push({ input: maskPath, blend: 'dest-in' });
+            } catch (err) {
+                console.info('Design ini tidak di-mask-ing!');
             }
-        }).composite([
-            { input: imageResize, top: 634 - bboxNew[1], left: 1080 - bboxNew[0] },
-            { input: 'birthday_template/mask.png', blend: 'dest-in' }
-        ]).png().toBuffer().then((data) => {
-            return data
-        })
 
-        // Image Composit
-        const finalImage = await sharp('birthday_template/bg.jpg')  // Gambar latar
-            .composite([
-                { input: agePlaceHolder, top: 3200, left: 416 },
-                { input: namePlaceHolder, top: 3393, left: 416 },
-                { input: imageCroped, top: 0, left: 0 },
-                { input: datePlaceholder, top: 774, left: 2556 },
-            ]).toBuffer().then((data) => {
-                return data
+            // Buat gambar komposit mask
+            const imageCroped = await sharp({
+                create: {
+                    width: bgMeta.width,
+                    height: bgMeta.height,
+                    channels: 4,
+                    background: { r: 0, g: 0, b: 0, alpha: 0 },
+                },
             })
-        result = finalImage
-    } catch (error) {
-        console.error(error)
+                .composite(imageComposite)
+                .png()
+                .toBuffer();
+
+            // Overlay tambahan
+            const compositeOverlay = [{ input: imageCroped, top: 0, left: 0 }];
+            if (Array.isArray(overlay)) {
+                overlay.forEach((element) => {
+                    const pos = element.position;
+                    compositeOverlay.push({
+                        input: Buffer.from(replaceText(element.input, overlayData), 'utf8'),
+                        top: pos.top,
+                        left: pos.left,
+                    });
+                });
+            } else {
+                console.warn('Overlay is not an array or is undefined.');
+            }
+            // Gabungkan semua layer dan kembalikan buffer
+            const finalImageBuffer = await sharp(bgPath)
+                .composite(compositeOverlay)
+                .jpeg()
+                .toBuffer();
+
+            resolve(finalImageBuffer);
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
+const calculateAge = (birthday) => {
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+  
+    // Jika belum ulang tahun tahun ini, kurangi umur dengan 1
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
     }
-    return result
-}
+  
+    return age;
+  }
+
 module.exports = {
+    verifyImage: async (base64String, size = true) => {
+        if (!base64String.startsWith('data:image/jpeg;base64,')) {
+            return false
+        }
+        const imageBuffer = Buffer.from(base64String.split(',')[1], 'base64');
+        const metadata = await sharp(imageBuffer).metadata();
+        if(size){
+            if (metadata.width !== 160 || metadata.height !== 160) {
+                return false
+            }
+        }
+        return true
+    },
     arrayToHuman: (arrayData) => {
         if (Array.isArray(arrayData)) {
             if (arrayData.length == 0) {
@@ -161,14 +220,18 @@ module.exports = {
         return buffer
     },
 
-    saveImage: async (base64String, filePath, bucketName = process.env.MINIO_BUCKET_NAME) => {
-        const buffer = makeBufferFromBase64(base64String);
+    saveImage: async (file, filePath, bucketName = process.env.MINIO_BUCKET_NAME) => {
+        let buffer;
+        if(Buffer.isBuffer(file)){
+            buffer = file
+        }else{
+            buffer = makeBufferFromBase64(file);
+        }
         try {
             await minio_client.putObject(bucketName, filePath, buffer, buffer.length);
-            console.log(`Gambar berhasil disimpan di minio dengan path: ${filePath}`);
+            console.info(`Gambar berhasil disimpan di minio (${bucketName}) dengan path: ${filePath}`);
         } catch (e) {
             console.error(`Gagal menyimpan gambar ke minio: ${e} (${bucketName})`)
-            console.table(minio_client)
         }
     },
     fileToBase64: (filePath) => {
@@ -198,7 +261,7 @@ module.exports = {
                     console.error('Gagal menyalin dan mengubah nama gambar:', err);
                     return;
                 }
-                console.log('File berhasil disalin dan nama diubah.');
+                console.info('File berhasil disalin dan nama diubah.');
             });
         });
     },
@@ -246,5 +309,9 @@ module.exports = {
             token: generat.generateString(8)
         })
     },
-    makeBufferFromBase64, makeBondingBox, MakeBirthdayCard
+    isValidUUID: (uuid) =>{
+        const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+        return uuidRegex.test(uuid);
+    }, 
+    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence
 }

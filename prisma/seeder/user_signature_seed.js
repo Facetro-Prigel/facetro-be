@@ -20,23 +20,23 @@ const getFaceSignature = async (file) =>{
         data= {image:y}
         base64=y
     }).catch((error)=>{
-        console.log(`Convert Error in ${file}`)
+        console.error(`Convert Error in ${file}`)
     })
     await axios.post(`${ml_url}build`,data, config_u).then((res)=>{
         let datas = res.data
         bbox= datas.bbox
         signiture = datas.signatureData
     }).catch((e)=>{
-        console.log(`Request Error in ${file}`)
+        console.error(`Request Error in ${file}`)
     })
     return [bbox, signiture, base64]
 }
 exports.run = async () => {
     const users = await prisma.user.findMany()
     for (let user of users) {
-        let hu = await getFaceSignature(`./inital_photos/${user.identityNumber}.jpg`)
+        let hu = await getFaceSignature(`./inital_photos/${user.identity_number}.jpg`)
         let newName = generator.generateString(20)+".jpg"
-        utils.copyAndRenameImage(`./inital_photos/${user.identityNumber}.jpg`, "./photos", newName)
+        utils.copyAndRenameImage(`./inital_photos/${user.identity_number}.jpg`, "./photos", newName)
         await prisma.user.update({where:{
             uuid:user.uuid
         }, data:{

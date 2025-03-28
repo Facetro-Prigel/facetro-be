@@ -2,33 +2,34 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcrypt');
 const prisma = new PrismaClient
+const { createResponse } = require('./helper/utils')
 require('dotenv').config();
 
-const checkPermission = async (user, text) =>{
+const checkPermission = async (user, text) => {
   return await prisma.user.findFirst({
     where: {
       uuid: user["uuid"],
       OR: [{
-        permissionUser: {
+        permission_user: {
           some: {
             permission: {
               is: {
-                guardName: text
+                guard_name: text
               }
             }
           }
         }
       },
       {
-        roleuser: {
+        role_user: {
           some: {
             role: {
               is: {
-                permisionrole: {
+                permission_role: {
                   some: {
                     permission: {
                       is: {
-                        guardName: text
+                        guard_name: text
                       }
                     }
                   }
@@ -39,11 +40,11 @@ const checkPermission = async (user, text) =>{
         }
       },
       {
-        roleuser: {
+        role_user: {
           some: {
             role: {
               is: {
-                guardName: 'super_admin'
+                guard_name: 'super_admin'
               }
             }
           }
@@ -52,16 +53,16 @@ const checkPermission = async (user, text) =>{
       ]
     },
     include: {
-      permissionUser: {
+      permission_user: {
         include: {
           permission: true
         }
       },
-      roleuser: {
+      role_user: {
         include: {
           role: {
             include: {
-              permisionrole: {
+              permission_role: {
                 include: {
                   permission: true
                 }
@@ -75,23 +76,25 @@ const checkPermission = async (user, text) =>{
 }
 exports.authorization = (text = '', child_permission = []) => {
   return (req, res, next) => {
+    console.info('terhit')
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]
-    if ((token == null) || (authHeader.split(' ')[0] != 'Bearer')) return res.status(401).json({ msg: "Akses tidak sah", code: 401 })
+    if ((token == null) || (authHeader.split(' ')[0] != 'Bearer')) return createResponse(res, 401, "Unauthorized", "Akses Tidak Sah!", req.route)
     jwt.verify(token, process.env.SECRET_TOKEN, async (err, user) => {
-      if (err) return res.status(403).json({ msg: "Dilarang", code: 403 })
+      if (err) return createResponse(res, 403, "Forbidden", "Anda memberikan token Autentikasi yang salah", req.route)
       req.user = user
       if (text != '') {
         let thare_premission = await checkPermission(user, text)
-        if (!thare_premission){ 
-          permission_name = await prisma.permission.findUnique({where:{guardName: text}, select:{name: true}})
-          return await res.status(403).json({ msg: `Anda tidak memiliki izin untuk melakukan '${ permission_name.name ?? text }'`, code: 401 }) }
-        if (child_permission.length){
-          for (const permission_i of child_permission) {
-            let thare_child_premission = await checkPermission(user, permission_i)
-            if(thare_child_premission){
-              req[permission_i] = true
-            }
+        if (!thare_premission) {
+          permission_name = await prisma.permission.findUnique({ where: { guard_name: text }, select: { name: true } })
+          return createResponse(res, 403, "Forbidden", `Anda tidak memiliki izin untuk melakukan'${permission_name.name ?? text}'`, req.route)
+        }
+      }
+      if (child_permission.length) {
+        for (const permission_i of child_permission) {
+          let thare_child_premission = await checkPermission(user, permission_i)
+          if (thare_child_premission) {
+            req[permission_i] = true
           }
         }
       }
@@ -100,23 +103,26 @@ exports.authorization = (text = '', child_permission = []) => {
   }
 }
 
-exports.deviceAuth = (req, res, next) => {
+exports.deviceAuth = () => {
+  return (req, res, next) => {
   const authHeader = req.headers['authorization'];
+  const protoIdentifier = req.headers['x-device-identifier'];
   const token = authHeader && authHeader.split(' ')[1]
-  if ((token == null) || (authHeader.split(' ')[0] != 'Bearer')) return res.status(401).json({ msg: "Perangkat presensi tidak sah", code: 401 })
+  if ((token == null) || (authHeader.split(' ')[0] != 'Bearer')) return createResponse(res, 401, "Perangkat presensi tidak sah", "Bentuk autentikasi perangkat presensi ini tidak memenuhi standar autentikasi sistem kami", req.route)
   jwt.verify(token, process.env.SECRET_DEVICE_TOKEN, async (err, device) => {
-    if (err) return res.status(403).json({ msg: "Dilarang", code: 403, 'reson': 'device' })
+    if (err) return createResponse(res, 403, "Dilarang", "Perangkat ini memberikan token Autentikasi yang salah", req.route)
     identity = device.identityKey
     uuid = device.uuid
+    req.device = device
     result = await prisma.device.findUnique({
       where: {
         uuid: uuid
       }
     })
-    if (!result) return res.status(403).json({ msg: "Perangkat Tidak Cocok", code: 403, 'reson': 'device' })
+    if (!result) return createResponse(res, 403, "Perangkat Tidak Cocok", "Perangkat ini memberikan parameter yang berbeda dari yang telah kami buat sebelumnya", req.route)
     vacryResult = await bcrypt.compare(identity, result.identity)
-    if (!vacryResult) return res.status(403).json({ msg: "Izin Perangkat Telah Dicabut", code: 403, 'reson': 'device' })
+    if (!vacryResult) return createResponse(res, 403, "Izin Dicabut!", "Izin untuk perangkat ini telah dicabut", req.route)
     req.device = result
     next()
-  })
+  })}
 }

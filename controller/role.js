@@ -7,7 +7,7 @@ const checkDeleteUpdate = async (uuid, reqs) => {
     where: {
       uuid: uuid,
       NOT: [{
-        guardName: 'super_admin'
+        guard_name: 'super_admin'
       }]
     },
     select: {
@@ -21,90 +21,95 @@ const inputInsertUpdate = async (req) => {
     name: req.body.name,
     description: req.body.description
   }
-  if (req.asign_role_to_permision && req.body.permisions) {
-    data.permisionrole = {
-      deleteMany: {}, // Hapus semua relasi sebelumnya
-      create: req.body.permisions
-        .filter(permissionUuid => permissionUuid !== "")
-        .map(permissionUuid => ({ permission: { connect: { uuid: permissionUuid } } }))
+  if (req.asign_role_to_permision && req.body.permission_role) {
+    data.permission_role = {
+      create: req.body.permission_role
+        .filter(permission_uuid => permission_uuid !== "")
+        .map(permission_uuid => ({ permission: { connect: { uuid: permission_uuid } } }))
     }
   }  
   return data
 }
 module.exports = {
   getter_all: async (req, res) => {
-    let isExist;
-    
-    isExist = await prisma.role.findMany({
-      select: {
-        uuid: true,
-        name: true,
-        description: true,
-      },
-    });
+    let roles;
+    try {
+      roles = await prisma.role.findMany({
+        select: {
+          uuid: true,
+          name: true,
+          description: true,
+        },
+      });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/role");
+    }
 
-    res.status(200).json({ data: isExist, code: 200 });
+    return utils.createResponse(res, 200, "Success", "Peran berhasil ditemukan", "/role", roles);
   },
   getter: async (req, res) => {
     var uuid = req.params.uuid;
-    let isExist;
-    isExist = await prisma.role.findUnique({
-      where: { uuid: uuid },
-      select: {
-        uuid: true,
-        name: true,
-        guardName: true,
-        description: true,
-        permisionrole: {
-          select: {
-            permission: {
-              select:{
-                name: true,
-                uuid: true
+    let role;
+    try {
+      role = await prisma.role.findUnique({
+        where: { uuid: uuid },
+        select: {
+          uuid: true,
+          name: true,
+          guard_name: true,
+          description: true,
+          permission_role: {
+            select: {
+              permission: {
+                select:{
+                  name: true,
+                  uuid: true
+                }
               }
             }
           }
-        }
-      },
-    });
-    res.status(200).json({ data: isExist, code: 200 });
+        },
+      });
+    } catch (error) {
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/role/${uuid}`);
+    }
+    return utils.createResponse(res, 200, "Success", "Peran berhasil ditemukan", `/role/${uuid}`, role);
   },
 
   insert: async (req, res) => {
     try {
-      console.log(JSON.stringify(req.body));
       let data = await inputInsertUpdate(req)
-      data.guardName = utils.toSnakeCase(req.body.guardName) ?? utils.toSnakeCase(req.body.name)
+      data.guard_name = utils.toSnakeCase(req.body.guard_name) ?? utils.toSnakeCase(req.body.name)
       let result = await prisma.role.create({
         data: data
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return res.status(500).json({ error: "Terjadi kesalahan saat memproses permintaan" });
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/role");
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Peran sudah ditambahkan" });
+    return utils.createResponse(res, 200, "Success", "Peran berhasil ditambahkan", "/role");
   },
   deleter: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return res.status(400).json({ msg: "Peran tidak ditemukan / tidak dapat dihapus" });
+      return utils.createResponse(res, 404, "Not Found", "Peran tidak ditemukan atau tidak dapat dihapus", `/role/${uuid}`);
     }
     await prisma.role.delete({ where: { uuid: uuid } })
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Peran berhasil dihapus " })
+    return utils.createResponse(res, 200, "Success", "Peran berhasil dihapus", `/role/${uuid}`);
   },
   update: async (req, res) => {
     let uuid = req.params.uuid
     let check = await checkDeleteUpdate(uuid)
     if (!check) {
-      return res.status(400).json({ msg: "Peran tidak ditemukan / tidak dapat diubah" });
+      return utils.createResponse(res, 404, "Not Found", "Peran tidak ditemukan atau tidak dapat diubah", `/role/${uuid}`);
     }
     try {
       let data = await inputInsertUpdate(req)
-      if (req.body.guardName) {
-        data.guardName = utils.toSnakeCase(req.body.guardName)
+      if (req.body.guard_name) {
+        data.guard_name = utils.toSnakeCase(req.body.guard_name)
       }
       let result = await prisma.role.update({
         where: {
@@ -114,9 +119,9 @@ module.exports = {
       })
     } catch (error) {
       console.error("Error while inserting device:", error);
-      return res.status(400).json({ error: "Terjadi kesalahan saat memproses permintaan" });
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/role/${uuid}`); 
     }
     utils.webSockerUpdate(req)
-    return res.status(200).json({ msg: "Peran berhasil ubah" })
+    return utils.createResponse(res, 200, "Success", "Peran berhasil diubah", `/role/${uuid}`);
   }
 };

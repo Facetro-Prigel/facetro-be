@@ -5,16 +5,16 @@ module.exports = {
     getUserWithRole: async (role, select = false) =>{
         let superUsers = [] 
         const superAdminUser = await prisma.role.findUnique({where:{
-            guardName: role
+            guard_name: role
         }, include:{
-            roleuser:{
+            role_user:{
                 include:{
                     user:true
                 }
             }
         }})
         if(superAdminUser){
-            let superUsersObj = superAdminUser.roleuser
+            let superUsersObj = superAdminUser.role_user
             for (let user of superUsersObj) {
                 if(select){
                     if(user.user[select]){

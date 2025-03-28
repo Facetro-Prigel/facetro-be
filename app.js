@@ -1,163 +1,128 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const {PrismaClient} =require('@prisma/client')
-const middleware = require('./middleware');
 const allRoutes = require("./routes");
-const { Server } = require('socket.io');
+const { io: clientIO } = require("socket.io-client");
 const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
 var cors = require('cors');
+const mime = require('mime-types');
 const minioClient = require('./minioClient')
-const prisma= new PrismaClient(); 
+const utils = require('./helper/utils');
+
+const socket = clientIO((process.env.WEBSOCKET_URL || "http://localhost:3001"));
+
+socket.on("connect", () => {
+  console.info("Terhubung ke server WebSocket eksternal");
+});
+
+socket.on("connect_error", (error) => {
+  console.error("Gagal terhubung ke server WebSocket:", error);
+});
+
+app.use(cors());
+
+app.get('/avatar/:filename', async (req, res) => {
+  const filename = req.params.filename;
+
+  // Debugging: Log detail permintaan
+  console.log('Request for avatar:', filename);
+  console.log('Referer:', req.get('Referer'));
+  console.log('Origin:', req.get('Origin'));
+
+  // Cek referer atau origin untuk mencegah permintaan langsung
+  const referer = req.get('Referer');
+  const origin = req.get('Origin');
+  if (!referer && !origin) {
+      return res.status(403).send('Direct access forbidden'); // 403 Forbidden jika tidak ada referer/origin
+  }
+
+  try {
+      // Ambil objek dari MinIO
+      const responseStream = await minioClient.getObject('avatar', filename);
+
+      // Deteksi tipe konten berdasarkan nama file
+      const contentType = mime.contentType(filename) || 'application/octet-stream';
+      res.set('Content-Type', contentType);
+
+      // Kirim stream gambar sebagai respons
+      responseStream.pipe(res);
+  } catch (e) {
+      // Tangani error berdasarkan jenis kesalahan
+      console.error('Error fetching image from MinIO:', e);
+      if (e.code === 'NoSuchKey') {
+          return res.status(404).send('Image not found'); // 404 jika file tidak ditemukan
+      } else {
+          return res.status(500).send('Internal Server Error'); // 500 untuk kesalahan server lainnya
+      }
+  }
+});
 
 app.get('/photos/:filename', async (req, res) => {
-    const filename = 'photos/' + req.params.filename;
+  const filename = req.params.filename;
 
-    const link_404 = process.env.FRONTEND_URL + "/404"
+  const link_404 = process.env.FRONTEND_URL + "/404"
 
-    const referer = req.get('Referer');
-    const origin = req.get('Origin');
+  const referer = req.get('Referer');
+  const origin = req.get('Origin');
 
-    // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
-    if (!referer && !origin) {
-        return res.redirect(link_404);
-    }
-
+  // Redirect ke halaman 404 jika tidak ada referer atau origin (permintaan langsung)
+  if (!referer && !origin) {
+    return res.redirect(link_404);
+  }
+  try {
+    let responseStream = await minioClient.getObject('photos', filename);
+    res.set('Content-Type', 'image/jpeg');
+    responseStream.pipe(res);
+  } catch (e) {
     try {
-        const responseStream = await minioClient.getObject(process.env.MINIO_BUCKET_NAME, filename);
-        res.set('Content-Type', 'image/jpeg');
-        responseStream.pipe(res);
+      let responseStream = await minioClient.getObject('log', filename);
+      res.set('Content-Type', 'image/jpeg');
+      responseStream.pipe(res);
     } catch (e) {
-        console.error('Error fetching image from minio: ', e);
-        res.redirect(link_404);  // Redirect jika gambar tidak ditemukan
+      console.error('Error fetching image from minio: ', e);
+      res.redirect(link_404);  // Redirect jika gambar tidak ditemukan
     }
+  }
 });
 
 
 // get config vars
-app.use(cors())
-//app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
-const io = new Server(server, {
-  cors: {
-    origin: '*',
-    methods: ["GET", "POST", "OPTIONS"]
-  }
-});
-app.set('socketio', io);
-io.on('connection', (socket) => {
-  console.log(`Pengguna (${socket.id}) terhubung ke websocket`);
-  socket.on('disconnect', () => {
-    console.log(`Pengguna (${socket.id}), terputus ke websocket`);
-  });
-});
-io.on("connection_error", (err) => {
-  console.log(err.req);      // the request object
-  console.log(err.code);     // the error code, for example 1
-  console.log(err.message);  // the error message, for example "Session ID unknown"
-  console.log(err.context);  // some additional error context
-});
+app.set('socketio', socket);
 BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();
 };
-
-// const hapus = async (req, res, model) =>{
-//   const id = req.params.uuid
-//   const call = eval('prisma.'+model)
-//   const results = await call.delete({
-//       where:{
-//         uuid:id
-//     }
-//   });
-//   res.send(results);
-// }
-
-// const tambah = async (req, res, model) =>{
-//   const id = req.body
-//   const call = eval('prisma.'+model)
-//   const results = await call.create({
-//     data:id
-//   })
-//   res.send(results);
-// }
-
-// const perbarui = async (req, res, model) => {
-//   const id = req.params.uuid;
-//   const post = req.body;
-//   const call = eval('prisma.' + model);
-//   const results = await call.update({
-//     where: { uuid: id },
-//     data: post
-//   });
-//   res.send(results);
-// };
-
-// const tampilkan = async (req, res, model) => {
-//   const id = req.params.uuid;
-//   const call = eval('prisma.' + model);
-//   const results = await call.findUnique({
-//     where: { uuid: id }
-//   });
-//   res.send(results);
-// };
-
-// const tampilkansemua = async (req, res, model) => {
-//   const call = eval('prisma.' + model);
-//   const results = await call.findMany();
-//   res.send(results);
-// };
-
-// const method = ['user', 'role', 'permission', 'group', 'device'];
-// method.forEach(element => {
-//   app.delete(`/${element}/:uuid`, async (req, res) => {
-//     hapus(req, res, element);
-//   });
-//   app.post(`/${element}`, async (req, res) => {
-//     tambah(req, res, element);
-//   });
-//   app.put(`/${element}/:uuid`, async (req, res) => {
-//     perbarui(req, res, element);
-//   });
-//   app.get(`/${element}/:uuid?`, async (req, res) => {
-//     const id = req.params.uuid;
-//     if (id) {
-//       tampilkan(req, res, element);
-//     } else {
-//       tampilkansemua(req, res, element);
-//     }
-//   });
-// });
 console.info("=======Bejalan Menggunakan Versi=======")
 let data_commit = execSync("git show --summary").toString().split(/\r?\n/)
 let penulis = data_commit[1]
 let waktu = data_commit[2]
-let pesan =  data_commit[4]
-console.log(data_commit[1].indexOf("Merge:"))
-if(data_commit[1].indexOf("Merge:") != -1){
+let pesan = data_commit[4]
+
+if (data_commit[1].indexOf("Merge:") != -1) {
   penulis = data_commit[2]
   waktu = data_commit[3]
-  pesan =  data_commit[5]
+  pesan = data_commit[5]
 }
 console.table({
   hash: data_commit[0].replace("commit ", ""),
-  penulis: penulis.replace("Author: ", ""), 
+  penulis: penulis.replace("Author: ", ""),
   waktu: new Date(waktu.replace("Date:", "").trim()).toLocaleString('id-ID', {
     timeZone: 'Asia/Jakarta',
     timeStyle: "long",
-    dateStyle:"full"
-  }), 
+    dateStyle: "full"
+  }),
   pesan: pesan.trim(),
 })
 // console.table(process.env)
-app.get('/',(req, res) => {
-  res.json({msg:'Hello!'});
+app.get('/', (req, res) => {
+  utils.createResponse(res, 200, 'success', 'Hello!')
 });
 
-server.listen(process.env.PORT,'0.0.0.0', () => {
-  console.log(`Aplikasi berjalan di port ${ process.env.PORT }`);
+server.listen(process.env.PORT, '0.0.0.0', () => {
+  console.info(`Aplikasi berjalan di 0.0.0.0 di port ${process.env.PORT}`);
 });
 
