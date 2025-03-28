@@ -555,5 +555,101 @@ module.exports = {
     utils.webSockerUpdate(req)
     return utils.createResponse(res, 200, "Success", "Pengguna berhasil dihapus", `/user/${uuid}`);
   },
+  getUserPresenceLog: async (req, res) => {
+    const uuid = req.params.uuid;
+    try {
+        const now = new Date();
+        const today_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const today_end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+        const week_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 7));
+        const month_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+        const semester_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 6, 1));
+  
+        const [log, this_week_log, this_month_log, this_semester_log, today_log] = await Promise.all([
+            prisma.log.findMany({
+                select: { created_at: true, type: true },
+                where: { 
+                  user_uuid: uuid, 
+                  type: { in: ['Login', 'Logout'] }, 
+                  is_match: true 
+                },
+                orderBy: { created_at: 'asc' }
+            }),
+            prisma.log.findMany({
+                select: { created_at: true, type: true },
+                where: {
+                    user_uuid: uuid,
+                    type: { in: ['Login', 'Logout'] },
+                    is_match: true,
+                    created_at: { gte: week_start, lte: now }
+                },
+                orderBy: { created_at: 'asc' }
+            }),
+            prisma.log.findMany({
+                select: { created_at: true, type: true },
+                where: {
+                    user_uuid: uuid,
+                    type: { in: ['Login', 'Logout'] },
+                    is_match: true,
+                    created_at: { gte: month_start, lte: now }
+                },
+                orderBy: { created_at: 'asc' }
+            }),
+            prisma.log.findMany({
+                select: { created_at: true, type: true },
+                where: {
+                    user_uuid: uuid,
+                    type: { in: ['Login', 'Logout'] },
+                    is_match: true,
+                    created_at: { gte: semester_start, lte: now }
+                },
+                orderBy: { created_at: 'asc' }
+            }),
+            prisma.log.findMany({
+                select: { created_at: true, type: true },
+                where: {
+                    user_uuid: uuid,
+                    type: { in: ['Login', 'Logout'] },
+                    is_match: true,
+                    created_at: { gte: today_start, lte: today_end }
+                },
+                orderBy: { created_at: 'asc' }
+            })
+        ]);
 
+        const calculatePresenceMinutes = (logs) => {
+          const groupedByDay = logs.reduce((acc, log) => {
+              const date = new Date(log.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+              if (!acc[date]) acc[date] = [];
+              acc[date].push(new Date(log.created_at));
+              return acc;
+          }, {});
+      
+          return Object.entries(groupedByDay).reduce((totalMinutes, [date, timestamps]) => {
+              if (timestamps.length < 2) return totalMinutes;
+              timestamps.sort((a, b) => a - b);
+              const minutes = (timestamps[timestamps.length - 1] - timestamps[0]) / (1000 * 60);
+              return totalMinutes + minutes;
+          }, 0);
+      };
+      
+      // Menentukan Login pertama dan Logout terakhir hari ini
+      const today_login = [...today_log].reverse().find(log => log.type === 'Login')?.created_at || null;
+      const today_logout = [...today_log].reverse().find(log => log.type === 'Logout')?.created_at || null;
+      
+      return utils.createResponse(res, 200, "Success", "Log pengguna berhasil ditemukan", `/user/${uuid}/log`, {
+          log,
+          weekly_minutes: calculatePresenceMinutes(this_week_log),
+          monthly_minutes: calculatePresenceMinutes(this_month_log),
+          semester_minutes: calculatePresenceMinutes(this_semester_log),
+          today_login,
+          today_logout
+      });
+    } catch (error) {
+        console.error(JSON.stringify(`${error}: ${error.message}`));
+        return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}/log`);
+    }
+}
+
+  
 };
