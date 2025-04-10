@@ -159,6 +159,32 @@ const checkDeleteUpdate = async (uuid, reqs) => {
   });
   return user
 }
+
+const calculateDailyPresenceMinutes = (logs) => {
+  const dailyMinutes = Array(7).fill(0);
+
+  const groupedByDay = logs.reduce((acc, log) => {
+    const dateObj = new Date(log.created_at);
+    const date = dateObj.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(new Date(log.created_at));
+    return acc;
+  }, {});
+
+  Object.entries(groupedByDay).forEach(([_, timestamps]) => {
+    if (timestamps.length < 2) return;
+
+    timestamps.sort((a, b) => a - b);
+    const minutes = (timestamps[timestamps.length - 1] - timestamps[0]) / (1000 * 60);
+    
+    const dayIndex = (timestamps[0].getDay() + 6) % 7;
+    dailyMinutes[dayIndex] = Math.round(minutes * 100) / 100;
+  });
+
+  return dailyMinutes;
+};
+
+
 module.exports = {
   birthday_image: async (req, res) => {
     const path = require('path');
@@ -639,6 +665,7 @@ module.exports = {
       
       return utils.createResponse(res, 200, "Success", "Log pengguna berhasil ditemukan", `/user/${uuid}/log`, {
           log,
+          daily_minutes: calculateDailyPresenceMinutes(this_week_log),
           weekly_minutes: calculatePresenceMinutes(this_week_log),
           monthly_minutes: calculatePresenceMinutes(this_month_log),
           semester_minutes: calculatePresenceMinutes(this_semester_log),

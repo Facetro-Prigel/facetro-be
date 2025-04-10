@@ -1,6 +1,6 @@
 const express = require("express");
 const route = express.Router();
-const { getter_all, getter, deleteUser, insert, update, upload_image, unnes_image, birthday_image, getUserPresenceLog, birthday_image } = require('../controller/user')
+const { getter_all, getter, deleteUser, insert, update, upload_image, unnes_image, birthday_image, getUserPresenceLog } = require('../controller/user')
 const { login } = require('../controller/authuser')
 const { authorization } = require('../middleware')
 route.delete("/:uuid",authorization('user_delete'), deleteUser)
