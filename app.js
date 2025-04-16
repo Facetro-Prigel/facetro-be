@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const allRoutes = require("./routes");
-const { io: clientIO } = require("socket.io-client");
+// const { io: clientIO } = require("socket.io-client");
 const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
@@ -10,17 +10,16 @@ const mime = require('mime-types');
 const minioClient = require('./minioClient')
 const utils = require('./helper/utils');
 
-const socket = clientIO((process.env.WEBSOCKET_URL || "http://localhost:3001"));
+// const socket = clientIO((process.env.WEBSOCKET_URL || "http://localhost:3001"));
 
-socket.on("connect", () => {
-  console.info("Terhubung ke server WebSocket eksternal");
-});
+// socket.on("connect", () => {
+//   console.info("Terhubung ke server WebSocket eksternal");
+// });
 
-socket.on("connect_error", (error) => {
-  console.error("Gagal terhubung ke server WebSocket:", error);
-});
-
-app.use(cors());
+// socket.on("connect_error", (error) => {
+//   console.error("kampang")
+//   // console.error("Gagal terhubung ke server WebSocket:", error);
+// });
 
 app.get('/avatar/:filename', async (req, res) => {
   const filename = req.params.filename;
@@ -88,10 +87,31 @@ app.get('/photos/:filename', async (req, res) => {
 
 
 // get config vars
+app.use(cors())
+//app.use("/photos", express.static('photos'))
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
-app.set('socketio', socket);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ["GET", "POST", "OPTIONS"]
+  }
+});
+app.set('socketio', io);
+io.on('connection', (socket) => {
+  console.log(`Pengguna (${socket.id}) terhubung ke websocket`);
+  socket.on('disconnect', () => {
+    console.log(`Pengguna (${socket.id}), terputus ke websocket`);
+  });
+});
+io.on("connection_error", (err) => {
+  console.log(err.req);      // the request object
+  console.log(err.code);     // the error code, for example 1
+  console.log(err.message);  // the error message, for example "Session ID unknown"
+  console.log(err.context);  // some additional error context
+});
+
 BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();
