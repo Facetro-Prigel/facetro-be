@@ -415,10 +415,10 @@ module.exports = {
     if (search) {
       const searchCondition = {
         OR: [
-          { user: { name: { contains: search, mode: 'insensitive' } } }, // Pencarian nama
-          { user: { identity_number: { contains: search, mode: 'insensitive' } } }, // Pencarian nomor identitas
-          { device: { name: { contains: search, mode: 'insensitive' } } }, // Pencarian nama perangkat
-          { user: { user_group: { some: { group: { name: { contains: search, mode: 'insensitive' } } } } } } // Pencarian grup
+          { user: { name: { contains: search } } }, // Pencarian nama
+          { user: { identity_number: { contains: search } } }, // Pencarian nomor identitas
+          { device: { name: { contains: search } } }, // Pencarian nama perangkat
+          { user: { user_group: { some: { group: { name: { contains: search } } } } } } // Pencarian grup
         ]
       };
 
@@ -437,7 +437,7 @@ module.exports = {
     }
 
     // Tambahkan pengurutan berdasarkan parameter sort dan order
-    const validSortFields = ['name', 'identity_number', 'device', 'group', 'in_time']; // Daftar kolom yang valid
+    const validSortFields = ['name', 'identity_number', 'device', 'group', 'inTime', 'type']; // Daftar kolom yang valid
     if (validSortFields.includes(sort)) {
       if (sort === 'inTime') {
         // Urutkan berdasarkan waktu (created_at)
@@ -461,8 +461,7 @@ module.exports = {
         defaultQuery.orderBy = {
           user: {
             user_group: {
-              group: {
-                name: order              }
+              _count: order
             }
           }
         }
