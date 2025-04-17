@@ -313,5 +313,29 @@ module.exports = {
         const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
         return uuidRegex.test(uuid);
     }, 
+    getSpecificDayOfWeek: (date, targetDay) =>{
+        // Pastikan targetDay adalah angka antara 0 dan 6 (0 = Minggu, 1 = Senin, ..., 6 = Sabtu)
+        const dayOfWeek = date.getDay(); // Mendapatkan indeks hari saat ini (0-6)
+        
+        // Hitung selisih hari ke targetDay
+        let diffToTargetDay = targetDay - dayOfWeek;
+        if (diffToTargetDay > 0) {
+          diffToTargetDay -= 7; // Jika targetDay berada di minggu sebelumnya
+        }
+      
+        // Kurangi tanggal saat ini dengan selisih hari untuk mendapatkan targetDay
+        const targetDate = new Date(date);
+        targetDate.setDate(date.getDate() + diffToTargetDay);
+      
+        // Format hasil ke YYYY-MM-DD berdasarkan zona waktu lokal (Asia/Jakarta)
+        let localTime = targetDate.toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          year: "numeric",
+          day: '2-digit',
+          month: '2-digit'
+        });
+        localTime = localTime.split('/');
+        return `${localTime[2]}-${localTime[1]}-${localTime[0]}`;
+      },
     makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence
 }

@@ -585,15 +585,26 @@ module.exports = {
     const uuid = req.params.uuid;
     try {
         const now = new Date();
-        const today_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        const today_end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-        const week_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 7));
-        const month_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-        const semester_start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 6, 1));
+        let localTime = new Date().toLocaleString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          year: "numeric",
+          day: '2-digit',
+          month: '2-digit'
+        })
+        localTime = localTime.split('/')
+        let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
+        const today_start = new Date(`${nowDate}T00:00:00.000+07:00`);
+        const today_end = new Date(`${nowDate}T23:59:59.500+07:00`);
+        
+        const week_start = new Date(utils.getSpecificDayOfWeek(now, 0));
+
+        const month_start = new Date(`${localTime[2]}-${localTime[1]}-01T00:00:00.000+07:00`);
+        let monthStartSemester = parseInt(localTime[1]) > 7 ? '07' : '01';  
+        const semester_start = new Date(`${localTime[2]}-${monthStartSemester}-01T00:00:00.000+07:00`);
   
         const [log, this_week_log, this_month_log, this_semester_log, today_log] = await Promise.all([
             prisma.log.findMany({
-                select: { created_at: true, type: true },
+                select: { image_path:true, bbox:true, created_at: true, type: true },
                 where: { 
                   user_uuid: uuid, 
                   type: { in: ['Login', 'Logout'] }, 

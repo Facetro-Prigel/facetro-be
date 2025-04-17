@@ -354,19 +354,19 @@ module.exports = {
     const search = req.query.search; // Ambil parameter pencarian
     const sort = req.query.sort || 'created_at'; // Default sort: created_at
     const order = req.query.order || 'desc'; // Default order: desc
-  
+
     // Validasi input halaman dan limit
     if (isNaN(pageNumber) || isNaN(limitNumber) || pageNumber < 1 || limitNumber < 1) {
       return utils.createResponse(res, 400, 'Bad Request!', 'Anda harus menyertakan halaman dan berapa banyak yang ditampilkan!', '/log');
     }
-  
+
     // Query dasar untuk menghitung total records
     const countQuery = {
       where: {
         user_uuid: req.user.uuid
       }
     };
-  
+
     // Query dasar untuk mengambil data
     const defaultQuery = {
       where: {
@@ -403,14 +403,14 @@ module.exports = {
         }
       }
     };
-  
+
     // Jika show_other_log diaktifkan, hapus kondisi user_uuid
     if (req.show_other_log) {
       delete defaultQuery.where;
       delete countQuery.where;
       console.info('showOther');
     }
-  
+
     // Tambahkan kondisi pencarian jika parameter search disediakan
     if (search) {
       const searchCondition = {
@@ -421,47 +421,58 @@ module.exports = {
           { user: { user_group: { some: { group: { name: { contains: search, mode: 'insensitive' } } } } } } // Pencarian grup
         ]
       };
-  
+
       // Gabungkan kondisi pencarian dengan kondisi existing
       if (defaultQuery.where) {
         defaultQuery.where = { ...defaultQuery.where, ...searchCondition };
       } else {
         defaultQuery.where = searchCondition;
       }
-  
+
       if (countQuery.where) {
         countQuery.where = { ...countQuery.where, ...searchCondition };
       } else {
         countQuery.where = searchCondition;
       }
     }
-  
+
     // Tambahkan pengurutan berdasarkan parameter sort dan order
     const validSortFields = ['name', 'identity_number', 'device', 'group', 'in_time']; // Daftar kolom yang valid
     if (validSortFields.includes(sort)) {
-      if (sort === 'group') {
-        // Urutkan berdasarkan nama grup (nested relation)
-        defaultQuery.orderBy = {
-          user: {
-            user_group: {
-              some: {
-                group: {
-                  name: order
-                }
-              }
-            }
-          }
-        };
-      } else if (sort === 'in_time') {
+      if (sort === 'inTime') {
         // Urutkan berdasarkan waktu (created_at)
         defaultQuery.orderBy = {
           created_at: order
         };
-      } else {
-        // Urutkan berdasarkan kolom lainnya (misalnya, name, identity_number, device)
+      }
+      else if (sort === 'device') {
         defaultQuery.orderBy = {
-          [sort]: { user: { [sort]: order } } || { device: { name: order } } || { created_at: order }
-        };
+          device: {
+            name: order
+          }
+        }
+      }
+      else if (sort == 'type') {
+        defaultQuery.orderBy = {
+          type: order
+        }
+      }
+      else if (sort === 'group') {
+        defaultQuery.orderBy = {
+          user: {
+            user_group: {
+              group: {
+                name: order              }
+            }
+          }
+        }
+      }
+      else{
+        defaultQuery.orderBy={
+          user: {
+              [sort]: order
+          }
+        }
       }
     } else {
       // Default urutan: created_at descending
@@ -469,14 +480,14 @@ module.exports = {
         created_at: 'desc'
       };
     }
-  
+
     try {
       // Hitung total records
       const total_records = await prisma.log.count(countQuery);
-  
+
       // Ambil data log
       const logDatas = await prisma.log.findMany(defaultQuery);
-  
+
       // Format data untuk respons
       const showLogs = logDatas.map((log) => ({
         name: log.user.name,
@@ -489,7 +500,7 @@ module.exports = {
         in_time: log.created_at,
         group: log.user.user_group.map((uy) => uy.group.name)
       }));
-  
+
       // Kirim respons sukses
       return utils.createResponse(res, 200, 'Success!', 'Berhasil Mengambil Logs!', '/log', { data: showLogs, total_records });
     } catch (error) {

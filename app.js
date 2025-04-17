@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const allRoutes = require("./routes");
-const { io: clientIO } = require("socket.io-client");
+const io= require("socket.io-client");
 const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
@@ -9,9 +9,10 @@ var cors = require('cors');
 const mime = require('mime-types');
 const minioClient = require('./minioClient')
 const utils = require('./helper/utils');
-
-const socket = clientIO((process.env.WEBSOCKET_URL || "http://localhost:3001"));
-
+const socket = io((process.env.WEBSOCKET_URL || "http://localhost:3001"), {
+  transports: ['websocket'], // Pastikan hanya menggunakan WebSocket
+  path: '/socket.io'         // Sesuaikan dengan path WebSocket server
+})
 socket.on("connect", () => {
   console.info("Terhubung ke server WebSocket eksternal");
 });
