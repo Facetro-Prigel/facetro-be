@@ -315,6 +315,7 @@ module.exports = {
     }, 
     getSpecificDayOfWeek: (date, targetDay) =>{
         // Pastikan targetDay adalah angka antara 0 dan 6 (0 = Minggu, 1 = Senin, ..., 6 = Sabtu)
+        
         const dayOfWeek = date.getDay(); // Mendapatkan indeks hari saat ini (0-6)
         
         // Hitung selisih hari ke targetDay

@@ -82,7 +82,7 @@ const inputInsertUpdate = async (req, updateOrInsert) => {
     };
   } else {
     data.user_details = {
-      create:s
+      create: s
     };
   }
   if (req.body.password) {
@@ -161,26 +161,67 @@ const checkDeleteUpdate = async (uuid, reqs) => {
 }
 
 const calculateDailyPresenceMinutes = (logs) => {
-  const dailyMinutes = Array(7).fill(0);
+  // Inisialisasi objek untuk menyimpan total menit per hari
+  const dailyMinutes = [];
 
+  if (logs.length === 0) {
+    // Jika tidak ada log, kembalikan array kosong
+    return dailyMinutes;
+  }
+
+  // Tentukan rentang tanggal dari logs
+  const allDates = logs.map((log) => {
+    const dateObj = new Date(log.created_at);
+    return dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+  });
+
+  const minDate = new Date(Math.min(...allDates.map((date) => new Date(date))));
+  const maxDate = new Date(Math.max(...allDates.map((date) => new Date(date))));
+
+  // Fungsi untuk mendapatkan semua tanggal dalam rentang
+  const getAllDatesInRange = (startDate, endDate) => {
+    const dates = [];
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }));
+      currentDate.setDate(currentDate.getDate() + 1); // Pindah ke hari berikutnya
+    }
+    return dates;
+  };
+
+  const allDatesInRange = getAllDatesInRange(minDate, maxDate);
+
+  // Kelompokkan log berdasarkan tanggal (dalam zona waktu WIB)
   const groupedByDay = logs.reduce((acc, log) => {
     const dateObj = new Date(log.created_at);
-    const date = dateObj.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+    const date = dateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
     if (!acc[date]) acc[date] = [];
-    acc[date].push(new Date(log.created_at));
+    acc[date].push(dateObj); // Simpan timestamp dalam bentuk Date object
     return acc;
   }, {});
 
-  Object.entries(groupedByDay).forEach(([_, timestamps]) => {
-    if (timestamps.length < 2) return;
+  // Hitung durasi untuk setiap hari dalam rentang tanggal
+  allDatesInRange.forEach((date) => {
+    const timestamps = groupedByDay[date];
 
+    if (!timestamps || timestamps.length < 2) {
+      // Jika tidak ada entri atau hanya satu entri, durasi dihitung sebagai 0
+      dailyMinutes.push({ date, minutes: 0 });
+      return;
+    }
+
+    // Urutkan timestamp secara ascending
     timestamps.sort((a, b) => a - b);
-    const minutes = (timestamps[timestamps.length - 1] - timestamps[0]) / (1000 * 60);
-    
-    const dayIndex = (timestamps[0].getDay() + 6) % 7;
-    dailyMinutes[dayIndex] = Math.round(minutes * 100) / 100;
+
+    // Hitung durasi antara entri pertama dan terakhir (dalam menit)
+    const durationMs = timestamps[timestamps.length - 1] - timestamps[0];
+    const durationMinutes = Math.round((durationMs / (1000 * 60)) * 100) / 100;
+
+    // Simpan hasil dalam objek dailyMinutes
+    dailyMinutes.push({ date, minutes: durationMinutes });
   });
 
+  // Mengembalikan hasil sebagai array untuk konsistensi
   return dailyMinutes;
 };
 
@@ -188,9 +229,9 @@ const calculateDailyPresenceMinutes = (logs) => {
 module.exports = {
   birthday_image: async (req, res) => {
     const path = require('path');
-    const defaultImagePath =  path.join(__dirname, '../no_images.png'); 
+    const defaultImagePath = path.join(__dirname, '../no_images.png');
     try {
-      const uuid = req.params.uuid;  
+      const uuid = req.params.uuid;
       const birthdayData = await prisma.user.findUnique({
         where: { uuid: uuid },
         select: {
@@ -203,12 +244,12 @@ module.exports = {
             },
           },
         },
-      }); 
+      });
       if (!birthdayData || !birthdayData.user_details?.birthday) {
         return utils.createResponse(res, 400, "Bad Request", "Pengguna belum mengisikan tanggal lahir!", `/birthday/${uuid}`);
       }
       try {
-        const stream = await minioClient.getObject('design', 'birthday_'+birthdayData.avatar);
+        const stream = await minioClient.getObject('design', 'birthday_' + birthdayData.avatar);
         const chunks = [];
         for await (const chunk of stream) {
           chunks.push(chunk);
@@ -229,10 +270,10 @@ module.exports = {
           let transparent = Buffer.concat(chunks);
           let BirthdayCard = await utils.makeDesign('birthday', transparent, birthdayData.bbox, {
             'date': new Date(birthday).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: "long" }),
-            'name': utils.transformSentence(birthdayData.name), 
+            'name': utils.transformSentence(birthdayData.name),
             'age': age
           })
-          utils.saveImage(BirthdayCard,  'birthday_'+birthdayData.avatar, 'design')
+          utils.saveImage(BirthdayCard, 'birthday_' + birthdayData.avatar, 'design')
           const base64Image = Buffer.from(BirthdayCard, 'binary').toString('base64');
           const base64Data = `data:image/jpeg;base64,${base64Image}`;
           return utils.createResponse(res, 200, "Success", "Gambar birthday berhasil diambil", `/birthday/${uuid}`, base64Data);
@@ -275,10 +316,10 @@ module.exports = {
       if (!image) {
         return utils.createResponse(res, 400, "Bad Request", "Gambar tidak ditemukan!", "/user/image");
       }
-  
+
       // Konfigurasi Axios
       const config_u = { headers: { "Content-Type": "application/json" } };
-  
+
       // Step 1: Kirim gambar ke endpoint ML untuk diproses
       let mlResponse;
       try {
@@ -293,7 +334,7 @@ module.exports = {
           "/user/image"
         );
       }
-  
+
       // Ambil data hasil pemrosesan ML
       const { data: mlData } = mlResponse;
       if (!mlData || !mlData.data || mlData.data.length === 0) {
@@ -305,13 +346,13 @@ module.exports = {
           "/user/image"
         );
       }
-  
+
       const processedData = mlData.data[0];
-  
+
       // Step 2: Simpan gambar asli
       const requestImagePath = `${genPass.generateString(23)}.jpg`;
       utils.saveImage(image, requestImagePath, "photos");
-  
+
       // Step 3: Generate avatar dengan menambahkan query string `type=profile`
       try {
         const avatarResponse = await axios.patch(
@@ -324,7 +365,7 @@ module.exports = {
       } catch (avatarError) {
         console.error("Avatar Generation Error:", avatarError.message || avatarError);
       }
-  
+
       // Step 4: Generate gambar transparan (remove background)
       try {
         const transparentResponse = await axios.post(
@@ -341,14 +382,14 @@ module.exports = {
       } catch (transparentError) {
         console.error("Transparent Background Error:", transparentError.message || transparentError);
       }
-  
+
       // Step 5: Simpan data ke database
       try {
         processedData.image_path = requestImagePath;
         const uuid = await prisma.tempData.create({
           data: { data: processedData },
         });
-  
+
         // Return success response
         return utils.createResponse(
           res,
@@ -584,110 +625,107 @@ module.exports = {
   getUserPresenceLog: async (req, res) => {
     const uuid = req.params.uuid;
     try {
-        const now = new Date();
-        let localTime = new Date().toLocaleString('id-ID', {
-          timeZone: 'Asia/Jakarta',
-          year: "numeric",
-          day: '2-digit',
-          month: '2-digit'
+      const now = new Date();
+      let localTime = new Date().toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        year: "numeric",
+        day: '2-digit',
+        month: '2-digit'
+      })
+      localTime = localTime.split('/')
+      let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
+      const today_start = new Date(`${nowDate}T00:00:00.000+07:00`);
+      const today_end = new Date(`${nowDate}T23:59:59.500+07:00`);
+      const week_start = new Date(utils.getSpecificDayOfWeek(now, 0) + 'T00:00:00.000+07:00');
+      const month_start = new Date(`${localTime[2]}-${localTime[1]}-01T00:00:00.000+07:00`);
+      let monthStartSemester = parseInt(localTime[1]) > 7 ? '07' : '01';
+      const semester_start = new Date(`${localTime[2]}-${monthStartSemester}-01T00:00:00.000+07:00`);
+      const [log, this_week_log, this_month_log, this_semester_log, today_log] = await Promise.all([
+        prisma.log.findMany({
+          select: { image_path: true, bbox: true, created_at: true, type: true },
+          where: {
+            user_uuid: uuid,
+            type: { in: ['Login', 'Logout'] },
+            is_match: true
+          },
+          orderBy: { created_at: 'asc' }
+        }),
+        prisma.log.findMany({
+          select: { created_at: true, type: true },
+          where: {
+            user_uuid: uuid,
+            type: { in: ['Login', 'Logout'] },
+            is_match: true,
+            created_at: { gte: week_start, lte: now }
+          },
+          orderBy: { created_at: 'asc' }
+        }),
+        prisma.log.findMany({
+          select: { created_at: true, type: true },
+          where: {
+            user_uuid: uuid,
+            type: { in: ['Login', 'Logout'] },
+            is_match: true,
+            created_at: { gte: month_start, lte: now }
+          },
+          orderBy: { created_at: 'asc' }
+        }),
+        prisma.log.findMany({
+          select: { created_at: true, type: true },
+          where: {
+            user_uuid: uuid,
+            type: { in: ['Login', 'Logout'] },
+            is_match: true,
+            created_at: { gte: semester_start, lte: now }
+          },
+          orderBy: { created_at: 'asc' }
+        }),
+        prisma.log.findMany({
+          select: { created_at: true, type: true },
+          where: {
+            user_uuid: uuid,
+            type: { in: ['Login', 'Logout'] },
+            is_match: true,
+            created_at: { gte: today_start, lte: today_end }
+          },
+          orderBy: { created_at: 'asc' }
         })
-        localTime = localTime.split('/')
-        let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
-        const today_start = new Date(`${nowDate}T00:00:00.000+07:00`);
-        const today_end = new Date(`${nowDate}T23:59:59.500+07:00`);
-        
-        const week_start = new Date(utils.getSpecificDayOfWeek(now, 0));
+      ]);
 
-        const month_start = new Date(`${localTime[2]}-${localTime[1]}-01T00:00:00.000+07:00`);
-        let monthStartSemester = parseInt(localTime[1]) > 7 ? '07' : '01';  
-        const semester_start = new Date(`${localTime[2]}-${monthStartSemester}-01T00:00:00.000+07:00`);
-  
-        const [log, this_week_log, this_month_log, this_semester_log, today_log] = await Promise.all([
-            prisma.log.findMany({
-                select: { image_path:true, bbox:true, created_at: true, type: true },
-                where: { 
-                  user_uuid: uuid, 
-                  type: { in: ['Login', 'Logout'] }, 
-                  is_match: true 
-                },
-                orderBy: { created_at: 'asc' }
-            }),
-            prisma.log.findMany({
-                select: { created_at: true, type: true },
-                where: {
-                    user_uuid: uuid,
-                    type: { in: ['Login', 'Logout'] },
-                    is_match: true,
-                    created_at: { gte: week_start, lte: now }
-                },
-                orderBy: { created_at: 'asc' }
-            }),
-            prisma.log.findMany({
-                select: { created_at: true, type: true },
-                where: {
-                    user_uuid: uuid,
-                    type: { in: ['Login', 'Logout'] },
-                    is_match: true,
-                    created_at: { gte: month_start, lte: now }
-                },
-                orderBy: { created_at: 'asc' }
-            }),
-            prisma.log.findMany({
-                select: { created_at: true, type: true },
-                where: {
-                    user_uuid: uuid,
-                    type: { in: ['Login', 'Logout'] },
-                    is_match: true,
-                    created_at: { gte: semester_start, lte: now }
-                },
-                orderBy: { created_at: 'asc' }
-            }),
-            prisma.log.findMany({
-                select: { created_at: true, type: true },
-                where: {
-                    user_uuid: uuid,
-                    type: { in: ['Login', 'Logout'] },
-                    is_match: true,
-                    created_at: { gte: today_start, lte: today_end }
-                },
-                orderBy: { created_at: 'asc' }
-            })
-        ]);
+      const calculatePresenceMinutes = (logs) => {
+        const groupedByDay = logs.reduce((acc, log) => {
+          const date = new Date(log.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+          if (!acc[date]) acc[date] = [];
+          acc[date].push(new Date(log.created_at));
+          return acc;
+        }, {});
 
-        const calculatePresenceMinutes = (logs) => {
-          const groupedByDay = logs.reduce((acc, log) => {
-              const date = new Date(log.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
-              if (!acc[date]) acc[date] = [];
-              acc[date].push(new Date(log.created_at));
-              return acc;
-          }, {});
-      
-          return Object.entries(groupedByDay).reduce((totalMinutes, [date, timestamps]) => {
-              if (timestamps.length < 2) return totalMinutes;
-              timestamps.sort((a, b) => a - b);
-              const minutes = (timestamps[timestamps.length - 1] - timestamps[0]) / (1000 * 60);
-              return totalMinutes + minutes;
-          }, 0);
+        return Object.entries(groupedByDay).reduce((totalMinutes, [date, timestamps]) => {
+          if (timestamps.length < 2) return totalMinutes;
+          timestamps.sort((a, b) => a - b);
+          const minutes = (timestamps[timestamps.length - 1] - timestamps[0]) / (1000 * 60);
+          return totalMinutes + minutes;
+        }, 0);
       };
-      
+
       // Menentukan Login pertama dan Logout terakhir hari ini
       const today_login = [...today_log].reverse().find(log => log.type === 'Login')?.created_at || null;
       const today_logout = [...today_log].reverse().find(log => log.type === 'Logout')?.created_at || null;
-      
+
       return utils.createResponse(res, 200, "Success", "Log pengguna berhasil ditemukan", `/user/${uuid}/log`, {
-          log,
-          daily_minutes: calculateDailyPresenceMinutes(this_week_log),
-          weekly_minutes: calculatePresenceMinutes(this_week_log),
-          monthly_minutes: calculatePresenceMinutes(this_month_log),
-          semester_minutes: calculatePresenceMinutes(this_semester_log),
-          today_login,
-          today_logout
+        log,
+        daily_minutes: calculateDailyPresenceMinutes(this_week_log),
+        weekly_minutes: calculatePresenceMinutes(this_week_log),
+        monthly_minutes: calculatePresenceMinutes(this_month_log),
+        semester_minutes: calculatePresenceMinutes(this_semester_log),
+        today_login,
+        today_logout
       });
     } catch (error) {
-        console.error(JSON.stringify(`${error}: ${error.message}`));
-        return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}/log`);
+      console.error(JSON.stringify(`${error}: ${error.message}`));
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/user/${uuid}/log`);
     }
-}
+  }
 
-  
+
 };
