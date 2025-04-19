@@ -305,8 +305,12 @@ module.exports = {
     webSockerUpdate: (req) => {
         const generat = require('./generator.js')
         const io = req.app.get('socketio');
-        io.emit('update CUD', {
-            token: generat.generateString(8)
+        io.emit('backend emit', {
+            token: generat.generateString(8),
+            
+            identifier: process.env.BE_WS_IDENTIFIER,
+            address: 'update CUD',
+            backend_id: process.env.CONTAINER_ID
         })
     },
     isValidUUID: (uuid) =>{

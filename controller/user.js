@@ -226,6 +226,7 @@ const calculateDailyPresenceMinutes = (logs) => {
 };
 
 
+
 module.exports = {
   birthday_image: async (req, res) => {
     const path = require('path');
@@ -648,7 +649,7 @@ module.exports = {
             type: { in: ['Login', 'Logout'] },
             is_match: true
           },
-          orderBy: { created_at: 'asc' }
+          orderBy: { created_at: 'desc' }
         }),
         prisma.log.findMany({
           select: { created_at: true, type: true },

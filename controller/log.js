@@ -330,13 +330,17 @@ module.exports = {
         makeTelegramNotification(image, ml_result, nameImage, telegramParams)
         const io = req.app.get('socketio');
         if (ml_result.isMatch) {
-          io.emit('logger update', {
+          io.emit('backend emit', {
             name: isExist.name,
             project: result.group,
             device: req.device.name,
             photo: nameImage,
             bbox: ml_result.bbox,
-            time: result.startTime
+            time: result.startTime,
+            
+            identifier: process.env.BE_WS_IDENTIFIER,
+            address: 'logger update',
+            backend_id: process.env.CONTAINER_ID
           })
         }
         return utils.createResponse(res, 200, 'Success!', `Berhasil Melakukan Presensi!`, '/log', result)
@@ -911,7 +915,7 @@ module.exports = {
         makeTelegramNotification(image, { isMatch: true, bbox: updatedData.bbox }, nameImage, telegramParams)
       }
       const io = req.app.get('socketio');
-      io.emit('logger update', {
+      io.emit('backend emit', {
         name: isExist.name,
         project: utils.arrayToHuman(isExist.user_group.map((t) => {
           return t.group.name
@@ -919,7 +923,11 @@ module.exports = {
         device: req.device.name,
         photo: nameImage,
         bbox: updatedData.bbox,
-        time: new Date()
+        time: new Date(),
+        
+        identifier: process.env.BE_WS_IDENTIFIER,
+        address: 'logger update',
+        backend_id: process.env.CONTAINER_ID
       })
 
       return utils.createResponse(res, 200, 'Succes!', `Data log telah diperbarui!`, '/log/afterRecog');
