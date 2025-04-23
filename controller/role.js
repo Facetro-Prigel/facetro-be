@@ -16,20 +16,32 @@ const checkDeleteUpdate = async (uuid, reqs) => {
   });
   return role
 }
-const inputInsertUpdate = async (req) => {
+
+const inputInsertUpdate = async (req, mode = "insert") => {
   let data = {
     name: req.body.name,
     description: req.body.description
   }
-  if (req.asign_role_to_permision && req.body.permission_role) {
+
+  if (req.body.guard_name) {
+    const permissionUuids = req.body.permission_role?.filter(uuid => uuid !== "") || [];
+
     data.permission_role = {
-      create: req.body.permission_role
-        .filter(permission_uuid => permission_uuid !== "")
-        .map(permission_uuid => ({ permission: { connect: { uuid: permission_uuid } } }))
+      create: permissionUuids.map(permission_uuid => ({
+        permission: {
+          connect: { uuid: permission_uuid }
+        }
+      }))
     }
-  }  
-  return data
+
+    if (mode == "update") {
+      data.permission_role.deleteMany = {}; // Hapus semua permission lama
+    }
+  }
+
+  return data;
 }
+
 module.exports = {
   getter_all: async (req, res) => {
     let roles;
@@ -78,7 +90,7 @@ module.exports = {
 
   insert: async (req, res) => {
     try {
-      let data = await inputInsertUpdate(req)
+      let data = await inputInsertUpdate(req, "insert")
       data.guard_name = utils.toSnakeCase(req.body.guard_name) ?? utils.toSnakeCase(req.body.name)
       let result = await prisma.role.create({
         data: data
@@ -107,7 +119,7 @@ module.exports = {
       return utils.createResponse(res, 404, "Not Found", "Peran tidak ditemukan atau tidak dapat diubah", `/role/${uuid}`);
     }
     try {
-      let data = await inputInsertUpdate(req)
+      let data = await inputInsertUpdate(req, "update")
       if (req.body.guard_name) {
         data.guard_name = utils.toSnakeCase(req.body.guard_name)
       }
