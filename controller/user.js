@@ -4,7 +4,8 @@ const { sendMail } = require('../helper/mailer');
 const utils = require("../helper/utils");
 const axios = require("axios");
 const role_utils = require("../helper/role_utils");
-const minioClient = require('../minioClient')
+const minioClient = require('../minioClient');
+const { group } = require("console");
 const prisma = new PrismaClient();
 
 
@@ -424,10 +425,30 @@ module.exports = {
   getter_all: async (req, res) => {
     let users;
     try {
-      users = await prisma.user.findMany({
+      let query = {
+        where: {
+          OR:[{
+            groups: {
+              some: {
+                notify_to: req.user.uuid,
+              },
+            }, 
+          },{
+            user_group:{
+              some:{
+                group:{
+                  is:{
+                    notify_to: req.user.uuid
+                  }
+                }
+              }
+            }
+          }]
+          ,
+        },
         orderBy: [
           {
-            created_at: 'desc'
+            created_at: 'desc',
           }
         ],
         select: {
@@ -437,6 +458,7 @@ module.exports = {
           avatar: true,
           bbox: true,
           created_at: true,
+          groups:true,
           role_user: {
             select: {
               role: {
@@ -456,7 +478,11 @@ module.exports = {
             },
           },
         }
-      });
+      }
+      if(req.show_all_users){
+        delete query.where;
+      }
+      users = await prisma.user.findMany(query);
     } catch (error) {
       console.error("Terjadi masalah saat mengambil data user", error);
       utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/user");

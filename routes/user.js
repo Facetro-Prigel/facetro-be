@@ -4,7 +4,7 @@ const { getter_all, getter, deleteUser, insert, update, upload_image, unnes_imag
 const { login } = require('../controller/authuser')
 const { authorization } = require('../middleware')
 route.delete("/:uuid",authorization('user_delete'), deleteUser)
-route.get("/", authorization('user_get_multi'),getter_all)
+route.get("/", authorization('user_get_multi', ['show_all_users']),getter_all)
 route.get('/birthday/:uuid', authorization('user_get'), birthday_image)
 route.post("/image", authorization(),upload_image)
 route.post("/unnes", authorization(),unnes_image)

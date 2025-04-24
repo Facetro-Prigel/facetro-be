@@ -15,7 +15,7 @@ generateString: (length) => {
     }
     return result;
 },
-generatePassword: async (password, round=14) => {
+generatePassword: async (password, round=12) => {
   const salt = await bcrypt.genSalt(round);
   return await bcrypt.hash(password, salt);
 },
