@@ -337,7 +337,7 @@ module.exports = {
             photo: nameImage,
             bbox: ml_result.bbox,
             time: result.startTime,
-            
+
             identifier: process.env.BE_WS_IDENTIFIER,
             address: 'logger update',
             backend_id: process.env.CONTAINER_ID
@@ -367,14 +367,50 @@ module.exports = {
     // Query dasar untuk menghitung total records
     const countQuery = {
       where: {
-        user_uuid: req.user.uuid
+        OR: [
+          {
+            user_uuid: req.user.uuid
+          }, {
+            user: {
+              is: {
+                user_group: {
+                  some: {
+                    group: {
+                      is: {
+                        notify_to: req.user.uuid
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     };
 
     // Query dasar untuk mengambil data
     const defaultQuery = {
       where: {
-        user_uuid: req.user.uuid
+        OR: [
+          {
+            user_uuid: req.user.uuid
+          }, {
+            user: {
+              is: {
+                user_group: {
+                  some: {
+                    group: {
+                      is: {
+                        notify_to: req.user.uuid
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       },
       take: limitNumber,
       skip: ((pageNumber - 1) * limitNumber),
@@ -428,13 +464,15 @@ module.exports = {
 
       // Gabungkan kondisi pencarian dengan kondisi existing
       if (defaultQuery.where) {
-        defaultQuery.where = { ...defaultQuery.where, ...searchCondition };
+        defaultQuery.where = {
+          AND: [defaultQuery.where, searchCondition], // Menggabungkan kondisi lama dan baru
+        };
       } else {
         defaultQuery.where = searchCondition;
       }
 
       if (countQuery.where) {
-        countQuery.where = { ...countQuery.where, ...searchCondition };
+        countQuery.where = {AND: [countQuery.where, searchCondition]};
       } else {
         countQuery.where = searchCondition;
       }
@@ -470,10 +508,10 @@ module.exports = {
           }
         }
       }
-      else{
-        defaultQuery.orderBy={
+      else {
+        defaultQuery.orderBy = {
           user: {
-              [sort]: order
+            [sort]: order
           }
         }
       }
@@ -924,7 +962,7 @@ module.exports = {
         photo: nameImage,
         bbox: updatedData.bbox,
         time: new Date(),
-        
+
         identifier: process.env.BE_WS_IDENTIFIER,
         address: 'logger update',
         backend_id: process.env.CONTAINER_ID

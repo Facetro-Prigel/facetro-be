@@ -51,7 +51,32 @@ module.exports = {
   getter_all: async (req, res) => {
     let isExist;
     try {
-      isExist = await prisma.device.findMany({
+      let query={
+        where:{
+          OR:[{
+            presence_group:{
+                some: {
+                  group: {
+                    is: {
+                      notify_to: req.user.uuid
+                    }
+                  }
+
+              }
+            }
+          },{
+            door_group:{
+                some: {
+                  group: {
+                    is: {
+                      notify_to: req.user.uuid
+                    }
+                  }
+
+              }
+            }
+          }]
+        },
         select: {
           uuid: true,
           name: true,
@@ -59,7 +84,11 @@ module.exports = {
           ip_address: true,
           token: true
         },
-      });
+      }
+      if(req.show_all_device){
+        delete query.where
+      }
+      isExist = await prisma.device.findMany(query);
     } catch (error) {
       console.error("Error while inserting device:", error);
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", "/device");
