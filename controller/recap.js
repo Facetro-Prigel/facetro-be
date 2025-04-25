@@ -86,19 +86,25 @@ module.exports = {
       }
 
       if (hasPermission(user, "export_some_recap")) {
-        const devices = user.user_group?.flatMap(userGroup =>
-          userGroup.group?.door_group?.map(doorGroup => doorGroup.device?.uuid) || []
-        ).filter(Boolean) || [];
+        const groupIds = user.user_group?.map(ug => ug.group?.uuid).filter(Boolean) || [];
 
-        if (devices.length === 0) {
-          return utils.createResponse(res, 403, "Forbidden", "Tidak ada perangkat yang bisa direkap", `/recap`);
+        if (groupIds.length == 0) {
+          return utils.createResponse(res, 404, "Not Found", "Tidak ada grup yang bisa direkap", `/recap`);
         }
-
+        
         query.where = {
-          device: {
-            uuid: { in: devices }
+          user: {
+            user_group: {
+              some: {
+                group: { 
+                  uuid: { in: groupIds } 
+                }
+              }
+            }
           }
         };
+        
+        
       }
 
       const attendanceData = await prisma.log.findMany(query);
