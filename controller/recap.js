@@ -1,177 +1,202 @@
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const { PrismaClient } = require('@prisma/client');
+const ExcelJS = require('exceljs');
+const axios = require('axios');
+const path = require('path');
+const utils = require('../helper/utils');
+const prisma = new PrismaClient();
 
-class RecapGenerator {
-    constructor(data) {
-        this.previousMonth = "";
-        this.previousYear = "";
-        this.currentMonth = "";
-        this.currentYear = "";
-        this.user = "";
-        this.row = 1;
-        this.data = data;
-        this.workbook = new ExcelJS.Workbook();
-        this.monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-    }
+const hasPermission = (user, guardName) => {
+  const permissionsFromRoles = user.role_user.flatMap(roleUser =>
+    roleUser.role.permission_role.map(pr => pr.permission.guard_name)
+  );
 
-    calculateDuration(day) {
-        const loginTime = new Date(day.login);
-        const logoutTime = new Date(day.logout);
+  const directPermissions = user.permission_user.map(pu => pu.permission.guard_name);
 
-        const duration = logoutTime - loginTime;
+  const allPermissions = new Set([...permissionsFromRoles, ...directPermissions]);
 
-        const seconds = Math.floor((duration / 1000) % 60);
-        const minutes = Math.floor((duration / (1000 * 60)) % 60);
-        const hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
-
-        return hours;
-    }
-
-    createWeeklyHeader(worksheet) {
-        const daysHeader = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-        daysHeader.forEach((day, index) => {
-            const cell = worksheet.getCell(this.row, index + 1);
-            cell.value = day;
-            cell.alignment = { horizontal: 'center' };
-            cell.font = { bold: true };
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAD3' } };
-        });
-        this.row += 1;
-    }
-
-    createHeader(worksheet, name) {
-        worksheet.mergeCells(`A${this.row}:G${this.row}`);
-        worksheet.getCell(`A${this.row}`).value = `${name}`;
-        worksheet.getCell(`A${this.row}`).alignment = { horizontal: 'center' };
-        worksheet.getCell(`A${this.row}`).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        worksheet.getCell(`A${this.row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } };
-        this.row += 1;
-
-        if (this.monthNames.includes(name)) {
-            this.createWeeklyHeader(worksheet);
-        }
-    }
-
-    placeDate(worksheet, date) {
-        const dayOfWeek = date.getDay();
-        const column = dayOfWeek + 1;
-
-        const cell = worksheet.getCell(this.row, column);
-        cell.value = date.getDate();
-
-        const day = this.data[this.key][date];
-        cell.fill = { type: 'pattern', pattern: 'solid' };
-
-        if (!day.logout || !day.logout) {
-            cell.fill.color = { argb: 'FFFF0000' };
-        }else if(this.calculateDuration(day) < 8){
-            cell.fill.color = { argb: 'FFFFFF00' };
-        }else if (this.calculateDuration(day) >= 8) {
-            cell.fill.color = { argb: 'FF00FF00' };
-        }
-
-        cell.alignment = { horizontal: 'center' };
-    }
-    async createCalendarExcel() {
-        for (const key of Object.keys(this.data)) {
-            this.user = key;
-            const worksheet = this.workbook.addWorksheet(key);
-
-            const sortedData = Object.values(this.data[key]).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-            const start = sortedData[0].createdAt; 
-            const end = sortedData[sortedData.length - 1].createdAt;
-
-            // Proses batch di sini
-            await this.processUserSheetInBatches(start, end, worksheet);
-        }
-
-        return this.workbook.xlsx.writeBuffer();
-    }
-
-    async processUserSheetInBatches(start, end, worksheet) {
-        let currentDate = new Date(start);
-        const endDate = new Date(end);
-        const batchSize = 7; // misalnya batch mingguan
-        const batch = [];
-
-        while (currentDate <= endDate) {
-            batch.push(new Date(currentDate));
-            currentDate.setDate(currentDate.getDate() + 1);
-
-            // Jika batch penuh atau mencapai akhir bulan
-            if (batch.length === batchSize || currentDate.getMonth() !== batch[0].getMonth()) {
-                await this.processBatch(batch, worksheet);
-                batch.length = 0;
-            }
-        }
-    }
-
-    async processBatch(batch, worksheet) {
-        for (const date of batch) {
-            this.placeDate(worksheet, date);
-            if (date.getDay() === 6) this.row++;
-        }
-    }
-}
-
-const fetchLog = async (users) => {
-    const logs = await prisma.log.findMany({
-        where: {
-            user: {
-                uuid: {
-                    in: users
-                }
-            }
-        },
-        orderBy: {
-            createdAt: 'asc'
-        }
-    });
-    return logs;
-}
+  return allPermissions.has(guardName);
+};
 
 module.exports = {
-    makeRecap: async (req, res) => {
-        const users = req.body ? req.body.users : [req.params.uuid];
-        const results = await fetchLog(users);
-        
-        const data = {};
-    
-        results.forEach(result => {
-            const userName = result.user.name;
-            const day = result.createdAt.getDate();
-    
-            if (!data[userName]) {
-                data[userName] = {};
+  getRecap: async (req, res) => {
+    const columnWidths = {
+        name: 0,
+        identity_number: 0,
+        device: 0,
+        type: 0,
+        in_time: 0,
+        group: 0
+      };
+      
+    try {
+      let query = {
+        orderBy: { created_at: 'desc' },
+        select: {
+          is_match: true,
+          image_path: true,
+          bbox: true,
+          type: true,
+          created_at: true,
+          device: { select: { name: true, uuid: true } },
+          user: {
+            select: {
+              name: true,
+              identity_number: true,
+              user_group: {
+                select: {
+                  group: {
+                    select: { name: true }
+                  }
+                }
+              }
             }
-            if (!data[userName][day]) {
-                data[userName][day] = {
-                    login: null,
-                    logout: null
-                };
+          }
+        }
+      };
+
+      const user = await prisma.user.findUnique({
+        where: { uuid: req.user.uuid },
+        include: {
+          role_user: {
+            include: {
+              role: {
+                include: {
+                  permission_role: { include: { permission: true } }
+                }
+              }
             }
-    
-            const time = result.createdAt;
-            if (!data[userName][day].login || time < data[userName][day].login) {
-                data[userName][day].login = time;
+          },
+          permission_user: { include: { permission: true } },
+          user_group: {
+            include: {
+              group: {
+                include: {
+                  door_group: {
+                    include: { device: true }
+                  }
+                }
+              }
             }
-            if (!data[userName][day].logout || time > data[userName][day].logout) {
-                data[userName][day].logout = time;
-            }
+          }
+        }
+      });
+
+      if (!hasPermission(user, "export_all_recap") && !hasPermission(user, "export_some_recap")) {
+        return utils.createResponse(res, 403, "Forbidden", "Anda tidak memiliki izin untuk mengakses data ini", `/recap`);
+      }
+
+      if (hasPermission(user, "export_some_recap")) {
+        const devices = user.user_group?.flatMap(userGroup =>
+          userGroup.group?.door_group?.map(doorGroup => doorGroup.device?.uuid) || []
+        ).filter(Boolean) || [];
+
+        if (devices.length === 0) {
+          return utils.createResponse(res, 403, "Forbidden", "Tidak ada perangkat yang bisa direkap", `/recap`);
+        }
+
+        query.where = {
+          device: {
+            uuid: { in: devices }
+          }
+        };
+      }
+
+      const attendanceData = await prisma.log.findMany(query);
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Rekap Presensi');
+
+      worksheet.columns = [
+        { header: 'Photo', key: 'photo', width: 15 },
+        { header: 'Name', key: 'name' },
+        { header: 'Identity Number', key: 'identity_number' },
+        { header: 'Presence/Open Door In', key: 'device' },
+        { header: 'Presence/Door', key: 'type' },
+        { header: 'Waktu', key: 'in_time' },
+        { header: 'Group', key: 'group' }
+      ];
+
+      const headerRow = worksheet.getRow(1);
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF007BFF' }
+        };
+        cell.font = {
+            color: { argb: 'FFFFFFFF' },
+            bold: true
+        };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+      
+      let rowIndex = 2;
+      for (const entry of attendanceData) {
+        const name = entry.user?.name || '';
+        const identity_number = entry.user?.identity_number || '';
+        const device = entry.device?.name || '';
+        const type = entry.type || '';
+        const in_time = new Date(entry.created_at).toLocaleString('id-ID');
+        const group = entry.user?.user_group?.map(g => g.group.name).join(', ') || '';
+
+        const row = worksheet.addRow({ name, identity_number, device, type, in_time, group });
+        worksheet.getRow(rowIndex).height = 60;
+
+        row.eachCell((cell) => {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
-    
-        const calendar = new RecapGenerator(data);
-        const buffer = await calendar.createCalendarExcel();
-    
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=recap.xlsx');
-	res.setHeader('Content-Length', buffer.length);
-        res.send(buffer);
-    },
-    
-    handleGetLog: async (req, res) => {
-        const users = req.body ? req.body.users : [req.params.uuid];
-        const results = await fetchLog(users);
-        return res.status(200).json(results);
+
+        columnWidths.name = Math.max(columnWidths.name, name.length);
+        columnWidths.identity_number = Math.max(columnWidths.identity_number, identity_number.length);
+        columnWidths.device = Math.max(columnWidths.device, device.length);
+        columnWidths.type = Math.max(columnWidths.type, type.length);
+        columnWidths.in_time = Math.max(columnWidths.in_time, in_time.length);
+        columnWidths.group = Math.max(columnWidths.group, group.length);
+      
+        if (entry.image_path) {
+          try {
+            const imageUrl = `http://localhost:${process.env.PORT}/photos/${entry.image_path}`;
+            const imageResp = await axios.get(imageUrl, {
+                responseType: 'arraybuffer',
+                headers: {
+                  Origin: `http://localhost:${process.env.PORT || 3000}`,
+                  Referer: `http://localhost:${process.env.PORT || 3000}/recap`
+                }
+              });
+      
+            const imageId = workbook.addImage({
+              buffer: imageResp.data,
+              extension: path.extname(entry.image_path).slice(1) || 'jpeg'
+            });
+      
+            worksheet.addImage(imageId, {
+                tl: { col: 0 + (1 - 80 / (15 * 7.5)) / 2, row: rowIndex - 1 },
+                ext: { width: 80, height: 80 }
+            });
+      
+          } catch (err) {
+            console.warn(`Gagal mengambil gambar ${entry.image_path}:`, err.message);
+          }
+        }
+      
+        rowIndex++;
+      }
+
+      worksheet.getColumn('name').width = columnWidths.name + 2;
+      worksheet.getColumn('identity_number').width = columnWidths.identity_number + 2;
+      worksheet.getColumn('device').width = columnWidths.device + 2;
+      worksheet.getColumn('type').width = columnWidths.type + 2;
+      worksheet.getColumn('in_time').width = columnWidths.in_time + 2;
+      worksheet.getColumn('group').width = columnWidths.group + 2;
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=rekap-presensi.xlsx');
+      res.send(buffer);
+
+    } catch (error) {
+      console.error('XLSX Export Error:', error);
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/recap`);
     }
-}
+  }
+};
