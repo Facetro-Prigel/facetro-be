@@ -85,8 +85,8 @@ module.exports = {
         { header: 'Photo', key: 'photo', width: 15 },
         { header: 'Name', key: 'name' },
         { header: 'Identity Number', key: 'identity_number' },
-        { header: 'Presence/Open Door In', key: 'device' },
-        { header: 'Presence/Door', key: 'type' },
+        { header: 'Presence In', key: 'device' },
+        { header: 'Login/Logout', key: 'type' },
         { header: 'Waktu', key: 'in_time' },
         { header: 'Group', key: 'group' }
       ];
