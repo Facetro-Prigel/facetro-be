@@ -5,18 +5,6 @@ const path = require('path');
 const utils = require('../helper/utils');
 const prisma = new PrismaClient();
 
-const hasPermission = (user, guardName) => {
-  const permissionsFromRoles = user.role_user.flatMap(roleUser =>
-    roleUser.role.permission_role.map(pr => pr.permission.guard_name)
-  );
-
-  const directPermissions = user.permission_user.map(pu => pu.permission.guard_name);
-
-  const allPermissions = new Set([...permissionsFromRoles, ...directPermissions]);
-
-  return allPermissions.has(guardName);
-};
-
 module.exports = {
   getRecap: async (req, res) => {
     const columnWidths = {
@@ -29,7 +17,37 @@ module.exports = {
       };
       
     try {
+      const assigned_groups = await prisma.user.findUnique({
+        where: { uuid: req.user.uuid },
+        include: {
+          user_group: {
+            include: {
+              group: {
+                include: {
+                  door_group: {
+                    include: { device: true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const group_ids = assigned_groups.user_group?.map(ug => ug.group?.uuid).filter(Boolean) || [];
+      
       let query = {
+        where: {
+          user: {
+            user_group: {
+              some: {
+                group: { 
+                  uuid: { in: group_ids } 
+                }
+              }
+            }
+          }
+        },
         orderBy: { created_at: 'desc' },
         select: {
           is_match: true,
@@ -54,57 +72,8 @@ module.exports = {
         }
       };
 
-      const user = await prisma.user.findUnique({
-        where: { uuid: req.user.uuid },
-        include: {
-          role_user: {
-            include: {
-              role: {
-                include: {
-                  permission_role: { include: { permission: true } }
-                }
-              }
-            }
-          },
-          permission_user: { include: { permission: true } },
-          user_group: {
-            include: {
-              group: {
-                include: {
-                  door_group: {
-                    include: { device: true }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (!hasPermission(user, "export_all_recap") && !hasPermission(user, "export_some_recap")) {
-        return utils.createResponse(res, 403, "Forbidden", "Anda tidak memiliki izin untuk mengakses data ini", `/recap`);
-      }
-
-      if (hasPermission(user, "export_some_recap")) {
-        const groupIds = user.user_group?.map(ug => ug.group?.uuid).filter(Boolean) || [];
-
-        if (groupIds.length == 0) {
-          return utils.createResponse(res, 404, "Not Found", "Tidak ada grup yang bisa direkap", `/recap`);
-        }
-        
-        query.where = {
-          user: {
-            user_group: {
-              some: {
-                group: { 
-                  uuid: { in: groupIds } 
-                }
-              }
-            }
-          }
-        };
-        
-        
+      if(req.export_all_recap){
+        delete query.where
       }
 
       const attendanceData = await prisma.log.findMany(query);
@@ -116,8 +85,8 @@ module.exports = {
         { header: 'Photo', key: 'photo', width: 15 },
         { header: 'Name', key: 'name' },
         { header: 'Identity Number', key: 'identity_number' },
-        { header: 'Presence/Open Door In', key: 'device' },
-        { header: 'Presence/Door', key: 'type' },
+        { header: 'Presence In', key: 'device' },
+        { header: 'Login/Logout', key: 'type' },
         { header: 'Waktu', key: 'in_time' },
         { header: 'Group', key: 'group' }
       ];
