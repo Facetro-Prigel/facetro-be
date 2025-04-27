@@ -18,45 +18,36 @@ module.exports = {
       };
       
     try {
-      const assigned_groups = await prisma.user.findUnique({
-        where: { uuid: req.user.uuid },
-        include: {
-          user_group: {
-            include: {
-              group: {
-                include: {
-                  door_group: {
-                    include: { device: true }
+      let query =  {
+        where: {
+          OR: [
+            {
+              user_uuid: req.user.uuid
+            }, {
+              user: {
+                is: {
+                  user_group: {
+                    some: {
+                      group: {
+                        is: {
+                          notify_to: req.user.uuid
+                        }
+                      }
+                    }
                   }
                 }
               }
             }
-          }
-        }
-      });
-
-      const group_ids = assigned_groups.user_group?.map(ug => ug.group?.uuid).filter(Boolean) || [];
-      
-      let query = {
-        where: {
-          user: {
-            user_group: {
-              some: {
-                group: { 
-                  uuid: { in: group_ids } 
-                }
-              }
-            }
-          }
+          ]
         },
-        orderBy: { created_at: 'desc' },
+        orderBy: {
+          created_at: 'desc'
+        },
         select: {
           is_match: true,
           image_path: true,
           bbox: true,
           type: true,
-          created_at: true,
-          device: { select: { name: true, uuid: true } },
           user: {
             select: {
               name: true,
@@ -64,16 +55,24 @@ module.exports = {
               user_group: {
                 select: {
                   group: {
-                    select: { name: true }
+                    select: {
+                      name: true
+                    }
                   }
                 }
               }
+            }
+          },
+          created_at: true,
+          device: {
+            select: {
+              name: true
             }
           }
         }
       };
 
-      if(req.export_all_recap){
+      if(req.show_other_log){
         delete query.where
       }
 
