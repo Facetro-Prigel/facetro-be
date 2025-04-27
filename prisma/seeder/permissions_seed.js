@@ -148,7 +148,7 @@ exports.run = async () =>{
                 description: "This User Can Open Door On Any Device."
             },
             {
-                name: "show_other_log",
+                name: "Show Other Log",
                 guard_name: "show_other_log",
                 description: "This User Can Get Other User log On Any Device."
             },
@@ -181,11 +181,6 @@ exports.run = async () =>{
                 name: "Can Get Multiple Permissions",
                 guard_name: "permission_get_multi",
                 description: "This Role/User can get general information of multiple Groups."
-            },
-            {
-                name: "Show Other Log",
-                guard_name: "show_other_log",
-                description: "This Role/User can get other logs."
             },
             {
                 name: "Get All Group",
