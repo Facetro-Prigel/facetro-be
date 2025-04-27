@@ -4,13 +4,53 @@ const prisma = new PrismaClient();
 exports.run = async () => {
     const group_seed = [
         {
-            name: "PRIGEL-BATCH 5",
-            device: "1A - Digital Center",
+            name: "DEKANAT",
+            device: "APEL DEKANAT",
             notify_to: "198409052019031006"
         },
         {
-            name: "FACETRO",
-            device: "1A - Digital Center",
+            name: "Akademik dan Kemahasiswaaan",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "Keuangan dan Bisnis",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "Umum, SDM dan Kerjasama",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "KTP",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "PNF",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "BK",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "PGSD",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "Psikologi",
+            device: "APEL DEKANAT",
+            notify_to: "198409052019031006"
+        },
+        {
+            name: "PGPAUD",
+            device: "APEL DEKANAT",
             notify_to: "198409052019031006"
         }
     ];
