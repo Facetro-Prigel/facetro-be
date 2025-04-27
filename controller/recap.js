@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { createResponse } = require("../helper/utils");
 const ExcelJS = require('exceljs');
 const axios = require('axios');
 const path = require('path');
@@ -164,11 +165,11 @@ module.exports = {
       worksheet.getColumn('in_time').width = columnWidths.in_time + 2;
       worksheet.getColumn('group').width = columnWidths.group + 2;
 
-      const buffer = await workbook.xlsx.writeBuffer();
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=rekap-presensi.xlsx');
-      res.send(buffer);
+      let buffer = await workbook.xlsx.writeBuffer();
 
+      const base64file = buffer.toString('base64');
+
+      return createResponse(res, 200, "Success", "Rekap Presensi berhasil diunduh", `/recap`, { file: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64file}` });
     } catch (error) {
       console.error('XLSX Export Error:', error);
       utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/recap`);
