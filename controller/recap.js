@@ -3,7 +3,7 @@ const { createResponse } = require("../helper/utils");
 const ExcelJS = require('exceljs');
 const path = require('path');
 const utils = require('../helper/utils');
-const { minio_client } = require('../minioClient'); // import minio client
+const minio_client = require('../minioClient'); // import minio client
 const prisma = new PrismaClient();
 
 
@@ -139,25 +139,29 @@ module.exports = {
 
         if (entry.image_path) {
           try {
-            let imageBuffer = null;
-            try {
-              const stream = await minio_client.getObject('log', entry.image_path);
-              imageBuffer = await streamToBuffer(stream);
-            }catch (err) {
-              console.warn(`Gagal mengambil gambar dari MinIO ${entry.image_path}:`, err.message);
+            const stream = await minio_client.getObject('log', entry.image_path);
+            const imageBuffer = await streamToBuffer(stream);
+        
+            if (!imageBuffer || imageBuffer.length === 0) {
+              console.warn(`Gagal mengambil gambar dari MinIO ${entry.image_path}: buffer kosong`);
+              continue; // skip adding image
             }
-
-            const imageId = workbook.addImage({buffer: imageBuffer, extension: path.extname(entry.image_path).slice(1) || 'jpeg'});
-
+        
+            let ext = path.extname(entry.image_path).toLowerCase().replace('.', '');
+            if (!['jpeg', 'jpg', 'png'].includes(ext)) ext = 'jpeg';
+        
+            const imageId = workbook.addImage({ buffer: imageBuffer, extension: ext === 'jpg' ? 'jpeg' : ext });
+        
             worksheet.addImage(imageId, {
-                tl: { col: 0 + (1 - 80 / (15 * 7.5)) / 2, row: rowIndex - 1 },
-                ext: { width: 80, height: 80 }
+              tl: { col: 0 + (1 - 80 / (15 * 7.5)) / 2, row: rowIndex - 1 },
+              ext: { width: 80, height: 80 }
             });
-
+        
+            console.log(`Berhasil mengambil gambar dari MinIO ${entry.image_path}`);
           } catch (err) {
-              console.warn(`Gagal mengambil gambar dari MinIO ${entry.image_path}:`, err.message);
+            console.warn(`Gagal mengambil gambar dari MinIO ${entry.image_path}:`, err.message);
           }
-        }
+        }        
 
         rowIndex++;
       }
