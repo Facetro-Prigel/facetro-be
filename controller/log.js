@@ -420,6 +420,7 @@ module.exports = {
         image_path: true,
         bbox: true,
         type: true,
+        uuid: true,
         user: {
           select: {
             name: true,
@@ -531,6 +532,7 @@ module.exports = {
 
       // Format data untuk respons
       const showLogs = logDatas.map((log) => ({
+        uuid: log.uuid,
         name: log.user.name,
         identity_number: log.user.identity_number,
         device: log.device.name,
@@ -547,6 +549,29 @@ module.exports = {
     } catch (error) {
       console.error('Error fetching logs:', error);
       return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengambil logs!', '/log');
+    }
+  },
+  editLog(req, res) {
+    const { uuid, new_user_identity } = req.body;
+    if (!uuid || !new_user_identity) {
+      return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', '/log/edit');
+    }
+    try {
+      prisma.log.update({
+        where: {
+          uuid: uuid
+        },
+        data: {
+          user: {
+            update: {
+              identity_number: new_user_identity
+            }
+          }
+        }
+      })
+      return utils.createResponse(res, 200, 'Success!', 'Berhasil Mengubah Logs!', '/log');
+    } catch (error) {
+      return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengubah logs!', '/log');
     }
   },
   recognation: async (req, res) => {
