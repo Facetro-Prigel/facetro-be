@@ -1,29 +1,38 @@
 const { PrismaClient } = require('@prisma/client');
 const { createResponse } = require("../helper/utils");
 const ExcelJS = require('exceljs');
-const axios = require('axios');
 const path = require('path');
 const utils = require('../helper/utils');
+const minio_client = require('../minioClient'); // import minio client
 const prisma = new PrismaClient();
+
+
+const streamToBuffer = (stream) => {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+  });
+}
 
 module.exports = {
   getRecap: async (req, res) => {
     const columnWidths = {
-        name: 0,
-        identity_number: 0,
-        device: 0,
-        type: 0,
-        in_time: 0,
-        group: 0
-      };
-      
+      name: 0,
+      identity_number: 0,
+      device: 0,
+      type: 0,
+      in_time: 0,
+      group: 0
+    };
+
     try {
-      let query =  {
+      let query = {
         where: {
           OR: [
+            { user_uuid: req.user.uuid },
             {
-              user_uuid: req.user.uuid
-            }, {
               user: {
                 is: {
                   user_group: {
@@ -72,8 +81,8 @@ module.exports = {
         }
       };
 
-      if(req.show_other_log){
-        delete query.where
+      if (req.show_other_log) {
+        delete query.where;
       }
 
       const attendanceData = await prisma.log.findMany(query);
@@ -104,7 +113,7 @@ module.exports = {
         };
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
       });
-      
+
       let rowIndex = 2;
       for (const entry of attendanceData) {
         const name = entry.user?.name || '';
@@ -127,33 +136,33 @@ module.exports = {
         columnWidths.type = Math.max(columnWidths.type, type.length);
         columnWidths.in_time = Math.max(columnWidths.in_time, in_time.length);
         columnWidths.group = Math.max(columnWidths.group, group.length);
-      
+
         if (entry.image_path) {
           try {
-            const imageUrl = `http://localhost:${process.env.PORT}/photos/${entry.image_path}`;
-            const imageResp = await axios.get(imageUrl, {
-                responseType: 'arraybuffer',
-                headers: {
-                  Origin: `http://localhost:${process.env.PORT || 3000}`,
-                  Referer: `http://localhost:${process.env.PORT || 3000}/recap`
-                }
-              });
-      
-            const imageId = workbook.addImage({
-              buffer: imageResp.data,
-              extension: path.extname(entry.image_path).slice(1) || 'jpeg'
-            });
-      
+            const stream = await minio_client.getObject('log', entry.image_path);
+            const imageBuffer = await streamToBuffer(stream);
+        
+            if (!imageBuffer || imageBuffer.length === 0) {
+              console.warn(`Gagal mengambil gambar dari MinIO ${entry.image_path}: buffer kosong`);
+              continue; // skip adding image
+            }
+        
+            let ext = path.extname(entry.image_path).toLowerCase().replace('.', '');
+            if (!['jpeg', 'jpg', 'png'].includes(ext)) ext = 'jpeg';
+        
+            const imageId = workbook.addImage({ buffer: imageBuffer, extension: ext === 'jpg' ? 'jpeg' : ext });
+        
             worksheet.addImage(imageId, {
-                tl: { col: 0 + (1 - 80 / (15 * 7.5)) / 2, row: rowIndex - 1 },
-                ext: { width: 80, height: 80 }
+              tl: { col: 0 + (1 - 80 / (15 * 7.5)) / 2, row: rowIndex - 1 },
+              ext: { width: 80, height: 80 }
             });
-      
+        
+            console.log(`Berhasil mengambil gambar dari MinIO ${entry.image_path}`);
           } catch (err) {
-            console.warn(`Gagal mengambil gambar ${entry.image_path}:`, err.message);
+            console.warn(`Gagal mengambil gambar dari MinIO ${entry.image_path}:`, err.message);
           }
-        }
-      
+        }        
+
         rowIndex++;
       }
 
@@ -165,7 +174,6 @@ module.exports = {
       worksheet.getColumn('group').width = columnWidths.group + 2;
 
       let buffer = await workbook.xlsx.writeBuffer();
-
       const base64file = buffer.toString('base64');
 
       return createResponse(res, 200, "Success", "Rekap Presensi berhasil diunduh", `/recap`, { file: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64file}` });
