@@ -447,34 +447,35 @@ module.exports = {
       const requestImagePath = `${genPass.generateString(23)}.jpg`;
       utils.saveImage(image, requestImagePath, "photos");
   
-      // Step 3: Generate avatar (tanpa await)
-      axios.patch(`${process.env.ML_URL}build?type=profile`, { image }, config_u)
-        .then((avatarResponse) => {
-          const avatar = avatarResponse.data?.data?.[0]?.croppedImage;
-          if (avatar) {
-            utils.saveImage(avatar, requestImagePath, "avatar");
-          }
-        })
-        .catch((avatarError) => {
-          console.error("Avatar Generation Error:", avatarError.message || avatarError);
-        });
-  
-      // Step 4: Generate gambar transparan (tanpa await)
-      axios.post(`${process.env.ML_URL}remove_bg`, { image }, config_u)
-        .then((transparentResponse) => {
-          const transparent = transparentResponse.data?.data?.[0];
-          if (transparent) {
-            utils.saveImage(
-              transparent,
-              requestImagePath.replace(".jpg", ".png"),
-              "transparent"
-            );
-          }
-        })
-        .catch((transparentError) => {
-          console.error("Transparent Background Error:", transparentError.message || transparentError);
-        });
-  
+            // Step 3: Generate avatar dengan menambahkan query string `type=profile`
+            try {
+              const avatarResponse = await axios.patch(
+                `${process.env.ML_URL}build?type=profile`,
+                { image },
+                config_u
+              );
+              const avatar = avatarResponse.data.data[0].croppedImage;
+              utils.saveImage(avatar, requestImagePath, "avatar");
+            } catch (avatarError) {
+              console.error("Avatar Generation Error:", avatarError.message || avatarError);
+            }
+      
+            // Step 4: Generate gambar transparan (remove background)
+            try {
+              const transparentResponse = await axios.post(
+                `${process.env.ML_URL}remove_bg`,
+                { image },
+                config_u
+              );
+              const transparent = transparentResponse.data.data[0];
+              utils.saveImage(
+                transparent,
+                requestImagePath.replace(".jpg", ".png"),
+                "transparent"
+              );
+            } catch (transparentError) {
+              console.error("Transparent Background Error:", transparentError.message || transparentError);
+            }
       // Step 5: Simpan data ke database
       try {
         processedData.image_path = requestImagePath;
