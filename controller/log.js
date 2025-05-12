@@ -552,19 +552,19 @@ module.exports = {
     }
   },
   editLog(req, res) {
-    const { uuid, new_user_identity } = req.body;
-    if (!uuid || !new_user_identity) {
+    const { log_uuid, user_uuid } = req.body;
+    if (!log_uuid || !user_uuid) {
       return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', '/log/edit');
     }
     try {
       prisma.log.update({
         where: {
-          uuid: uuid
+          uuid: log_uuid
         },
         data: {
           user: {
             update: {
-              identity_number: new_user_identity
+              uuid: user_uuid
             }
           }
         }
