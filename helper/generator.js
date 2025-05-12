@@ -1,12 +1,25 @@
 
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcrypt');
+
 require('dotenv').config();
 
 module.exports = {
-generateString: (length) => {
+generateString: (length, symbol=false, upperCase=true, lowerCase=true, number=true) => {
     let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var characters = '';
+    if(upperCase){
+      characters += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    }
+    if(lowerCase){
+      characters += 'abcdefghijklmnopqrstuvwxyz'
+    }
+    if(number){
+      characters += '0123456789';
+    }
+    if(symbol){
+      characters += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    }
     const charactersLength = characters.length;
     let counter = 0;
     while (counter < length) {

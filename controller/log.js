@@ -473,7 +473,7 @@ module.exports = {
       }
 
       if (countQuery.where) {
-        countQuery.where = {AND: [countQuery.where, searchCondition]};
+        countQuery.where = { AND: [countQuery.where, searchCondition] };
       } else {
         countQuery.where = searchCondition;
       }
@@ -574,7 +574,7 @@ module.exports = {
       return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengubah logs!', '/log');
     }
   },
-  recognation: async (req, res) => {
+  recognition: async (req, res) => {
     try {
       const deviceUuid = req.device.uuid;
       if (Object.keys(req.body).length !== 2) {
@@ -997,6 +997,132 @@ module.exports = {
     } catch (error) {
       console.error(error)
       return utils.createResponse(res, 400, 'Bad Request!', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/afterRecog');
+    }
+  },
+  recognitionRecovery: async (req, res) => {
+    try {
+      const deviceUuid = req.device.uuid;
+
+      //Input Validation
+      if (Object.keys(req.body).length !== 1) {
+        return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log/recog");
+      }
+      let { recovery_token } = req.body;
+      let input = utils.decryptText(recovery_token);
+      const [userUuid, userEmail] = input.split(',').map(str => str.trim());
+
+      // Checking the authenticity of the token
+      if (!userUuid && !userEmail) {
+        return utils.createResponse(res, 400, 'Bad Request!', `Token yang diberikan salah!`, '/log/recog');
+      }
+      let verifyUser = await prisma.user.findUnique({
+        where: {
+
+          uuid: userUuid || undefined
+        },
+        select: {
+          email: true
+        }
+      });
+      if (userEmail != verifyUser.email) {
+        return utils.createResponse(res, 403, 'Forbidden!', `Token yang diberikan ilegal!`, '/log/recog');
+      }
+
+      //Check logs
+      const logs = await prisma.log.findMany({
+        where: {
+          device_uuid: deviceUuid
+        },
+        orderBy: {
+          created_at: 'desc'
+        },
+        select: {
+          uuid: true,
+          user_uuid: true,
+          created_at: true
+        },
+        take: 3
+      });
+      const allSame = (logs.length > 0) && logs.every(log => log.user_uuid === logs[0].user_uuid);
+      if (!allSame) {
+        return utils.createResponse(res, 403, 'Forbidden!', `Request yang diminta  ilegal!`, '/log/recog');
+      }
+
+      //Check user last status
+      let now = new Date()
+      let localTime = now.toLocaleString('id-ID', {
+        timeZone: 'Asia/Jakarta',
+        year: "numeric",
+        day: '2-digit',
+        month: '2-digit'
+      })
+      localTime = localTime.split('/')
+      let nowDate = `${localTime[2]}-${localTime[1]}-${localTime[0]}`
+
+      const userTodayLog = await prisma.log.findFirst({
+        where: {
+          user_uuid: userUuid,
+          created_at: {
+            gte: new Date(`${nowDate}T00:00:00.000+07:00`)
+          },
+          type: 'Login'
+        }
+      });
+
+      let isAlreadyLoggedInToday = !!userTodayLog;
+
+      if (!isAlreadyLoggedInToday) {
+
+        // Sortir logs untuk ambil yang paling lama
+        const sortedLogs = [...logs].sort(
+          (a, b) => new Date(a.created_at) - new Date(b.created_at)
+        );
+
+        const oldestLog = sortedLogs[0];
+        const otherLogs = sortedLogs.slice(1);
+
+        const idsOfOtherLogs = otherLogs.map(log => log.uuid);
+
+        // Update log terlama → Login
+        await prisma.log.updateMany({
+          where: { uuid: oldestLog.uuid },
+          data: { user_uuid: userUuid, type: 'Login' }
+        });
+
+        // Update log lainnya → Logout
+        if (idsOfOtherLogs.length > 0) {
+          await prisma.log.updateMany({
+            where: { uuid: { in: idsOfOtherLogs } },
+            data: { user_uuid: userUuid, type: 'Logout' }
+          });
+        }
+
+        console.log(`Berhasil update 1 log menjadi 'Login', ${idsOfOtherLogs.length} log menjadi 'Logout'.`);
+
+      } else {
+        // Sudah login/logout hari ini → semua log diubah ke 'Logout'
+        const idsToUpdate = logs.map(log => log.uuid);
+
+        await prisma.log.updateMany({
+          where: { uuid: { in: idsToUpdate } },
+          data: { user_uuid: userUuid, type: 'Logout' }
+        });
+
+        console.log(`Berhasil update ${idsToUpdate.length} log menjadi 'Logout'.`);
+      }
+      const io = req.app.get('socketio');
+      io.emit('backend emit', {
+        time: new Date(),
+
+        identifier: process.env.BE_WS_IDENTIFIER,
+        address: 'logger update',
+        backend_id: process.env.CONTAINER_ID
+      })
+
+      return utils.createResponse(res, 200, 'Succes!', `Data log telah diperbarui!`, '/log/recog');
+    } catch (error) {
+      console.error(error)
+      return utils.createResponse(res, 400, 'Bad Request!', `Terjadi Kesalahan Fatal, Check input anda!`, '/log/recog');
     }
   }
 }

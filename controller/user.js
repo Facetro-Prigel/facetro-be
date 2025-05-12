@@ -238,7 +238,7 @@ module.exports = {
           avatar: true, // pastikan field ini menyimpan path gambar
         }
       });
-  
+
       if (!users || users.length === 0) {
         return utils.createResponse(
           res,
@@ -248,61 +248,61 @@ module.exports = {
           "/user/re-embadding"
         );
       }
-  
+
       const minio_client = require('../minioClient');
-  
+
       for (const user of users) {
         const imagePath = user.avatar;
-  
+
         if (!imagePath) {
           console.warn(`User ${user.uuid} tidak memiliki avatar`);
           continue;
         }
-  
+
         try {
           // Step 2: Ambil gambar dari MinIO
           const stream = await minio_client.getObject('photos', imagePath); // ganti 'photos' jika bucket berbeda
           const imageBuffer = await utils.streamToBuffer(stream);
-  
+
           if (!imageBuffer || imageBuffer.length === 0) {
             console.warn(`Gagal mengambil gambar dari MinIO ${imagePath}: buffer kosong`);
             continue;
           }
-  
+
           // Step 3: Encode gambar ke base64 untuk dikirim ke ML
           const base64Image = `data:image/jpeg;base64,${imageBuffer.toString('base64')}`;
-  
+
           // Step 4: Kirim ke endpoint ML untuk re-embedding
           const mlResponse = await axios.post(
             `${process.env.ML_URL}build`,
             { image: base64Image },
             { headers: { "Content-Type": "application/json" } }
           );
-  
+
           const mlData = mlResponse.data?.data?.[0];
-  
+
           if (!mlData) {
             console.warn(`Re-embedding gagal untuk user ${user.uuid}`);
             continue;
           }
-  
+
           // Step 5: Update data embedding di database
           await prisma.user.update({
             where: { uuid: user.uuid },
             data: {
               signature: mlData.signatureData,
-              bbox: mlData.bbox, 
+              bbox: mlData.bbox,
               modified_at: new Date()
             }
           });
-  
+
           console.log(`Re-embedding berhasil untuk user ${user.uuid}`);
-  
+
         } catch (err) {
           console.error(`Gagal memproses user ${user.uuid}:`, err.message);
         }
       }
-  
+
       return utils.createResponse(
         res,
         200,
@@ -410,10 +410,10 @@ module.exports = {
       if (!image) {
         return utils.createResponse(res, 400, "Bad Request", "Gambar tidak ditemukan!", "/user/image");
       }
-  
+
       // Konfigurasi Axios
       const config_u = { headers: { "Content-Type": "application/json" } };
-  
+
       // Step 1: Kirim gambar ke endpoint ML untuk diproses
       let mlResponse;
       try {
@@ -428,7 +428,7 @@ module.exports = {
           "/user/image"
         );
       }
-  
+
       // Ambil data hasil pemrosesan ML
       const { data: mlData } = mlResponse;
       if (!mlData || !mlData.data || mlData.data.length === 0) {
@@ -440,49 +440,49 @@ module.exports = {
           "/user/image"
         );
       }
-  
+
       const processedData = mlData.data[0];
-  
+
       // Step 2: Simpan gambar asli
       const requestImagePath = `${genPass.generateString(23)}.jpg`;
       utils.saveImage(image, requestImagePath, "photos");
-  
-            // Step 3: Generate avatar dengan menambahkan query string `type=profile`
-            try {
-              const avatarResponse = await axios.patch(
-                `${process.env.ML_URL}build?type=profile`,
-                { image },
-                config_u
-              );
-              const avatar = avatarResponse.data.data[0].croppedImage;
-              utils.saveImage(avatar, requestImagePath, "avatar");
-            } catch (avatarError) {
-              console.error("Avatar Generation Error:", avatarError.message || avatarError);
-            }
-      
-            // Step 4: Generate gambar transparan (remove background)
-            try {
-              const transparentResponse = await axios.post(
-                `${process.env.ML_URL}remove_bg`,
-                { image },
-                config_u
-              );
-              const transparent = transparentResponse.data.data[0];
-              utils.saveImage(
-                transparent,
-                requestImagePath.replace(".jpg", ".png"),
-                "transparent"
-              );
-            } catch (transparentError) {
-              console.error("Transparent Background Error:", transparentError.message || transparentError);
-            }
+
+      // Step 3: Generate avatar dengan menambahkan query string `type=profile`
+      try {
+        const avatarResponse = await axios.patch(
+          `${process.env.ML_URL}build?type=profile`,
+          { image },
+          config_u
+        );
+        const avatar = avatarResponse.data.data[0].croppedImage;
+        utils.saveImage(avatar, requestImagePath, "avatar");
+      } catch (avatarError) {
+        console.error("Avatar Generation Error:", avatarError.message || avatarError);
+      }
+
+      // Step 4: Generate gambar transparan (remove background)
+      try {
+        const transparentResponse = await axios.post(
+          `${process.env.ML_URL}remove_bg`,
+          { image },
+          config_u
+        );
+        const transparent = transparentResponse.data.data[0];
+        utils.saveImage(
+          transparent,
+          requestImagePath.replace(".jpg", ".png"),
+          "transparent"
+        );
+      } catch (transparentError) {
+        console.error("Transparent Background Error:", transparentError.message || transparentError);
+      }
       // Step 5: Simpan data ke database
       try {
         processedData.image_path = requestImagePath;
         const uuid = await prisma.tempData.create({
           data: { data: processedData },
         });
-  
+
         // Return success response
         return utils.createResponse(
           res,
@@ -518,17 +518,17 @@ module.exports = {
     try {
       let query = {
         where: {
-          OR:[{
+          OR: [{
             groups: {
               some: {
                 notify_to: req.user.uuid,
               },
-            }, 
-          },{
-            user_group:{
-              some:{
-                group:{
-                  is:{
+            },
+          }, {
+            user_group: {
+              some: {
+                group: {
+                  is: {
                     notify_to: req.user.uuid
                   }
                 }
@@ -549,7 +549,7 @@ module.exports = {
           avatar: true,
           bbox: true,
           created_at: true,
-          groups:true,
+          groups: true,
           role_user: {
             select: {
               role: {
@@ -570,7 +570,7 @@ module.exports = {
           },
         }
       }
-      if(req.show_all_users){
+      if (req.show_all_users) {
         delete query.where;
       }
       users = await prisma.user.findMany(query);

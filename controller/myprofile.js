@@ -419,6 +419,7 @@ module.exports = {
           }
         }
       });
+      user_data.recovery_token = utils.encryptText(user_data.uuid+','+user_data.email)
     } catch (error) {
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/myprofile/${uuid}`);
     }
