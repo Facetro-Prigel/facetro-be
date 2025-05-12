@@ -8,28 +8,35 @@ const prisma = new PrismaClient();
 
 module.exports = {
   getRecap: async (req, res) => {
+    const { start_date, end_date } = req.query;
     const workbook = new ExcelJS.Workbook();
     try {
       let query = {
         where: {
-          OR: [
-            { user_uuid: req.user.uuid },
-            {
-              user: {
-                is: {
-                  user_group: {
-                    some: {
-                      group: {
-                        is: {
-                          notify_to: req.user.uuid
+          AND: [
+          {created_at: {
+              gte: start_date? start_date : null,
+              lte: end_date? end_date : null}},
+          {
+            OR: [
+              { user_uuid: req.user.uuid },
+              {
+                user: {
+                  is: {
+                    user_group: {
+                      some: {
+                        group: {
+                          is: {
+                            notify_to: req.user.uuid
+                          }
                         }
                       }
                     }
                   }
                 }
               }
-            }
-          ]
+            ]
+          }]
         },
         orderBy: {
           created_at: 'asc'
@@ -69,11 +76,12 @@ module.exports = {
       };
 
       if (req.show_other_log) {
-        delete query.where;
+        query.where.AND[1].OR = [{ NOT: null }]; // ini biar support AND gate biar true
       }
 
       const attendance_data = await prisma.log.findMany(query)
       
+      // ini buat kurasi data biar ngga terlalu bloat pas proses ke excel
       const grouped_by_user = attendance_data.reduce((acc, log) => {
         const user_name = log.user.name;
         log.created_at = new Date(log.created_at).toISOString()
@@ -227,7 +235,6 @@ module.exports = {
               const tanggal = date;
               const masuk = loginTime.toFormat("HH:mm:ss");
               const pulang = logoutTime ? logoutTime.toFormat("HH:mm:ss") : '-';
-            
               const fillColor = {
                 type: 'pattern',
                 pattern: 'solid',
