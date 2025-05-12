@@ -30,6 +30,15 @@ const makeBufferFromBase64 = (base64String) => {
     return buffer
 }
 
+const streamToBuffer = (stream) => {
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      stream.on('data', (chunk) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
+  }
+
 const makeBondingBox = async (base64String, bbox, filename) => {
     let savedFilename = 'tele-img-' + filename
     const redBox = Buffer.from(
@@ -342,5 +351,5 @@ module.exports = {
         localTime = localTime.split('/');
         return `${localTime[2]}-${localTime[1]}-${localTime[0]}`;
       },
-    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence
+    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence, streamToBuffer
 }

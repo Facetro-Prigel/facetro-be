@@ -1,20 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
-const { createResponse } = require("../helper/utils");
+const { createResponse, streamToBuffer } = require("../helper/utils");
 const ExcelJS = require('exceljs');
 const path = require('path');
-const utils = require('../helper/utils');
 const minio_client = require('../minioClient'); // import minio client
 const prisma = new PrismaClient();
 
-
-const streamToBuffer = (stream) => {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on('data', (chunk) => chunks.push(chunk));
-    stream.on('end', () => resolve(Buffer.concat(chunks)));
-    stream.on('error', reject);
-  });
-}
 
 module.exports = {
   getRecap: async (req, res) => {
@@ -179,7 +169,7 @@ module.exports = {
       return createResponse(res, 200, "Success", "Rekap Presensi berhasil diunduh", `/recap`, { file: `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64file}` });
     } catch (error) {
       console.error('XLSX Export Error:', error);
-      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/recap`);
+      return createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/recap`);
     }
   }
 };
