@@ -554,7 +554,7 @@ module.exports = {
   editLog: async (req, res) => {
     const { log_uuid, user_uuid } = req.body;
     if (!log_uuid || !user_uuid) {
-      return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', '/log/edit');
+      return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', '/log');
     }
     try {
       const log = await prisma.log.findUnique({
