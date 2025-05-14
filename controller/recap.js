@@ -6,17 +6,23 @@ const minio_client = require('../minioClient'); // import minio client
 const { DateTime } = require("luxon");
 const prisma = new PrismaClient();
 
+
+
+
+
 module.exports = {
   getRecap: async (req, res) => {
-    const { start_date, end_date } = req.query;
+    let { start_date, end_date } = req.query;
+    start_date = start_date ? DateTime.fromISO(start_date, { zone: "Asia/Jakarta" }).startOf('day').toUTC().toJSDate() : undefined
+    end_date = end_date ? DateTime.fromISO(end_date, { zone: "Asia/Jakarta" }).endOf('day').toUTC().toJSDate() : undefined;
     const workbook = new ExcelJS.Workbook();
     try {
       let query = {
         where: {
           AND: [
           {created_at: {
-              gte: start_date? start_date : null,
-              lte: end_date? end_date : null}},
+              gte: start_date? start_date : undefined,
+              lte: end_date? end_date : undefined}},
           {
             OR: [
               { user_uuid: req.user.uuid },
@@ -76,7 +82,7 @@ module.exports = {
       };
 
       if (req.show_other_log) {
-        query.where.AND[1].OR = [{ NOT: null }]; // ini biar support AND gate biar true
+        query.where.AND[1].OR = [{}];
       }
 
       const attendance_data = await prisma.log.findMany(query)
