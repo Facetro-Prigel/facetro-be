@@ -551,24 +551,23 @@ module.exports = {
       return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengambil logs!', '/log');
     }
   },
-  editLog(req, res) {
+  editLog: async (req, res) => {
     const { log_uuid, user_uuid } = req.body;
     if (!log_uuid || !user_uuid) {
       return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', '/log/edit');
     }
     try {
-      prisma.log.update({
-        where: {
-          uuid: log_uuid
-        },
-        data: {
-          user: {
-            update: {
-              uuid: user_uuid
-            }
-          }
-        }
+      const log = await prisma.log.findUnique({
+        where: { uuid: log_uuid }
       })
+      
+      if (log) {
+        await prisma.log.update({
+          where: { uuid: log_uuid },
+          data: { user_uuid: user_uuid }
+        })
+      }
+      
       return utils.createResponse(res, 200, 'Success!', 'Berhasil Mengubah Logs!', '/log');
     } catch (error) {
       return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengubah logs!', '/log');
