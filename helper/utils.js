@@ -1,9 +1,57 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
-const minio_client = require('../minioClient');
+const crypto = require('crypto');
 
+const minio_client = require('../minioClient');
 require('dotenv').config();
+
+/**
+ * Enkripsi teks menggunakan AES-256-CBC
+ * @param {string} text - Teks yang akan dienkripsi
+ * @param {string} algo - Algoritma enkripsi (default: aes-256-cbc)
+ * @param {string} key - Kunci AES dari .env
+ * @returns {string} hasil berupa base64: [iv + ciphertext]
+ */
+const encryptText = (text, algo = 'aes-256-cbc', key = '') => {
+    if(key == ''){
+        key=process.env.AES_KEY
+        console.info('key:',key)
+        console.info('AES_KEY:',process.env.AES_KEY)
+        console.info('key Len:',key.length)
+        console.info('AES_KEY_len:',process.env.AES_KEY.length)
+    }
+    const iv = crypto.randomBytes(16); // IV harus 16 byte untuk AES
+    const cipher = crypto.createCipheriv(algo, Buffer.from(key), iv);
+
+    let encrypted = cipher.update(text, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    // Gabungkan IV + ciphertext dalam format base64
+    return Buffer.concat([iv, Buffer.from(encrypted, 'base64')]).toString('base64');
+};
+
+/**
+ * Dekripsi teks menggunakan AES-256-CBC
+ * @param {string} cipherText - Teks terenkripsi beserta IV (format: base64)
+ * @param {string} algo - Algoritma enkripsi (default: aes-256-cbc)
+ * @param {string} key - Kunci AES dari .env
+ * @returns {string} plaintext
+ */
+const decryptText = (cipherText, algo = 'aes-256-cbc', key = '') => {
+    if(key == ''){
+        key=process.env.AES_KEY
+    }
+    const data = Buffer.from(cipherText, 'base64');
+    const iv = data.subarray(0, 16); // Ambil 16 byte pertama sebagai IV
+    const encryptedText = data.subarray(16); // Sisanya adalah ciphertext
+
+    const decipher = crypto.createDecipheriv(algo, Buffer.from(key), iv);
+    let decrypted = decipher.update(encryptedText, undefined, 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+};
 
 const replaceText = (text, replacements) => {
     Object.keys(replacements).forEach((key) => {
@@ -12,7 +60,7 @@ const replaceText = (text, replacements) => {
     return text;
 };
 const createResponse = (res, status, title, detail, instance, data = undefined) => {
-    let responseData = {}; 
+    let responseData = {};
     responseData.title = title;
     responseData.detail = detail;
     responseData.instance = instance;
@@ -32,12 +80,12 @@ const makeBufferFromBase64 = (base64String) => {
 
 const streamToBuffer = (stream) => {
     return new Promise((resolve, reject) => {
-      const chunks = [];
-      stream.on('data', (chunk) => chunks.push(chunk));
-      stream.on('end', () => resolve(Buffer.concat(chunks)));
-      stream.on('error', reject);
+        const chunks = [];
+        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('end', () => resolve(Buffer.concat(chunks)));
+        stream.on('error', reject);
     });
-  }
+}
 
 const makeBondingBox = async (base64String, bbox, filename) => {
     let savedFilename = 'tele-img-' + filename
@@ -151,7 +199,9 @@ const makeDesign = (designName, fgImg, fgBBOX, overlayData = {}) => {
                 .composite(imageComposite)
                 .png()
                 .toBuffer();
-
+            console.info(`Image BG${bgMeta.width}x${bgMeta.height}`)
+            console.info(`Image FG${fgMetadata.width}x${fgMetadata.height}`)
+            console.info(`Image FG${imageComposite.width}x${imageComposite.height}`)
             // Overlay tambahan
             const compositeOverlay = [{ input: imageCroped, top: 0, left: 0 }];
             if (Array.isArray(overlay)) {
@@ -184,17 +234,17 @@ const calculateAge = (birthday) => {
     const birthDate = new Date(birthday);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDifference = today.getMonth() - birthDate.getMonth();
-  
+
     // Jika belum ulang tahun tahun ini, kurangi umur dengan 1
     if (
-      monthDifference < 0 ||
-      (monthDifference === 0 && today.getDate() < birthDate.getDate())
+        monthDifference < 0 ||
+        (monthDifference === 0 && today.getDate() < birthDate.getDate())
     ) {
-      age--;
+        age--;
     }
-  
+
     return age;
-  }
+}
 
 module.exports = {
     verifyImage: async (base64String, size = true) => {
@@ -203,7 +253,7 @@ module.exports = {
         }
         const imageBuffer = Buffer.from(base64String.split(',')[1], 'base64');
         const metadata = await sharp(imageBuffer).metadata();
-        if(size){
+        if (size) {
             if (metadata.width !== 160 || metadata.height !== 160) {
                 return false
             }
@@ -231,9 +281,9 @@ module.exports = {
 
     saveImage: async (file, filePath, bucketName = process.env.MINIO_BUCKET_NAME) => {
         let buffer;
-        if(Buffer.isBuffer(file)){
+        if (Buffer.isBuffer(file)) {
             buffer = file
-        }else{
+        } else {
             buffer = makeBufferFromBase64(file);
         }
         try {
@@ -316,40 +366,40 @@ module.exports = {
         const io = req.app.get('socketio');
         io.emit('backend emit', {
             token: generat.generateString(8),
-            
+
             identifier: process.env.BE_WS_IDENTIFIER,
             address: 'update CUD',
             backend_id: process.env.CONTAINER_ID
         })
     },
-    isValidUUID: (uuid) =>{
+    isValidUUID: (uuid) => {
         const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
         return uuidRegex.test(uuid);
-    }, 
-    getSpecificDayOfWeek: (date, targetDay) =>{
+    },
+    getSpecificDayOfWeek: (date, targetDay) => {
         // Pastikan targetDay adalah angka antara 0 dan 6 (0 = Minggu, 1 = Senin, ..., 6 = Sabtu)
-        
+
         const dayOfWeek = date.getDay(); // Mendapatkan indeks hari saat ini (0-6)
-        
+
         // Hitung selisih hari ke targetDay
         let diffToTargetDay = targetDay - dayOfWeek;
         if (diffToTargetDay > 0) {
-          diffToTargetDay -= 7; // Jika targetDay berada di minggu sebelumnya
+            diffToTargetDay -= 7; // Jika targetDay berada di minggu sebelumnya
         }
-      
+
         // Kurangi tanggal saat ini dengan selisih hari untuk mendapatkan targetDay
         const targetDate = new Date(date);
         targetDate.setDate(date.getDate() + diffToTargetDay);
-      
+
         // Format hasil ke YYYY-MM-DD berdasarkan zona waktu lokal (Asia/Jakarta)
         let localTime = targetDate.toLocaleString('id-ID', {
-          timeZone: 'Asia/Jakarta',
-          year: "numeric",
-          day: '2-digit',
-          month: '2-digit'
+            timeZone: 'Asia/Jakarta',
+            year: "numeric",
+            day: '2-digit',
+            month: '2-digit'
         });
         localTime = localTime.split('/');
         return `${localTime[2]}-${localTime[1]}-${localTime[0]}`;
-      },
-    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence, streamToBuffer
+    },
+    makeBufferFromBase64, makeBondingBox, makeDesign, createResponse, calculateAge, transformSentence, streamToBuffer, encryptText, decryptText
 }

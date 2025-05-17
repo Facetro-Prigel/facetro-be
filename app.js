@@ -120,7 +120,7 @@ console.table({
 })
 // console.table(process.env)
 app.get('/', (req, res) => {
-  utils.createResponse(res, 200, 'success', 'Hello!')
+  utils.createResponse(res, 200, 'success', 'Hello!', '/')
 });
 
 server.listen(process.env.PORT, '0.0.0.0', () => {
