@@ -13,7 +13,14 @@ require('dotenv').config();
  * @param {string} key - Kunci AES dari .env
  * @returns {string} hasil berupa base64: [iv + ciphertext]
  */
-const encryptText = (text, algo = 'aes-256-cbc', key = process.env.AES_KEY) => {
+const encryptText = (text, algo = 'aes-256-cbc', key = '') => {
+    if(key == ''){
+        key=process.env.AES_KEY
+        console.info('key:',key)
+        console.info('AES_KEY:',process.env.AES_KEY)
+        console.info('key Len:',key.length)
+        console.info('AES_KEY_len:',process.env.AES_KEY.length)
+    }
     const iv = crypto.randomBytes(16); // IV harus 16 byte untuk AES
     const cipher = crypto.createCipheriv(algo, Buffer.from(key), iv);
 
@@ -31,7 +38,10 @@ const encryptText = (text, algo = 'aes-256-cbc', key = process.env.AES_KEY) => {
  * @param {string} key - Kunci AES dari .env
  * @returns {string} plaintext
  */
-const decryptText = (cipherText, algo = 'aes-256-cbc', key = process.env.AES_KEY) => {
+const decryptText = (cipherText, algo = 'aes-256-cbc', key = '') => {
+    if(key == ''){
+        key=process.env.AES_KEY
+    }
     const data = Buffer.from(cipherText, 'base64');
     const iv = data.subarray(0, 16); // Ambil 16 byte pertama sebagai IV
     const encryptedText = data.subarray(16); // Sisanya adalah ciphertext

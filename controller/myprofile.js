@@ -421,6 +421,7 @@ module.exports = {
       });
       user_data.recovery_token = utils.encryptText(user_data.uuid+','+user_data.email)
     } catch (error) {
+      console.error(error);
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/myprofile/${uuid}`);
     }
     return utils.createResponse(res, 200, "Success", "Seluruh pengguna berhasil diambil", `/myprofile/${uuid}`, user_data);
