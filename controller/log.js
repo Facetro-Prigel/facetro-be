@@ -425,6 +425,7 @@ module.exports = {
           select: {
             name: true,
             identity_number: true,
+            avatar:true,
             user_group: {
               select: {
                 group: {
@@ -537,6 +538,7 @@ module.exports = {
         identity_number: log.user.identity_number,
         device: log.device.name,
         image: log.image_path,
+        avatar: log.user.avatar,
         bbox: log.bbox,
         type: log.type === 'Door' ? 'Door' : `Presence (${log.type})`,
         is_match: log.is_match,
@@ -552,26 +554,57 @@ module.exports = {
     }
   },
   editLog: async (req, res) => {
-    const { log_uuid, user_uuid } = req.body;
-    if (!log_uuid || !user_uuid) {
-      return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', '/log');
+    const uuid = req.params.uuid;
+    const { user_uuid } = req.body;
+    if (!uuid || !user_uuid) {
+      return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', `/log/${uuid}`);
     }
     try {
       const log = await prisma.log.findUnique({
-        where: { uuid: log_uuid }
+        where: { uuid: uuid }
       })
       
       if (log) {
         await prisma.log.update({
-          where: { uuid: log_uuid },
-          data: { user_uuid: user_uuid }
+          where: { uuid: uuid },
+          data: { user_uuid: user_uuid, other_data:{modified_at: new Date(), former_user_uuid: log.user_uuid, type: 'SIM'} }
         })
       }
-      
-      return utils.createResponse(res, 200, 'Success!', 'Berhasil Mengubah Logs!', '/log');
+      const io = req.app.get('socketio');
+      io.emit('backend emit', {
+        time: new Date(),
+        identifier: process.env.BE_WS_IDENTIFIER,
+        address: 'logger update',
+        backend_id: process.env.CONTAINER_ID
+      })
+      return utils.createResponse(res, 200, 'Success!', 'Berhasil Mengubah Logs!', `/log/${uuid}`);
     } catch (error) {
-      return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengubah logs!', '/log');
+      return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengubah logs!', `/log/${uuid}`);
     }
+  },
+  deleteLog: async (req, res) => {
+    const uuid = req.params.uuid;
+    try {
+      const log = await prisma.log.findUnique({
+        where: { uuid: uuid }
+      })
+      if (!log) {
+        return utils.createResponse(res, 404, "Not Found", "Pengguna tidak ditemukan / tidak dapat dihapus", `/log/${uuid}`);
+      }
+      const deletedLog = await prisma.log.delete({
+        where: { uuid: uuid }
+      });
+    } catch (error) {
+      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/log/${uuid}`);
+    }
+      const io = req.app.get('socketio');
+      io.emit('backend emit', {
+        time: new Date(),
+        identifier: process.env.BE_WS_IDENTIFIER,
+        address: 'logger update',
+        backend_id: process.env.CONTAINER_ID
+      })
+    return utils.createResponse(res, 200, "Success", "Pengguna berhasil dihapus", `/user/${uuid}`);
   },
   recognition: async (req, res) => {
     try {
@@ -1085,14 +1118,15 @@ module.exports = {
         // Update log terlama → Login
         await prisma.log.updateMany({
           where: { uuid: oldestLog.uuid },
-          data: { user_uuid: userUuid, type: 'Login' }
+          data: { user_uuid: userUuid, type: 'Login' }, 
+          other_data:{modified_at: new Date(), former_user_uuid: logs[0].user_uuid, type: 'self recov' }
         });
 
         // Update log lainnya → Logout
         if (idsOfOtherLogs.length > 0) {
           await prisma.log.updateMany({
             where: { uuid: { in: idsOfOtherLogs } },
-            data: { user_uuid: userUuid, type: 'Logout' }
+            data: { user_uuid: userUuid, type: 'Logout', other_data:{modified_at: new Date(), former_user_uuid: logs[0].user_uuid, type: 'self recov' }}
           });
         }
 
@@ -1104,7 +1138,7 @@ module.exports = {
 
         await prisma.log.updateMany({
           where: { uuid: { in: idsToUpdate } },
-          data: { user_uuid: userUuid, type: 'Logout' }
+          data: { user_uuid: userUuid, type: 'Logout', other_data:{modified_at: new Date(), former_user_uuid: logs[0].user_uuid, type: 'self recov' } }
         });
 
         console.log(`Berhasil update ${idsToUpdate.length} log menjadi 'Logout'.`);
@@ -1112,7 +1146,6 @@ module.exports = {
       const io = req.app.get('socketio');
       io.emit('backend emit', {
         time: new Date(),
-
         identifier: process.env.BE_WS_IDENTIFIER,
         address: 'logger update',
         backend_id: process.env.CONTAINER_ID
