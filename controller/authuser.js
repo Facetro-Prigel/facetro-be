@@ -4,6 +4,9 @@ const genPass = require('../helper/generator');
 const utils = require('../helper/utils');
 const bcrypt = require("bcrypt");
 const prisma = new PrismaClient();
+const metadata = require('gcp-metadata')
+const { OAuth2Client } = require('google-auth-library');
+const oAuth2Client = new OAuth2Client();
 require('dotenv').config();
 
 module.exports = {
@@ -122,5 +125,88 @@ module.exports = {
       process.env.SECRET_TOKEN
     );
     return utils.createResponse(res, 200, "Success", "Login berhasil!", "/user/login", { token: token, name: results.name, uuid: results.uuid, avatar: results.avatar, bbox: results.bbox, user_roles:user_roles, user_permission: user_permission});
+  },
+  googleLogin: async (req, res) => {
+    const { credential } = req.body;
+    if (!credential) {
+      return utils.createResponse(res, 400, "Bad Request", "Mohon pilih email yang mau digunakan!", "/user/google-login");
+    }
+
+    try {
+      const ticket = await oAuth2Client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      const email = payload.email;
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          role_user: {
+            include: {
+              role: {
+                include: {
+                  permission_role: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          permission_user: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        return utils.createResponse(res, 404, "Not Found", "Mohon hubungi admin terlebih dahulu untuk membuat akun!", "/user/google-login");
+      }
+
+      const user_roles = [];
+      const user_permission = [];
+
+      for (const roleUser of user.role_user) {
+        const role = roleUser.role;
+        user_roles.push(role.guard_name);
+
+        let permissions = role.permission_role;
+
+        if (role.guard_name === "super_admin") {
+          permissions = await prisma.permission.findMany();
+          for (const perm of permissions) {
+            user_permission.push(perm.guard_name);
+          }
+        } else {
+          for (const pr of permissions) {
+            user_permission.push(pr.permission.guard_name);
+          }
+        }
+      }
+
+      for (const pu of user.permission_user) {
+        user_permission.push(pu.permission.guard_name);
+      }
+
+      const token = generator.generateAccessToken(
+        {
+          uuid: user.uuid,
+          email: user.email,
+          name: user.name,
+        },
+        process.env.SECRET_TOKEN
+      );
+
+      return utils.createResponse(res, 200, "Success", "Login berhasil!", "/user/auth/google",{ token: token, name: results.name, uuid: results.uuid, avatar: results.avatar, bbox: results.bbox, user_roles:user_roles, user_permission: user_permission});
+    } catch (error) {
+      console.error("Error verifying token: ", error);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan pada server!", "/user/auth/google");
+    }
   }
 };
