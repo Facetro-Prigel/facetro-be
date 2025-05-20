@@ -311,7 +311,8 @@ module.exports = {
       for (const user of Object.values(grouped_by_user)) {
         const map = user;
 
-        let cursor = user.min.startOf('month');
+        let cursor = user.min.startOf('month'); // pakai ini kalau mau singkat dari awal bulan presensi aja
+        // let cursor = user.min.startOf('year'); // pakai ini kalau mau verbose saklek dari januari 
         const end = user.max.endOf('month');
 
         while (cursor <= end) {
@@ -590,7 +591,8 @@ module.exports = {
 
         renderLegend(worksheet, "A45", "G45", "Keterangan: ", null);
         renderLegend(worksheet, "A46", "G46", "Jika baris berwarna merah, berarti pengguna ini belum memenuhi jam kerja.", { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } });
-        renderLegend(worksheet, "A47", "G47", "Jika baris berwarna hijjau, berarti pengguna ini telah memenuhi jam kerja.", { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } });
+        renderLegend(worksheet, "A47", "G47", "Jika baris berwarna hijau, berarti pengguna ini telah memenuhi jam kerja.", { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } });
+        renderLegend(worksheet, "A48", "G48", "Jika baris tidak berwarna, berarti pengguna tidak presensi atau di luar rentang tanggal yang dipilih.", null);
       }
 
       const buffer = await workbook.xlsx.writeBuffer();
