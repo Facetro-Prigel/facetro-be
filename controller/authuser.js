@@ -203,7 +203,7 @@ module.exports = {
         process.env.SECRET_TOKEN
       );
 
-      return utils.createResponse(res, 200, "Success", "Login berhasil!", "/user/auth/google",{ token: token, name: results.name, uuid: results.uuid, avatar: results.avatar, bbox: results.bbox, user_roles:user_roles, user_permission: user_permission});
+      return utils.createResponse(res, 200, "Success", "Login berhasil!", "/user/auth/google",{ token: token, name: user.name, uuid: user.uuid, avatar: user.avatar, bbox: user.bbox, user_roles:user_roles, user_permission: user_permission});
     } catch (error) {
       console.error("Error verifying token: ", error);
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan pada server!", "/user/auth/google");
