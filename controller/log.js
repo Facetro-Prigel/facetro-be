@@ -555,7 +555,9 @@ module.exports = {
   },
   editLog: async (req, res) => {
     const uuid = req.params.uuid;
-    const { user_uuid } = req.body;
+    const { user_uuid, type } = req.body;
+    console.log(`req.body = ${JSON.stringify(req.body)}`);
+    console.log(`req.params = ${JSON.stringify(req.params)}`);
     if (!uuid || !user_uuid) {
       return utils.createResponse(res, 400, 'Bad Request!', 'Request yang diminta salah!', `/log/${uuid}`);
     }
@@ -567,7 +569,7 @@ module.exports = {
       if (log) {
         await prisma.log.update({
           where: { uuid: uuid },
-          data: { user_uuid: user_uuid, other_data:{modified_at: new Date(), former_user_uuid: log.user_uuid, type: 'SIM'} }
+          data: { user_uuid: user_uuid, type: type, other_data:{modified_at: new Date(), former_user_uuid: log.user_uuid, type: 'SIM'} }
         })
       }
       const io = req.app.get('socketio');
@@ -579,6 +581,7 @@ module.exports = {
       })
       return utils.createResponse(res, 200, 'Success!', 'Berhasil Mengubah Logs!', `/log/${uuid}`);
     } catch (error) {
+      console.error('Error updating log:', error);
       return utils.createResponse(res, 500, 'Internal Server Error!', 'Terjadi kesalahan saat mengubah logs!', `/log/${uuid}`);
     }
   },
