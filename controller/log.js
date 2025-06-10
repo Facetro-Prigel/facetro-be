@@ -870,7 +870,9 @@ module.exports = {
           is_match: true,
           device_uuid: req.device.uuid,
           user_uuid: recogResult.user_uuid,
-          other_data: {}
+          other_data: {
+            similarity: recogResult.similarity
+          }
         }
       })
       responseData.log_uuid = createLog.uuid
