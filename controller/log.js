@@ -611,6 +611,7 @@ module.exports = {
   },
   recognition: async (req, res) => {
     try {
+      const startTime = Date.now();
       const deviceUuid = req.device.uuid;
       if (Object.keys(req.body).length !== 2) {
         return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log/recog");
@@ -871,7 +872,9 @@ module.exports = {
           device_uuid: req.device.uuid,
           user_uuid: recogResult.user_uuid,
           other_data: {
-            similarity: recogResult.similarity
+            similarity: recogResult.similarity,
+            compared_image: recogResult.compared_image,
+            execution_time_ms: Date.now() - startTime
           }
         }
       })
@@ -996,7 +999,7 @@ module.exports = {
           user_details.program_study = isExist.user_details.program_study
           user_details.batch = isExist.user_details.batch
         }
-        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek: \n`
+        captionForElse = `Nama: \n > ${isExist.name} \nNomor Identitas:\n > ${isExist.identity_number} \nProdi: \n > ${(user_details.program_study)} \nAngkatan: \n > ${(user_details.batch)}   \nProyek:`
         captionForElse += isExist.user_group.map((t) => {
           return '\n>' + t.group.name;
         })
@@ -1024,7 +1027,6 @@ module.exports = {
         photo: nameImage,
         bbox: updatedData.bbox,
         time: new Date(),
-
         identifier: process.env.BE_WS_IDENTIFIER,
         address: 'logger update',
         backend_id: process.env.CONTAINER_ID
