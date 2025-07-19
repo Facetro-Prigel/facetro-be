@@ -540,7 +540,7 @@ module.exports = {
         image: log.image_path,
         avatar: log.user.avatar,
         bbox: log.bbox,
-        type: log.type === 'Door' ? 'Door' : `Presence (${log.type})`,
+        type: log.type,
         is_match: log.is_match,
         in_time: log.created_at,
         group: log.user.user_group.map((uy) => uy.group.name)
@@ -611,7 +611,8 @@ module.exports = {
   },
   recognition: async (req, res) => {
     try {
-      const startTime = Date.now();
+
+      const totalStartTime = Date.now();
       const deviceUuid = req.device.uuid;
       if (Object.keys(req.body).length !== 2) {
         return utils.createResponse(res, 400, "Bad Request", "Request yang diminta salah", "/log/recog");
@@ -778,9 +779,15 @@ module.exports = {
       } catch (error) {
         console.error(error)
       }
+      const mlStartTime = Date.now();
       let recogResult = await sandRecog(image, dataContainer);
+      const ml_process_time = Date.now() - mlStartTime;
       if (recogResult.error) {
-        return utils.createResponse(res, 404, 'Not Found!', `Maaf anda tidak terdaftar untuk ${type} di perangkat ini!`, '/log/recog');
+        const total_process_time = Date.now() - totalStartTime;
+        return utils.createResponse(res, 404, 'Not Found!', `Maaf anda tidak terdaftar untuk ${type} di perangkat ini!`, '/log/recog', {
+          ml_process_time,
+          total_process_time
+        });
       }
       const nameImage = `${generator.generateString(23)}.jpg`
       utils.saveImage(image, nameImage, 'log')
@@ -874,11 +881,14 @@ module.exports = {
           other_data: {
             similarity: recogResult.similarity,
             compared_image: recogResult.compared_image,
-            execution_time_ms: Date.now() - startTime
+            execution_time_ms: Date.now() - totalStartTime
           }
         }
       })
       responseData.log_uuid = createLog.uuid
+      const total_process_time = Date.now() - totalStartTime;
+      responseData.ml_process_time = ml_process_time;
+      responseData.total_process_time = total_process_time;
       return utils.createResponse(res, 200, 'Succes', `Pengguna Berhasil Ditemukan`, '/log/recog', responseData);
     } catch (error) {
       console.error(error);

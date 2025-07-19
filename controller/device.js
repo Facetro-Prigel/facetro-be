@@ -325,4 +325,55 @@ module.exports = {
     }
     return utils.createResponse(res, 200, "Success", "Perangkat berhasil diupdate", `/device/${uuid}`, nfc_data);
   },
+  getDeviceLog: async (req, res) => {
+    let uuid = req.params.uuid
+    try {
+      // Cek apakah device dengan uuid tersebut ada
+      const device = await prisma.device.findUnique({
+        where: { uuid: uuid },
+        select: { uuid: true, name: true }
+      });
+      if (!device) {
+        return utils.createResponse(res, 404, "Not Found", "Device tidak ditemukan", `/device/${uuid}`);
+      }
+      let log_data = await prisma.log.findMany({
+        where: {
+          device_uuid: uuid
+        },
+        include: {
+          user: {
+            include: {
+              user_group: {
+                include: {
+                  group: true
+                }
+              }
+            }
+          },
+          device: true // pastikan relasi device di-include agar field device.name tidak error
+        },
+        orderBy: {
+          created_at: 'desc'
+        }
+      })
+            // Format data untuk respons
+      const result = log_data.map((log) => ({
+        uuid: log.uuid,
+        name: log.user?.name || null,
+        identity_number: log.user?.identity_number || null,
+        device: log.device?.name || null,
+        image: log.image_path,
+        avatar: log.user?.avatar || null,
+        bbox: log.bbox,
+        type: log.type,
+        is_match: log.is_match,
+        in_time: log.created_at,
+        group: log.user?.user_group?.map((uy) => uy.group?.name) || []
+      }));
+      return utils.createResponse(res, 200, "Success", "Log perangkat berhasil diambil", `/device/${uuid}/logs`, result);
+    } catch (error) {
+      console.error("Error while getting device logs:", error);
+      return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/device/${uuid}/logs`);
+    }
+  },
 };

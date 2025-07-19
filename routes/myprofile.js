@@ -4,7 +4,7 @@ const { getter, update, upload_image, unnes_image, birthday_image, dashboard } =
 const { change_password } = require('../controller/authuser')
 const { authorization } = require('../middleware')
 route.post("/image", authorization(),upload_image)
-route.post("/unnes", authorization(),unnes_image)
+route.get("/unnes", authorization(),unnes_image)
 route.get('/birthday', authorization(), birthday_image)
 route.post("/change_password", authorization(), change_password)
 route.get("/", authorization(), getter)

@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const allRoutes = require("./routes");
-const io= require("socket.io-client");
 const { execSync } = require('child_process')
 const app = express();
 const server = require('http').createServer(app);
@@ -9,16 +8,21 @@ var cors = require('cors');
 const mime = require('mime-types');
 const minioClient = require('./minioClient')
 const utils = require('./helper/utils');
-const socket = io((process.env.WEBSOCKET_URL || "http://localhost:3001"), {
-  transports: ['websocket'], // Pastikan hanya menggunakan WebSocket
-  path: '/socket.io'         // Sesuaikan dengan path WebSocket server
-})
-socket.on("connect", () => {
-  console.info("Terhubung ke server WebSocket eksternal");
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    origin: '*', // Atur sesuai kebutuhan keamanan
+    methods: ["GET", "POST"]
+  },
+  path: '/socket.io'
 });
 
-socket.on("connect_error", (error) => {
-  console.error("Gagal terhubung ke server WebSocket:", error);
+io.on("connection", (socket) => {
+  console.info("Client terhubung ke WebSocket server");
+  socket.on("disconnect", () => {
+    console.info("Client terputus dari WebSocket server");
+  });
+  // Tambahkan event lain sesuai kebutuhan
 });
 
 app.use(cors());
@@ -92,7 +96,7 @@ app.get('/photos/:filename', async (req, res) => {
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(allRoutes);
-app.set('socketio', socket);
+app.set('socketio', io);
 BigInt.prototype.toJSON = function () {
   const int = Number.parseInt(this.toString());
   return int ?? this.toString();

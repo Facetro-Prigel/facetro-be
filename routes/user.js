@@ -14,5 +14,5 @@ route.put("/:uuid",authorization('user_update', ['asign_user_to_group', 'asign_u
 route.post("/login",login)
 route.post("/google-login", googleLogin)
 route.post("/", authorization('user_create', ['asign_user_to_group', 'asign_user_to_permision', 'asign_user_to_role']), insert)
-route.get("/presence/:uuid", authorization('user_get'), getUserPresenceLog)
+route.get("/log/:uuid", authorization('user_get'), getUserPresenceLog)
 module.exports = route;
