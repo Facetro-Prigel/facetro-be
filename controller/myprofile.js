@@ -225,8 +225,14 @@ module.exports = {
   },
   unnes_image: async (req, res) => {
     try {
-      const identity_number = req.user.identity_number
-      let url = `${process.env.UNNES_API}/primer/user_ava/${identity_number}/541.aspx`
+      const uuid = req.user.uuid
+      const user = await prisma.user.findUnique({
+        where: { uuid: uuid },
+        select: {
+          identity_number: true
+        },
+      })
+      let url = `${process.env.UNNES_API}/primer/user_ava/${user.identity_number}/541.aspx`
       const response = await axios.get(url, {
         responseType: 'arraybuffer',
         headers: {
@@ -239,12 +245,10 @@ module.exports = {
       if (mimeType == 'image-png') {
         return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
       }
-
       return utils.createResponse(res, 200, "Success", "Gambar UNNES berhasil diambil", `/unnes_image/${identity_number}`, base64Data);
     } catch (error) {
       return utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat mengambil gambar dari UNNES", `/unnes_image/${identity_number}`);
     }
-
   },
   upload_image: async (req, res) => {
     try {

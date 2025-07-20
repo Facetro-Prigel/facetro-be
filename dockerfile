@@ -1,39 +1,28 @@
 FROM node:22-bookworm-slim
 
 # Install dependencies
-RUN apt-get update && apt-get install -y curl tar git openssl xfonts-utils findutils fontconfig && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    curl tar git openssl xfonts-utils findutils fontconfig \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /home/app
 
-# Copy all files from the current directory to the container
+# Copy only package.json and package-lock.json first for better cache usage
+COPY package*.json ./
+
+# Install npm packages (use --omit=dev for production only)
+RUN npm install --omit=dev
+
+# Copy the rest of the application files
 COPY . .
 
-# Create the truetype font directory if it doesn't exist
-RUN mkdir -p /usr/share/fonts/truetype
-
-# Verify that .ttf files exist in the source directory
-RUN ls -l /home/app/design_template || true
-
-# Recursively find and move all .ttf files from design_template and its subdirectories
-RUN find /home/app/design_template -type f -name "*.ttf" -exec mv {} /usr/share/fonts/truetype/ \;
-
-# List fonts to verify installation (ignore error if directory is empty)
-RUN ls /usr/share/fonts/truetype || true
-
-# Set permissions for font files
-RUN chmod -R 755 /usr/share/fonts/truetype
-
-# Generate font scale and directory files
-RUN mkfontscale && mkfontdir && \
-    ls -l /usr/share/fonts/truetype
-
-# Optionally, rebuild font cache
-RUN fc-cache -fv
-
-# Install npm packages
-RUN npm install
+# Create the truetype font directory if it doesn't exist, move fonts, set permissions, and update font cache in one layer
+RUN mkdir -p /usr/share/fonts/truetype \
+    && find /home/app/design_template -type f -name "*.ttf" -exec mv {} /usr/share/fonts/truetype/ \; \
+    && chmod -R 755 /usr/share/fonts/truetype \
+    && mkfontscale && mkfontdir \
+    && fc-cache -fv || true
 
 # Generate Prisma client
 RUN npx prisma generate

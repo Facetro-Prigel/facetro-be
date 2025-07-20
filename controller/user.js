@@ -8,8 +8,6 @@ const minioClient = require('../minioClient');
 const { group } = require("console");
 const prisma = new PrismaClient();
 
-
-
 const inputInsertUpdate = async (req, updateOrInsert) => {
   const validationReason = {
     email: "Format email standar",
@@ -382,7 +380,7 @@ module.exports = {
     }
   },
   unnes_image: async (req, res) => {
-    const identity_number = req.body.identity_number
+    const identity_number = req.params.identity_number
     try {
       let url = `${process.env.UNNES_API}/primer/user_ava/${identity_number}/541.aspx`
       const response = await axios.get(url, {
@@ -401,7 +399,6 @@ module.exports = {
     } catch (error) {
       return utils.createResponse(res, 404, "Not Found", "Gambar tersebut tidak tersedia", `/unnes_image/${identity_number}`);
     }
-
   },
   upload_image: async (req, res) => {
     try {
@@ -654,7 +651,7 @@ module.exports = {
     try {
       variabel = await inputInsertUpdate(req, 'in')
     } catch (error) {
-      return utils.createResponse(res, 400, "Bad Request", "Input yang diberikan tidak valid!", "/user");
+      return utils.createResponse(res, 400, "Bad Request", "Input yang diberikan tidak valid!", "/user", error);
     }
     if (variabel.status == false) {
       return utils.createResponse(res, 400, "Bad Request", "Ada yang salah dengan input yang Anda berikan!", "/user", variabel.validateError);
@@ -707,6 +704,7 @@ module.exports = {
       })
       var data = await inputInsertUpdate(req, 'up')
       if (data.status == false) {
+        console.log(`data = ${JSON.stringify(data)}`)
         return utils.createResponse(res, 400, "Bad Request", `Ada yang salah dengan input yang Anda berikan!`, `/user/${uuid}`, data.validateError);
       }
       data = data.data

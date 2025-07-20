@@ -93,7 +93,10 @@ module.exports = {
 
       if (req.show_other_log) delete query.where;
 
-      const attendanceData = await prisma.log.findMany(query);
+      const attendanceData = await prisma.log.findMany({
+        ...query,
+        take: 1000
+      });
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Rekap Presensi');
@@ -193,7 +196,7 @@ module.exports = {
       });
     } catch (error) {
       console.error('XLSX Export Error:', error);
-      utils.createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/recap`);
+      createResponse(res, 500, "Internal Server Error", "Terjadi kesalahan saat memproses permintaan", `/recap`);
     }
   },
 
